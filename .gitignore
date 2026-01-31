@@ -1,0 +1,45 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# API keys and secrets
+config.json
+secrets.json
+credentials.json
+api-keys.json
+
+# Node modules
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Bun
+.bun/
+bun.lockb
+
+# Test outputs
+coverage/
+*.test.js
+*.test.ts
+
+# Temporary files
+tmp/
+temp/
+*.tmp
