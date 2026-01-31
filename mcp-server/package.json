@@ -1,0 +1,18 @@
+{
+  "name": "@institutional-reasoning/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server exposing all institutional reasoning frameworks",
+  "type": "module",
+  "main": "./index.ts",
+  "bin": {
+    "institutional-reasoning-mcp": "./index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@institutional-reasoning/core": "workspace:*"
+  },
+  "scripts": {
+    "dev": "bun run index.ts",
+    "build": "bun build index.ts --compile --outfile institutional-reasoning-mcp"
+  }
+}

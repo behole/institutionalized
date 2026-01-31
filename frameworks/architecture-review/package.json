@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/architecture-review",
+  "version": "0.1.0",
+  "description": "Architecture Review Board framework for system design validation",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

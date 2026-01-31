@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/grant-panel",
+  "version": "0.1.0",
+  "description": "Grant Review Panel framework for comparative prioritization",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

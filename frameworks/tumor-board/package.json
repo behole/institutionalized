@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/tumor-board",
+  "version": "0.1.0",
+  "description": "Tumor Board / MDT framework for multi-specialist consensus",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

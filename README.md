@@ -1,362 +1,249 @@
 # Institutional Reasoning
 
-**LLM decision-making frameworks based on centuries-old human systems.**
+**LLM decision-making frameworks based on centuries-old human institutional patterns**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
-[![Bun](https://img.shields.io/badge/Bun-1.0-black)](https://bun.sh/)
+Turn your LLM into a courtroom, peer review panel, red team, design studio, and 16 other battle-tested decision-making systems.
 
----
+## 🎯 Why This Exists
 
-## The Problem
+Humans developed sophisticated multi-party reasoning systems over centuries:
+- Courts use adversarial evaluation for life-or-death decisions
+- Academia uses peer review to validate research
+- Military uses red/blue teams to test security
+- Medicine uses tumor boards for complex diagnoses
 
-People use LLMs for important decisions (code reviews, publishing, hiring, strategy) but get unreliable single-perspective answers.
+This library implements 20 of these systems as multi-agent LLM frameworks.
 
-## The Insight
-
-LLMs already learned institutional decision-making patterns from training data (courts, peer review, military planning). We just need to activate them with the right structure and terminology.
-
-## The Solution
-
-Production-ready tools that wrap LLM reasoning in proven institutional frameworks:
-
-- **Courtroom** - Adversarial evaluation for binary decisions
-- **Peer Review** - Academic-style validation with author rebuttal
-- **Red/Blue Team** - Military stress-testing for security and architecture
-- **Pre-mortem** - Identify failure modes before committing
-- **Studio Critique** - Creative work evaluation with peer feedback
-
-Plus 20+ more frameworks (coming soon).
-
----
-
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
 # Install
-bun install institutional-reasoning
+bun install
 
-# Run a courtroom evaluation
-institutional-reasoning courtroom should-i-publish.json
+# Run a framework
+bun cli.ts courtroom examples/courtroom/merge-pr.json --verbose
+bun cli.ts six-hats examples/six-hats/decision.md
+bun cli.ts pre-mortem examples/pre-mortem/launch.md
 
-# Run peer review
-institutional-reasoning peer-review technical-spec.md --reviewers 3
-
-# Run pre-mortem
-institutional-reasoning pre-mortem launch-plan.md --pessimists 5
+# Or use as MCP server in Claude Code
+# See mcp-server/SETUP.md
 ```
 
----
+## 📦 20 Frameworks Implemented
 
-## Why This Works
+### Tier 1 - MVP (5 frameworks)
+| Framework | Use Case | Agents |
+|-----------|----------|--------|
+| **Courtroom** | Binary decisions under uncertainty | Prosecutor, Defense, Jury (5), Judge |
+| **Peer Review** | Validation with author response | Reviewers (3), Author, Editor |
+| **Red-Blue Team** | Security stress-testing | Blue (defender), Red (attacker), Observer |
+| **Pre-mortem** | Identify failure modes | Pessimists (5), Facilitator |
+| **Studio Critique** | Creative work feedback | Peers (3), Creator, Instructor |
 
-### 1. Leverage Pre-training
-LLMs consumed vast amounts of legal arguments, academic reviews, military doctrine. Legal terminology like "exhibit" and "burden of proof" activates learned behaviors about scrutiny and evidence.
+### Tier 2 - High Demand (5 frameworks)
+| Framework | Use Case | Pattern |
+|-----------|----------|---------|
+| **Devil's Advocate** | Challenge assumptions | Opposition → Rebuttal → Arbiter |
+| **AAR** | Learn from execution | Blameless post-mortem analysis |
+| **Six Thinking Hats** | Multi-perspective analysis | 6 hats examine from different angles |
+| **PhD Defense** | Rigorous validation | Committee (5) probes deeply |
+| **Architecture Review** | System design validation | 5 specialist domains review |
 
-### 2. Adversarial = Better
-Single-perspective LLM answers are unreliable. Adversarial systems (prosecutor vs. defense, red vs. blue) surface real questions and prevent groupthink.
+### Tier 3 - Specialized (5 frameworks)
+| Framework | Use Case | Key Feature |
+|-----------|----------|-------------|
+| **Grant Panel** | Prioritize under constraints | Comparative scoring + budget allocation |
+| **Intelligence Analysis** | Diagnostic reasoning | Competing hypotheses (CIA method) |
+| **Delphi** | Expert consensus | Anonymous iterative rounds |
+| **Design Critique** | Design feedback | Peers + stakeholders + facilitator |
+| **Consensus Circle** | Unity without voting | Quaker-style blocking concerns |
 
-### 3. Centuries of Refinement
-These aren't arbitrary structures—they're systems refined over centuries to handle imperfect information, human bias, and high-stakes decisions.
+### Tier 4 - Advanced (5 frameworks)
+| Framework | Use Case | Specialty |
+|-----------|----------|-----------|
+| **Differential Diagnosis** | Systematic troubleshooting | Medical diagnostic reasoning |
+| **Socratic** | Test assumptions | Probing questions expose gaps |
+| **SWOT** | Strategic assessment | Internal + External + Strategy synthesis |
+| **Tumor Board** | Multi-specialty decisions | Specialists from 5 domains |
+| **Parliamentary** | Policy discussion | Formal debate structure + vote |
 
-### 4. Ask LLMs to Argue, Not Rate
-LLMs are bad at rating things 1-10 (no calibrated internal scale) but good at constructing arguments. These frameworks force explicit reasoning through language.
+## 💡 Usage
 
----
-
-## Frameworks
-
-### ⚖️ Courtroom (Available)
-**For:** Binary decisions under uncertainty
-**Example:** Should I merge this PR? Publish this essay? Deploy this feature?
-
-**Roles:**
-- Prosecutor builds case for "guilty" (take action)
-- Defense mounts rebuttal
-- Jury (5 agents) deliberates independently
-- Judge synthesizes and renders verdict
-
-**Output:** Guilty / Not Guilty / Dismissed + rationale + actions
+### CLI
 
 ```bash
-institutional-reasoning courtroom case.json
+# Basic usage
+bun cli.ts <framework> <input-file> [options]
+
+# Examples
+bun cli.ts courtroom case.json --verbose
+bun cli.ts peer-review paper.md --reviewers 4 --output results.json
+bun cli.ts red-blue system.md --rounds 5
+bun cli.ts six-hats decision.md
+bun cli.ts differential-diagnosis symptoms.json
+
+# See all options
+bun cli.ts --help
 ```
 
-### 📝 Peer Review (In Progress)
-**For:** Validation with author response
-**Example:** Technical documentation, research proposals, specs
-
-**Roles:**
-- 2-4 Reviewers (independent evaluations)
-- Author (responds to critiques)
-- Editor (synthesizes and decides)
-
-**Output:** Accept / Revise / Reject + required changes
+### MCP Server (Claude Code Integration)
 
 ```bash
-institutional-reasoning peer-review paper.md --reviewers 3
+# Setup
+cd mcp-server
+bun install
+
+# Configure Claude Code - see mcp-server/SETUP.md
+
+# Now use in Claude Code:
+"Use the courtroom framework to decide: Should I merge this PR?"
+"Run a pre-mortem on my launch plan"
+"Apply six-hats thinking to this architecture decision"
 ```
 
-### 🔴🔵 Red Team / Blue Team (Coming Soon)
-**For:** Adversarial stress-testing
-**Example:** Security review, architecture decisions, finding edge cases
+### Programmatic
 
-**Roles:**
-- Blue Team proposes design/system
-- Red Team actively tries to break it
-- Observer documents vulnerabilities
+```typescript
+import { run as courtroom } from "./frameworks/courtroom";
+import { run as sixHats } from "./frameworks/six-hats";
 
-**Output:** Vulnerabilities found + severity + mitigations
-
-### ⏪ Pre-mortem (Coming Soon)
-**For:** Identify failure modes before commitment
-**Example:** Launch decisions, strategic planning, high-stakes commitments
-
-**Roles:**
-- Multiple pessimists imagine failure scenarios
-- Facilitator synthesizes and ranks risks
-
-**Output:** Ranked failure scenarios + mitigation strategies
-
-### 🎨 Studio Critique (Coming Soon)
-**For:** Creative work evaluation
-**Example:** Essays, designs, UX, creative projects
-
-**Roles:**
-- Peers observe in silence first
-- Structured feedback (strengths, weaknesses, questions)
-- Creator responds
-
-**Output:** What works / What doesn't / Questions to address
-
----
-
-## Real-World Results
-
-Based on [Falconer's LLM-as-a-Courtroom](https://falconer.com/notes/llm-as-a-courtroom/) (3 months production):
-
-- **65%** of PRs filtered before review
-- **95%** of flagged items filtered before reaching evaluation
-- **63%** of evaluations resulted in "no action needed"
-- **83%** accuracy when escalating to humans
-
----
-
-## Architecture
-
-### Shared Core
-All frameworks share:
-- Multi-agent orchestration (parallel and sequential)
-- Programmatic validation (exhibits must be exact quotes, reasoning must be substantial)
-- Observability (full audit trails, cost tracking, replay capability)
-- Multi-provider support (Anthropic, OpenAI, Ollama)
-
-### Framework Structure
-Each framework is:
-- **Opinionated** - Not "build your own" but "use courtroom" or "use peer review"
-- **Validated** - Programmatic checks prevent hallucination
-- **Observable** - Full transcript + cost tracking
-- **Configurable** - Model selection, jury size, thresholds
-
----
-
-## Comparison
-
-### vs. LangChain / AutoGen / CrewAI
-They provide generic multi-agent primitives. We provide **opinionated frameworks** based on proven human systems.
-
-### vs. LLM-as-a-Judge Papers
-Academic research. We build **production tools** with observability, cost tracking, real-world validation.
-
-### vs. Custom Prompts
-Prompts are brittle and not reproducible. These are **engineered systems** with validation, audit trails, and configurable parameters.
-
----
-
-## Use Cases
-
-### For Developers
-- Code review decisions
-- Architecture validation
-- Security audits
-- Technical documentation review
-
-### For Writers
-- Essay publishing decisions
-- Draft evaluation
-- Creative work feedback
-- Content strategy
-
-### For Product Teams
-- Feature prioritization
-- Launch go/no-go decisions
-- Strategic planning
-- Risk assessment
-
-### For AI Researchers
-- Reproducible evaluation frameworks
-- Ablation studies
-- Benchmark datasets
-- Multi-agent research
-
----
-
-## Installation
-
-```bash
-bun install institutional-reasoning
-```
-
-Set your API key:
-```bash
-export ANTHROPIC_API_KEY="your-key"
-```
-
----
-
-## Configuration
-
-```toml
-# config.toml
-[models]
-prosecutor = "claude-3-7-sonnet-20250219"
-defense = "claude-3-7-sonnet-20250219"
-jury = "claude-3-5-sonnet-20241022"
-judge = "claude-3-7-sonnet-20250219"
-
-[parameters]
-jury_size = 5
-jury_threshold = 3
-jury_temperature = 0.9
-judge_temperature = 0.2
-
-[validation]
-require_exact_quotes = true
-min_harm_words = 10
-```
-
----
-
-## Examples
-
-### Courtroom: Should I Publish?
-```json
-{
-  "question": "Should I publish this essay now or wait for more edits?",
-  "context": [
-    "essays/burnside-v4.md",
-    "reviews/critic-panel-feedback.md"
+// Run courtroom
+const verdict = await courtroom({
+  charge: "Should we migrate to microservices?",
+  evidence: [
+    "Current monolith has scaling issues",
+    "Team lacks microservices experience"
   ]
-}
+});
+
+// Run six hats
+const analysis = await sixHats({
+  question: "Should we build vs. buy this feature?",
+  context: "B2B SaaS with 50 customers"
+});
 ```
 
+## 🏗️ Architecture
+
+### Monorepo Structure
+```
+institutionalized/
+├── cli.ts                    # Unified CLI
+├── core/                     # Shared infrastructure
+│   ├── orchestrator.ts       # Parallel/sequential/iterative execution
+│   ├── providers.ts          # Multi-provider LLM support
+│   ├── observability.ts      # Audit trails & cost tracking
+│   └── validators.ts         # Common validation patterns
+├── frameworks/               # 20 framework implementations
+│   ├── courtroom/
+│   ├── peer-review/
+│   ├── red-blue/
+│   └── ... (17 more)
+├── mcp-server/              # MCP integration
+└── examples/                # Working examples
+```
+
+### Framework Pattern
+Every framework follows this structure:
+```
+frameworks/<name>/
+├── types.ts        # TypeScript interfaces
+├── index.ts        # run() function + orchestration
+└── package.json    # Workspace package
+```
+
+### Core Features
+- ✅ Multi-provider LLM support (Anthropic, OpenAI, OpenRouter)
+- ✅ Full audit trails with replay capability
+- ✅ Cost tracking per framework run
+- ✅ Parallel agent execution
+- ✅ JSON extraction from LLM responses
+- ✅ Configurable models per role
+- ✅ Validation & error handling
+
+## 📊 Framework Selection Guide
+
+**Binary decisions**: Courtroom, Devil's Advocate  
+**Validation**: Peer Review, PhD Defense, Studio Critique  
+**Risk assessment**: Pre-mortem, Red/Blue Team  
+**Diagnosis/troubleshooting**: Differential Diagnosis, Intelligence Analysis  
+**Consensus building**: Delphi, Consensus Circle, Tumor Board  
+**Creative feedback**: Studio Critique, Design Critique  
+**Strategic planning**: Six Hats, SWOT, Parliamentary  
+**Learning from execution**: AAR, Socratic  
+
+## 🔧 Configuration
+
+### API Keys
+
+Set environment variables or pass via config:
 ```bash
-institutional-reasoning courtroom publish-decision.json --verbose
+export ANTHROPIC_API_KEY=sk-ant-...
+export OPENAI_API_KEY=sk-...
+export OPENROUTER_API_KEY=sk-or-...
 ```
 
-### Peer Review: Technical Spec
-```bash
-institutional-reasoning peer-review api-spec.md \
-  --reviewers 3 \
-  --output review-results.json
+### Per-Framework Config
+
+```typescript
+const result = await run(input, {
+  provider: "anthropic",
+  config: {
+    models: {
+      prosecutor: "claude-3-7-sonnet-20250219",
+      defense: "claude-3-7-sonnet-20250219",
+      judge: "claude-3-7-sonnet-20250219"
+    },
+    parameters: {
+      temperature: 0.7,
+      jurySize: 5
+    }
+  },
+  verbose: true
+});
 ```
 
-### Pre-mortem: Launch Plan
-```bash
-institutional-reasoning pre-mortem launch-plan.md \
-  --pessimists 7 \
-  --output risks.json
-```
+## 📈 Roadmap
+
+- [x] 20 frameworks implemented
+- [x] Unified CLI
+- [x] MCP server integration
+- [x] Core infrastructure (orchestration, observability)
+- [x] Working examples
+- [ ] Test suite
+- [ ] Comprehensive documentation
+- [ ] CI/CD pipeline
+- [ ] Remaining 6+ frameworks (War Gaming, Hegelian, Talmudic, etc.)
+- [ ] Performance benchmarks
+- [ ] OSS release
+
+## 🤝 Contributing
+
+See `CONTRIBUTING.md` (coming soon)
+
+## 📄 License
+
+MIT
+
+## 🙏 Acknowledgments
+
+Inspired by centuries of human institutional wisdom:
+- Legal systems (courtroom)
+- Academic publishing (peer review)
+- Military doctrine (red/blue, AAR)
+- Medical practice (differential diagnosis, tumor boards)
+- Religious tradition (consensus circle, Socratic dialogue)
+- Business strategy (SWOT, Delphi)
+- Democratic governance (parliamentary)
+
+## 📚 Further Reading
+
+- `ARCHITECTURE.md` - Technical deep dive
+- `frameworks-catalog.md` - All 26 cataloged frameworks
+- `mcp-server/SETUP.md` - MCP integration guide
+- `PROGRESS.md` - Implementation progress
 
 ---
 
-## Roadmap
-
-### ✅ Phase 1: MVP (Current)
-- [x] Courtroom framework
-- [ ] Peer Review framework
-- [ ] Red/Blue Team framework
-- [ ] Pre-mortem framework
-- [ ] Studio Critique framework
-
-### 🚧 Phase 2: Production Hardening
-- [ ] Unified CLI for all frameworks
-- [ ] Shared core infrastructure
-- [ ] Multi-provider support (Anthropic, OpenAI, Ollama)
-- [ ] Cost optimization and streaming
-- [ ] Comprehensive test suite
-
-### 📋 Phase 3: Expansion
-- [ ] 15+ additional frameworks (see [catalog](./frameworks-catalog.md))
-- [ ] Web UI for non-technical users
-- [ ] IDE integrations (VSCode, JetBrains)
-- [ ] CI/CD integrations (GitHub Actions, GitLab)
-
-### 🎯 Phase 4: Community
-- [ ] Benchmark suite for accuracy measurement
-- [ ] Framework developer guide
-- [ ] Community-contributed frameworks
-- [ ] Research partnerships
-
----
-
-## Contributing
-
-We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
-
-### Adding a New Framework
-
-1. Study the human decision-making system
-2. Define agent roles and data structures
-3. Implement agents (one file per role)
-4. Add validation logic
-5. Write orchestrator
-6. Add tests and examples
-7. Document with README
-8. Submit PR
-
----
-
-## Research
-
-This project builds on:
-
-- [LLM-as-a-Courtroom (Falconer)](https://falconer.com/notes/llm-as-a-courtroom/)
-- [AgentCourt: Simulating Court with Adversarial Agents](https://arxiv.org/abs/2408.08089)
-- [Improving Factuality through Multiagent Debate](https://arxiv.org/abs/2305.14325)
-- [Constitutional AI (Anthropic)](https://www.anthropic.com/news/claude-new-constitution)
-
----
-
-## License
-
-MIT License - see [LICENSE](./LICENSE)
-
----
-
-## Citation
-
-If you use Institutional Reasoning in your research, please cite:
-
-```bibtex
-@software{institutional_reasoning,
-  title = {Institutional Reasoning: LLM Decision Frameworks Based on Human Systems},
-  author = {[Your Name]},
-  year = {2026},
-  url = {https://github.com/[username]/institutional-reasoning}
-}
-```
-
----
-
-## Acknowledgments
-
-Inspired by [Falconer's](https://falconer.com/) production deployment of LLM-as-a-Courtroom and centuries of institutional knowledge encoded in legal systems, academic processes, military doctrine, and creative practices.
-
----
-
-**Built with:** TypeScript, Bun, Anthropic Claude
-
-**Status:** MVP in development, not yet production-ready
-
-**Feedback:** [Open an issue](https://github.com/[username]/institutional-reasoning/issues) or start a [discussion](https://github.com/[username]/institutional-reasoning/discussions)
+**Built with Bun + TypeScript**  
+**20 frameworks • 1 unified interface • Infinite possibilities**

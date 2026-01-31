@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/aar",
+  "version": "0.1.0",
+  "description": "After-Action Review framework for learning from execution",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

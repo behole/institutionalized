@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/consensus-circle",
+  "version": "0.1.0",
+  "description": "Consensus Circle framework for Quaker-style decision making",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

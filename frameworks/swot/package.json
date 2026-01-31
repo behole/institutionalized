@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/swot",
+  "version": "0.1.0",
+  "description": "SWOT Analysis framework for strategic planning",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

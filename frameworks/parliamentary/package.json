@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/parliamentary",
+  "version": "0.1.0",
+  "description": "Parliamentary Debate framework for structured policy discussion",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

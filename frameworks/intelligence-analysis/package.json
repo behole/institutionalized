@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/intelligence-analysis",
+  "version": "0.1.0",
+  "description": "Intelligence Analysis framework using Competing Hypotheses method",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

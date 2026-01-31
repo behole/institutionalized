@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/socratic",
+  "version": "0.1.0",
+  "description": "Socratic Method framework for assumption testing through questioning",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

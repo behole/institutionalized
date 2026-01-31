@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/pre-mortem",
+  "version": "0.1.0",
+  "description": "Pre-mortem framework for identifying failure modes",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

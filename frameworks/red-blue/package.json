@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/red-blue",
+  "version": "0.1.0",
+  "description": "Red/Blue team framework for adversarial testing",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

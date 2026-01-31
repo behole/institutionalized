@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/studio",
+  "version": "0.1.0",
+  "description": "Studio critique framework for creative work evaluation",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

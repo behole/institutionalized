@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "institutional-reasoning": {
+      "command": "bun",
+      "args": [
+        "run",
+        "/Users/jjoosshhmbpm1/institutionalized/mcp-server/index.ts"
+      ],
+      "env": {
+        "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}"
+      }
+    }
+  }
+}

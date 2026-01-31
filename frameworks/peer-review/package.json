@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/peer-review",
+  "version": "0.1.0",
+  "description": "Peer review framework for validation with author rebuttal",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

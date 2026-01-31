@@ -1,0 +1,13 @@
+{
+  "question": "Should I merge this pull request that refactors our authentication system?",
+  "context": [
+    "PR refactors authentication from custom implementation to using industry-standard OAuth 2.0 library",
+    "All tests pass (97% coverage maintained)",
+    "Code review from 2 senior engineers: both approved with minor suggestions addressed",
+    "Breaking change: requires users to re-authenticate once after deployment",
+    "Benefits: Better security, easier maintenance, supports SSO in future",
+    "Risks: Authentication is critical path, refactor touches 15 files, deployment needs coordination",
+    "Timeline: Want to include in next week's release, otherwise delayed 2 weeks",
+    "Alternative: Could deploy to staging for 1 more week, but slows velocity"
+  ]
+}

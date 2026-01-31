@@ -1,0 +1,15 @@
+{
+  "name": "@institutional-reasoning/core",
+  "version": "0.1.0",
+  "description": "Shared core infrastructure for institutional reasoning frameworks",
+  "type": "module",
+  "main": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./types": "./types.ts",
+    "./providers": "./providers/index.ts",
+    "./orchestrator": "./orchestrator.ts",
+    "./validators": "./validators.ts",
+    "./observability": "./observability.ts"
+  }
+}

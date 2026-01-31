@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/devils-advocate",
+  "version": "0.1.0",
+  "description": "Devil's Advocate framework for challenging proposals",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

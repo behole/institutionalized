@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/six-hats",
+  "version": "0.1.0",
+  "description": "Six Thinking Hats framework for multi-perspective analysis",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

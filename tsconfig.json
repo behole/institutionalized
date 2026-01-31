@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022"],
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "composite": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["bun-types"],
+    "paths": {
+      "@core/*": ["./core/*"],
+      "@frameworks/*": ["./frameworks/*"]
+    }
+  },
+  "include": [
+    "core/**/*",
+    "frameworks/**/*",
+    "cli.ts",
+    "examples/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/node_modules",
+    "**/*.poc/**",
+    "courtroom-poc",
+    "peer-review-poc",
+    "pre-mortem-poc",
+    "red-blue-team-poc",
+    "studio-critique-poc"
+  ]
+}

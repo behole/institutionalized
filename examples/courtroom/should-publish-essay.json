@@ -1,0 +1,10 @@
+{
+  "question": "Should I publish this essay on my blog now, or wait for more revisions?",
+  "context": [
+    "I've written an essay about institutional reasoning and LLM decision-making. I've done 3 revision passes. A few friends read it and gave positive feedback, but I haven't done a formal review process.",
+    "The essay is ~3000 words. It argues that LLMs can be structured using institutional frameworks (courts, peer review, etc.) for better decision-making.",
+    "I want to publish it to get feedback from a wider audience, but I'm worried it might not be ready. The core argument feels solid, but some examples might need work.",
+    "Publishing now means I can iterate based on public feedback. Waiting means more polish but delayed learning.",
+    "This is my first technical essay. I've published blog posts before but nothing this substantive."
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/courtroom",
+  "version": "0.1.0",
+  "description": "Courtroom framework for adversarial evaluation",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/differential-diagnosis",
+  "version": "0.1.0",
+  "description": "Differential Diagnosis framework for systematic diagnostic reasoning",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}
