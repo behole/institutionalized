@@ -1,0 +1,16 @@
+{
+  "name": "courtroom-poc",
+  "version": "0.1.0",
+  "description": "LLM-as-a-Courtroom proof of concept",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/cli.ts",
+    "courtroom": "bun run src/cli.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

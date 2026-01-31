@@ -1,0 +1,57 @@
+{
+  "name": "Mobile App Launch Timing",
+  "description": "Decision to launch mobile app on Feb 1st vs delay to March 1st",
+
+  "courtroom": {
+    "question": "Should we launch the mobile app on February 1st, 2026?",
+    "context": [
+      "App is currently in beta with 500 users. Beta users report occasional slowness during peak times.",
+      "Marketing campaign is already scheduled for Feb 1st launch. Ads are purchased and press releases drafted.",
+      "Engineering team is 4 developers with no dedicated DevOps/SRE. No on-call rotation established yet.",
+      "Infrastructure: Single Heroku dyno, Postgres database, Redis cache. Current scale is 500 users.",
+      "Projected launch day traffic: 10,000 users (20x current beta size).",
+      "Alternative: Delay to March 1st to implement auto-scaling, monitoring, and on-call rotation.",
+      "Delaying costs: $50k in marketing spend already committed, loss of seasonal timing advantage.",
+      "Support team is 2 people who also handle other products."
+    ]
+  },
+
+  "redBlueTeam": {
+    "system": "Mobile app backend running on single Heroku dyno with Postgres database and Redis cache. REST API built with Node.js/Express. JWT authentication. Rate limiting at 100 req/min per IP. No auto-scaling configured. No monitoring beyond Heroku metrics. No on-call rotation.",
+    "context": [
+      "Currently handles 500 beta users without issues",
+      "Expected launch day traffic: 10,000 users (20x increase)",
+      "Single database with no read replicas",
+      "No load testing beyond 500 concurrent users"
+    ],
+    "scope": [
+      "System reliability under 20x load increase",
+      "Database performance and connection pooling",
+      "API rate limiting effectiveness",
+      "Failure modes and recovery"
+    ],
+    "threatModel": "reliability"
+  },
+
+  "preMortem": {
+    "proposal": "Launch mobile app to production on February 1st, 2026",
+    "context": [
+      "App is in beta with 500 active users",
+      "Marketing campaign already scheduled and ads purchased",
+      "Engineering team: 4 developers, no DevOps/SRE",
+      "No formal on-call rotation established",
+      "Infrastructure: Single Heroku dyno, Postgres, Redis",
+      "Beta users report occasional slowness during peak times",
+      "Support team: 2 people who also handle other products",
+      "Expected launch day traffic: ~10,000 users (20x current)"
+    ],
+    "timeline": "Launch Feb 1st 2026, evaluate Mar 1st 2026",
+    "stakeholders": [
+      "End users (expecting ~10,000 on launch day)",
+      "Marketing team (committed to launch date)",
+      "Engineering team (responsible for reliability)",
+      "Support team (will handle user issues)",
+      "Executive team (evaluating product viability)"
+    ]
+  }
+}

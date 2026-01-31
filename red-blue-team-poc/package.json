@@ -1,0 +1,16 @@
+{
+  "name": "red-blue-team-poc",
+  "version": "0.1.0",
+  "description": "Military-style adversarial security testing with red team attackers and blue team defenders",
+  "main": "src/orchestrator.ts",
+  "scripts": {
+    "red-blue": "bun run src/cli.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "openai": "^4.76.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

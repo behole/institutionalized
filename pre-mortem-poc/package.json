@@ -1,0 +1,16 @@
+{
+  "name": "pre-mortem-poc",
+  "version": "0.1.0",
+  "description": "Business risk management framework for identifying failure modes before commitment",
+  "main": "src/orchestrator.ts",
+  "scripts": {
+    "pre-mortem": "bun run src/cli.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "openai": "^4.76.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

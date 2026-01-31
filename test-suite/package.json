@@ -1,0 +1,13 @@
+{
+  "name": "institutional-reasoning-tests",
+  "version": "0.1.0",
+  "description": "Baseline test suite for institutional reasoning frameworks",
+  "scripts": {
+    "test": "bun run run-tests.ts",
+    "test:quick": "bun run run-tests.ts --quick",
+    "test:verbose": "bun run run-tests.ts --verbose"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

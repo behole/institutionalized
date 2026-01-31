@@ -1,0 +1,62 @@
+{
+  "name": "API Migration to GraphQL",
+  "description": "Decision to migrate existing REST API to GraphQL",
+
+  "courtroom": {
+    "question": "Should we migrate our REST API to GraphQL?",
+    "context": [
+      "Our current REST API has 47 endpoints serving 12,000 daily active users.",
+      "Mobile team reports they need to make 5-7 API calls per screen load, causing slow performance.",
+      "Engineering team is 6 people (4 backend, 2 frontend). No one has production GraphQL experience.",
+      "Migration would take estimated 4-6 months with API versioning to support both during transition.",
+      "Alternative: Optimize existing REST endpoints with better caching and response compression.",
+      "GraphQL would reduce mobile network requests by ~60% according to prototype testing.",
+      "Risk: Breaking changes during migration could disrupt existing integrations with 3 major partners."
+    ]
+  },
+
+  "peerReview": {
+    "work": "# GraphQL Migration Proposal\n\n## Executive Summary\nWe propose migrating our REST API to GraphQL over 6 months to improve mobile performance and developer experience.\n\n## Current State\nOur REST API consists of 47 endpoints serving 12,000 DAU. Mobile clients make 5-7 API calls per screen, resulting in slow load times and poor user experience.\n\n## Proposed Solution\nMigrate to GraphQL with the following phases:\n1. **Month 1-2:** Team training and proof-of-concept\n2. **Month 3-4:** Build GraphQL layer alongside REST\n3. **Month 5-6:** Migrate clients and deprecate REST endpoints\n\n## Benefits\n- 60% reduction in mobile network requests (validated in prototype)\n- Single endpoint simplifies client development\n- Type safety with GraphQL schema\n- Better tooling and introspection\n\n## Risks\n- No team members have production GraphQL experience\n- 4-6 month timeline delays other roadmap items\n- Breaking changes could disrupt 3 major partner integrations\n- N+1 query problem could cause performance issues if not handled carefully\n\n## Alternatives Considered\n- **REST optimization:** Caching and compression (faster to implement, less impact)\n- **BFF pattern:** Backend-for-frontend specific to mobile needs\n- **Stay with REST:** Continue current approach\n\n## Recommendation\nProceed with GraphQL migration, accepting the timeline and learning curve tradeoffs for long-term performance gains.",
+    "reviewType": "technical",
+    "context": [
+      "This proposal will be reviewed by the engineering leadership team and needs sign-off before we commit resources."
+    ]
+  },
+
+  "redBlueTeam": {
+    "system": "GraphQL API implementation with the following design: Single /graphql endpoint. Apollo Server on Node.js. PostgreSQL database with Dataloader for batching. JWT authentication in HTTP headers. Rate limiting at 100 queries per minute per user. Schema-first design with codegen for TypeScript types.",
+    "context": [
+      "The API serves both web and mobile clients",
+      "Authentication via JWT tokens with 24-hour expiration",
+      "Rate limiting uses Redis to track per-user query counts",
+      "Database queries use Dataloader to batch and cache within a single request",
+      "Schema allows introspection in development but not production"
+    ],
+    "scope": [
+      "GraphQL query execution and validation",
+      "Authentication and authorization",
+      "Rate limiting effectiveness",
+      "N+1 query prevention"
+    ],
+    "threatModel": "security"
+  },
+
+  "preMortem": {
+    "proposal": "Migrate our REST API to GraphQL over the next 6 months",
+    "context": [
+      "Team has no production GraphQL experience",
+      "Migration timeline is 6 months with parallel API support",
+      "Mobile performance is the primary driver (5-7 requests per screen)",
+      "3 major partners integrate with our API",
+      "Engineering team is 6 people",
+      "This delays other roadmap items during migration"
+    ],
+    "timeline": "Start migration Feb 2026, launch Aug 2026, evaluate Sep 2026",
+    "stakeholders": [
+      "Engineering team (building and maintaining)",
+      "Mobile team (primary beneficiary)",
+      "Partner teams (may experience breaking changes)",
+      "Product team (roadmap delayed)"
+    ]
+  }
+}

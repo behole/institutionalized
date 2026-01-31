@@ -1,0 +1,69 @@
+{
+  "name": "Authentication System Design",
+  "description": "Security architecture for user authentication",
+
+  "courtroom": {
+    "question": "Should we implement this authentication system design for production?",
+    "context": [
+      "Proposed system: JWT-based authentication with refresh tokens. Access tokens expire after 15 minutes, refresh tokens after 7 days.",
+      "Passwords hashed with bcrypt (cost factor 12). No password requirements enforced (users can choose any password).",
+      "Rate limiting: 5 failed login attempts locks account for 15 minutes. Lockout counter resets on successful login.",
+      "Sessions stored in Redis with automatic expiration. No session activity tracking.",
+      "Password reset via email with tokens that expire after 1 hour. Reset tokens are UUIDv4.",
+      "Alternative design: Add password complexity requirements, implement 2FA, track session activity.",
+      "Current security incidents: 0 (new system). Team has experience with JWT but not with high-security requirements.",
+      "User base: 50,000 users handling sensitive medical records (HIPAA compliance required)."
+    ]
+  },
+
+  "peerReview": {
+    "work": "# Authentication System Architecture\n\n## Overview\nProposed authentication system using JWT tokens with refresh token rotation for a healthcare application handling 50,000 users.\n\n## Design\n\n### Token Strategy\n- **Access tokens:** JWT, 15-minute expiration, signed with HS256\n- **Refresh tokens:** Opaque tokens, 7-day expiration, stored in Redis\n- **Rotation:** New refresh token issued on each use\n\n### Password Security\n- bcrypt hashing with cost factor 12\n- No minimum password requirements (user choice)\n- Password reset via email with 1-hour expiration tokens\n\n### Rate Limiting\n- 5 failed login attempts → 15-minute account lock\n- Counter resets on successful login\n- Applied per user account (not per IP)\n\n### Session Management\n- Sessions stored in Redis with TTL matching token expiration\n- No session activity tracking\n- No device fingerprinting\n\n## Security Considerations\n\n### Strengths\n- Short-lived access tokens limit exposure window\n- Refresh token rotation prevents token reuse\n- bcrypt with cost 12 provides strong password hashing\n- Rate limiting prevents brute force attacks\n\n### Known Limitations\n- No password complexity requirements may allow weak passwords\n- No 2FA option for sensitive accounts\n- Session tracking could help detect compromised accounts\n- No device management (users can't see/revoke sessions)\n\n## Compliance\n- **HIPAA:** Requires encryption in transit (HTTPS), access controls, audit logging\n- **Current design:** HTTPS enforced, access controls via JWT, no audit logging planned\n\n## Recommendation\nImplement this design with the addition of optional 2FA for high-risk users and audit logging for HIPAA compliance.",
+    "reviewType": "technical",
+    "context": [
+      "This will be used in a healthcare application requiring HIPAA compliance",
+      "Target: 50,000 users handling sensitive medical records"
+    ]
+  },
+
+  "redBlueTeam": {
+    "system": "JWT-based authentication system. Access tokens (15min expiration) + refresh tokens (7-day expiration). Passwords hashed with bcrypt cost 12. Rate limiting: 5 failed attempts = 15min lockout. Sessions in Redis. Password reset via email with 1-hour tokens (UUIDv4). No 2FA. No password requirements. No session activity tracking.",
+    "context": [
+      "Healthcare application requiring HIPAA compliance",
+      "50,000 users handling sensitive medical records",
+      "JWT tokens signed with HS256 and secret key in environment variables",
+      "Redis for session storage with automatic TTL",
+      "Email-based password reset flow",
+      "No device fingerprinting or session management UI"
+    ],
+    "scope": [
+      "Token security (JWT generation, validation, expiration)",
+      "Password security (hashing, reset flow, requirements)",
+      "Rate limiting effectiveness",
+      "Session management",
+      "HIPAA compliance gaps"
+    ],
+    "threatModel": "security"
+  },
+
+  "preMortem": {
+    "proposal": "Deploy this authentication system to production for our healthcare application",
+    "context": [
+      "Healthcare app with 50,000 users handling sensitive medical records",
+      "HIPAA compliance required",
+      "JWT-based auth with 15min access tokens, 7-day refresh tokens",
+      "No password complexity requirements enforced",
+      "No 2FA implemented",
+      "No audit logging for authentication events",
+      "Rate limiting: 5 failed attempts = 15min lockout",
+      "Team has JWT experience but no high-security requirements experience"
+    ],
+    "timeline": "Deploy auth system March 2026, full user migration by April 2026",
+    "stakeholders": [
+      "Healthcare providers using the system",
+      "Patients whose medical records are stored",
+      "Compliance team (HIPAA requirements)",
+      "Engineering team (maintaining security)",
+      "Legal team (liability for breaches)"
+    ]
+  }
+}

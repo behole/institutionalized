@@ -1,0 +1,21 @@
+{
+  "proposal": "Launch new mobile app to production on February 1st, 2026",
+  "context": [
+    "App is currently in beta with 500 active users",
+    "Marketing campaign is already scheduled and ads are purchased",
+    "Engineering team consists of 4 developers (3 backend, 1 frontend)",
+    "No dedicated DevOps or SRE, developers handle deployments",
+    "No formal on-call rotation established yet",
+    "Current infrastructure: Single Heroku dyno, Postgres database, Redis cache",
+    "Beta users report occasional slowness during peak times",
+    "Support team is 2 people who also handle other products"
+  ],
+  "timeline": "Launch Feb 1st 2026, evaluate success Mar 1st 2026",
+  "stakeholders": [
+    "End users (expecting ~10,000 on launch day)",
+    "Marketing team (already committed to launch date)",
+    "Engineering team (responsible for reliability)",
+    "Support team (will handle user issues)",
+    "Executive team (evaluating product viability)"
+  ]
+}

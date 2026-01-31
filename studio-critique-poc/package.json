@@ -1,0 +1,16 @@
+{
+  "name": "studio-critique-poc",
+  "version": "0.1.0",
+  "description": "Art/design education framework for creative work evaluation",
+  "main": "src/orchestrator.ts",
+  "scripts": {
+    "studio-critique": "bun run src/cli.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "openai": "^4.76.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
