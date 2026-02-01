@@ -116,6 +116,35 @@ bun install
 "Simulate a war game for our market entry strategy"
 ```
 
+### OpenCode Integration
+
+Use Institutional Reasoning directly within OpenCode for AI-assisted decision-making:
+
+```bash
+# In your OpenCode project, the frameworks are available as CLI tools
+# Just reference them in your prompts:
+
+"@opencode Run a courtroom evaluation on whether we should refactor this module"
+"@opencode Use six-hats to analyze our database migration strategy"
+"@opencode Run a pre-mortem on the Q4 product launch plan"
+```
+
+**Setup:**
+1. Ensure you have an API key set (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `OPENROUTER_API_KEY`)
+2. The CLI is automatically available in OpenCode's environment
+3. Reference any of the 26 frameworks directly in your prompts
+
+**Example workflow:**
+```
+User: "@opencode Should we use TypeScript for this new service?"
+
+OpenCode: "I'll run a courtroom evaluation to analyze this decision..."
+[Runs courtroom framework with prosecution/defense/jury]
+"Based on the evaluation: The jury voted 4-1 in favor. Key factors..."
+```
+
+See individual framework READMEs in `frameworks/<name>/README.md` for specific usage patterns and input formats.
+
 ### Programmatic
 
 ```typescript
