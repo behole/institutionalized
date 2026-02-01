@@ -2,7 +2,7 @@
 
 **LLM decision-making frameworks based on centuries-old human institutional patterns**
 
-Turn your LLM into a courtroom, peer review panel, red team, design studio, and 16 other battle-tested decision-making systems.
+Turn your LLM into a courtroom, peer review panel, red team, design studio, and 22 other battle-tested decision-making systems.
 
 ## 🎯 Why This Exists
 
@@ -12,7 +12,7 @@ Humans developed sophisticated multi-party reasoning systems over centuries:
 - Military uses red/blue teams to test security
 - Medicine uses tumor boards for complex diagnoses
 
-This library implements 20 of these systems as multi-agent LLM frameworks.
+This library implements 26 of these systems as multi-agent LLM frameworks.
 
 ## 🚀 Quick Start
 
@@ -24,12 +24,14 @@ bun install
 bun cli.ts courtroom examples/courtroom/merge-pr.json --verbose
 bun cli.ts six-hats examples/six-hats/decision.md
 bun cli.ts pre-mortem examples/pre-mortem/launch.md
+bun cli.ts war-gaming scenario.json
+bun cli.ts writers-workshop manuscript.md
 
 # Or use as MCP server in Claude Code
 # See mcp-server/SETUP.md
 ```
 
-## 📦 20 Frameworks Implemented
+## 📦 26 Frameworks Implemented
 
 ### Tier 1 - MVP (5 frameworks)
 | Framework | Use Case | Agents |
@@ -67,6 +69,16 @@ bun cli.ts pre-mortem examples/pre-mortem/launch.md
 | **Tumor Board** | Multi-specialty decisions | Specialists from 5 domains |
 | **Parliamentary** | Policy discussion | Formal debate structure + vote |
 
+### Tier 5 - Complete Catalog (6 frameworks)
+| Framework | Use Case | Origin |
+|-----------|----------|--------|
+| **War Gaming** | Strategic scenario testing | Military planning |
+| **Writers' Workshop** | Manuscript feedback | Clarion/Clarion West |
+| **Regulatory Impact** | Policy analysis | Government assessment |
+| **Hegelian Dialectic** | Resolve contradictions | Philosophy |
+| **Talmudic Dialectic** | Multi-interpretation | Religious textual analysis |
+| **Dissertation Committee** | Academic validation | Graduate education |
+
 ## 💡 Usage
 
 ### CLI
@@ -81,6 +93,8 @@ bun cli.ts peer-review paper.md --reviewers 4 --output results.json
 bun cli.ts red-blue system.md --rounds 5
 bun cli.ts six-hats decision.md
 bun cli.ts differential-diagnosis symptoms.json
+bun cli.ts war-gaming scenario.json --max-turns 10
+bun cli.ts writers-workshop manuscript.md --peer-count 5
 
 # See all options
 bun cli.ts --help
@@ -99,6 +113,7 @@ bun install
 "Use the courtroom framework to decide: Should I merge this PR?"
 "Run a pre-mortem on my launch plan"
 "Apply six-hats thinking to this architecture decision"
+"Simulate a war game for our market entry strategy"
 ```
 
 ### Programmatic
@@ -106,11 +121,12 @@ bun install
 ```typescript
 import { run as courtroom } from "./frameworks/courtroom";
 import { run as sixHats } from "./frameworks/six-hats";
+import { run as warGaming } from "./frameworks/war-gaming";
 
 // Run courtroom
 const verdict = await courtroom({
-  charge: "Should we migrate to microservices?",
-  evidence: [
+  question: "Should we migrate to microservices?",
+  context: [
     "Current monolith has scaling issues",
     "Team lacks microservices experience"
   ]
@@ -120,6 +136,12 @@ const verdict = await courtroom({
 const analysis = await sixHats({
   question: "Should we build vs. buy this feature?",
   context: "B2B SaaS with 50 customers"
+});
+
+// Run war gaming
+const simulation = await warGaming({
+  description: "Market entry against established competitor",
+  context: ["Competitor has 70% market share", "Our product superior"]
 });
 ```
 
@@ -134,12 +156,17 @@ institutionalized/
 │   ├── providers.ts          # Multi-provider LLM support
 │   ├── observability.ts      # Audit trails & cost tracking
 │   └── validators.ts         # Common validation patterns
-├── frameworks/               # 20 framework implementations
+├── frameworks/               # 26 framework implementations
 │   ├── courtroom/
 │   ├── peer-review/
 │   ├── red-blue/
-│   └── ... (17 more)
+│   ├── war-gaming/
+│   ├── writers-workshop/
+│   └── ... (21 more)
 ├── mcp-server/              # MCP integration
+├── test/                    # E2E tests for all frameworks
+├── benchmark/               # Performance benchmarks
+├── website/                 # Landing page
 └── examples/                # Working examples
 ```
 
@@ -149,7 +176,8 @@ Every framework follows this structure:
 frameworks/<name>/
 ├── types.ts        # TypeScript interfaces
 ├── index.ts        # run() function + orchestration
-└── package.json    # Workspace package
+├── package.json    # Workspace package
+└── README.md       # Framework documentation
 ```
 
 ### Core Features
@@ -160,17 +188,22 @@ frameworks/<name>/
 - ✅ JSON extraction from LLM responses
 - ✅ Configurable models per role
 - ✅ Validation & error handling
+- ✅ 100% TypeScript with full type safety
+- ✅ 20 E2E test suites covering all frameworks
+- ✅ Individual READMEs for every framework
 
 ## 📊 Framework Selection Guide
 
 **Binary decisions**: Courtroom, Devil's Advocate  
-**Validation**: Peer Review, PhD Defense, Studio Critique  
-**Risk assessment**: Pre-mortem, Red/Blue Team  
+**Validation**: Peer Review, PhD Defense, Studio Critique, Dissertation Committee  
+**Risk assessment**: Pre-mortem, Red/Blue Team, War Gaming  
 **Diagnosis/troubleshooting**: Differential Diagnosis, Intelligence Analysis  
 **Consensus building**: Delphi, Consensus Circle, Tumor Board  
-**Creative feedback**: Studio Critique, Design Critique  
-**Strategic planning**: Six Hats, SWOT, Parliamentary  
+**Creative feedback**: Studio Critique, Design Critique, Writers' Workshop  
+**Strategic planning**: Six Hats, SWOT, Parliamentary, War Gaming  
 **Learning from execution**: AAR, Socratic  
+**Policy analysis**: Regulatory Impact, Parliamentary  
+**Philosophical reasoning**: Hegelian Dialectic, Talmudic Dialectic, Socratic  
 
 ## 🔧 Configuration
 
@@ -205,21 +238,27 @@ const result = await run(input, {
 
 ## 📈 Roadmap
 
-- [x] 20 frameworks implemented
+- [x] 26 frameworks implemented (100% of catalog)
 - [x] Unified CLI
 - [x] MCP server integration
 - [x] Core infrastructure (orchestration, observability)
 - [x] Working examples
-- [ ] Test suite
-- [ ] Comprehensive documentation
-- [ ] CI/CD pipeline
-- [ ] Remaining 6+ frameworks (War Gaming, Hegelian, Talmudic, etc.)
-- [ ] Performance benchmarks
+- [x] Test suite (20 E2E test suites)
+- [x] Comprehensive documentation (26 READMEs)
+- [x] CI/CD pipeline
+- [x] Performance benchmarks
+- [x] Website/landing page
+- [ ] npm package publication
+- [ ] Tutorial videos
 - [ ] OSS release
 
 ## 🤝 Contributing
 
-See `CONTRIBUTING.md` (coming soon)
+See `CONTRIBUTING.md` for guidelines on:
+- Adding new frameworks
+- Improving existing frameworks
+- Writing tests
+- Documentation contributions
 
 ## 📄 License
 
@@ -229,21 +268,26 @@ MIT
 
 Inspired by centuries of human institutional wisdom:
 - Legal systems (courtroom)
-- Academic publishing (peer review)
-- Military doctrine (red/blue, AAR)
+- Academic publishing (peer review, PhD defense, dissertation committee)
+- Military doctrine (red/blue, AAR, war gaming)
 - Medical practice (differential diagnosis, tumor boards)
-- Religious tradition (consensus circle, Socratic dialogue)
-- Business strategy (SWOT, Delphi)
-- Democratic governance (parliamentary)
+- Religious tradition (consensus circle, Socratic dialogue, Talmudic dialectic)
+- Business strategy (SWOT, Delphi, pre-mortem)
+- Democratic governance (parliamentary, regulatory impact)
+- Philosophy (Hegelian dialectic)
+- Creative arts (studio critique, writers' workshop)
 
 ## 📚 Further Reading
 
 - `ARCHITECTURE.md` - Technical deep dive
-- `frameworks-catalog.md` - All 26 cataloged frameworks
+- `frameworks-catalog.md` - All 26 cataloged frameworks with detailed descriptions
 - `mcp-server/SETUP.md` - MCP integration guide
-- `PROGRESS.md` - Implementation progress
+- `PROGRESS.md` - Implementation progress and milestones
+- `STATUS.md` - Current project status
+- `benchmark/run-benchmarks.ts` - Performance benchmarking
+- `website/index.html` - Landing page
 
 ---
 
 **Built with Bun + TypeScript**  
-**20 frameworks • 1 unified interface • Infinite possibilities**
+**26 frameworks • 1 unified interface • Infinite possibilities**
