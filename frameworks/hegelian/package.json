@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/hegelian",
+  "version": "0.1.0",
+  "description": "Hegelian Dialectic framework for thesis-antithesis-synthesis reasoning",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

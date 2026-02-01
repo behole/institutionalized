@@ -36,6 +36,13 @@ const FRAMEWORKS = {
   swot: "Strategic situational assessment",
   "tumor-board": "Multi-specialist consensus for complex decisions",
   parliamentary: "Adversarial policy discussion",
+  // Remaining Frameworks (Tier 5)
+  "war-gaming": "Military scenario testing for strategic planning",
+  "writers-workshop": "Manuscript feedback in Clarion style",
+  "regulatory-impact": "Comprehensive policy impact assessment",
+  hegelian: "Thesis-antithesis-synthesis dialectic",
+  talmudic: "Multi-interpretation textual analysis",
+  "dissertation-committee": "Multi-stage academic work validation",
 } as const;
 
 type FrameworkName = keyof typeof FRAMEWORKS;

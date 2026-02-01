@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/regulatory-impact",
+  "version": "0.1.0",
+  "description": "Regulatory Impact Assessment framework for policy analysis",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

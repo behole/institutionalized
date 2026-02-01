@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/writers-workshop",
+  "version": "0.1.0",
+  "description": "Writers' Workshop framework for manuscript feedback",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

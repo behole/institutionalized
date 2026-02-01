@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/talmudic",
+  "version": "0.1.0",
+  "description": "Talmudic Dialectic framework for multi-interpretation reasoning",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

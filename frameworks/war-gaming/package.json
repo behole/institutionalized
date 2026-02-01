@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/war-gaming",
+  "version": "0.1.0",
+  "description": "War Gaming framework for military scenario testing",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}

@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Institutional Reasoning - LLM Decision Frameworks</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fafafa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .hero .subtitle {
+            font-size: 1.5rem;
+            opacity: 0.9;
+            margin-bottom: 40px;
+        }
+
+        .hero .tagline {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-bottom: 40px;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: white;
+            color: #667eea;
+            padding: 15px 40px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        /* Stats Section */
+        .stats {
+            background: white;
+            padding: 60px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            text-align: center;
+        }
+
+        .stat-item h3 {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-item p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 60px;
+            color: #333;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .feature-card p {
+            color: #666;
+            line-height: 1.8;
+        }
+
+        /* Frameworks Section */
+        .frameworks {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .frameworks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .framework-card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s;
+        }
+
+        .framework-card:hover {
+            transform: translateX(5px);
+            background: #f0f0f0;
+        }
+
+        .framework-card h4 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .framework-card p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .framework-tag {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-top: 10px;
+        }
+
+        /* Code Section */
+        .code-section {
+            padding: 80px 0;
+            background: #1a1a2e;
+            color: white;
+        }
+
+        .code-section .section-title {
+            color: white;
+        }
+
+        .code-block {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .code-block .comment {
+            color: #6c757d;
+        }
+
+        .code-block .keyword {
+            color: #ff79c6;
+        }
+
+        .code-block .string {
+            color: #f1fa8c;
+        }
+
+        .code-block .function {
+            color: #50fa7b;
+        }
+
+        /* Installation Section */
+        .installation {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+
+        .install-command {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px 30px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1.1rem;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .install-command::before {
+            content: "$";
+            color: #50fa7b;
+            margin-right: 10px;
+        }
+
+        /* Footer */
+        footer {
+            background: #1a1a2e;
+            color: white;
+            padding: 60px 0 30px;
+            text-align: center;
+        }
+
+        footer p {
+            opacity: 0.8;
+            margin-bottom: 20px;
+        }
+
+        footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero .subtitle {
+                font-size: 1.2rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Institutional Reasoning</h1>
+            <p class="subtitle">26 Battle-Tested Decision Frameworks for LLMs</p>
+            <p class="tagline">Bring centuries of human decision-making wisdom to your AI systems</p>
+            <a href="#installation" class="cta-button">Get Started</a>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <h3>26</h3>
+                    <p>Frameworks</p>
+                </div>
+                <div class="stat-item">
+                    <h3>100%</h3>
+                    <p>TypeScript</p>
+                </div>
+                <div class="stat-item">
+                    <h3>20</h3>
+                    <p>E2E Tests</p>
+                </div>
+                <div class="stat-item">
+                    <h3>0</h3>
+                    <p>Dependencies</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2 class="section-title">Why Institutional Reasoning?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>🎯 Battle-Tested</h3>
+                    <p>Each framework is based on real-world institutions: legal systems, academic peer review, military planning, medical diagnostics, and more. These aren't theoretical—they've been refined over centuries.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔧 Production Ready</h3>
+                    <p>Full TypeScript support, comprehensive test coverage, CI/CD integration, and MCP server for Claude Code. Deploy with confidence.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>⚡ Multi-Provider</h3>
+                    <p>Works with Anthropic, OpenAI, and OpenRouter. Switch providers without changing your code. Built-in observability and cost tracking.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📊 Observable</h3>
+                    <p>Full audit trails for every decision. Track costs, model usage, and reasoning chains. Debug and improve your AI's decision-making.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🎨 Consistent API</h3>
+                    <p>All 26 frameworks share the same simple interface. Learn once, apply everywhere. CLI and programmatic APIs available.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🚀 Fast</h3>
+                    <p>Built on Bun for maximum performance. Parallel execution where possible. Optimized for both speed and quality.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Frameworks Section -->
+    <section class="frameworks">
+        <div class="container">
+            <h2 class="section-title">26 Decision Frameworks</h2>
+            <div class="frameworks-grid">
+                <div class="framework-card">
+                    <h4>🏛️ Courtroom</h4>
+                    <p>Adversarial evaluation for binary decisions</p>
+                    <span class="framework-tag">Legal</span>
+                </div>
+                <div class="framework-card">
+                    <h4>📝 Peer Review</h4>
+                    <p>Academic validation with author rebuttal</p>
+                    <span class="framework-tag">Academic</span>
+                </div>
+                <div class="framework-card">
+                    <h4>🛡️ Red-Blue Team</h4>
+                    <p>Security stress-testing</p>
+                    <span class="framework-tag">Military</span>
+                </div>
+                <div class="framework-card">
+                    <h4>⚠️ Pre-Mortem</h4>
+                    <p>Identify failure modes before committing</p>
+                    <span class="framework-tag">Business</span>
+                </div>
+                <div class="framework-card">
+                    <h4>🎨 Studio Critique</h4>
+                    <p>Creative work evaluation</p>
+                    <span class="framework-tag">Creative</span>
+                </div>
+                <div class="framework-card">
+                    <h4>😈 Devil's Advocate</h4>
+                    <p>Formal challenge to proposals</p>
+                    <span class="framework-tag">Critical</span>
+                </div>
+                <div class="framework-card">
+                    <h4>📊 Six Thinking Hats</h4>
+                    <p>Multi-perspective analysis</p>
+                    <span class="framework-tag">Business</span>
+                </div>
+                <div class="framework-card">
+                    <h4>🎓 PhD Defense</h4>
+                    <p>Rigorous proposal validation</p>
+                    <span class="framework-tag">Academic</span>
+                </div>
+                <div class="framework-card">
+                    <h4>🏗️ Architecture Review</h4>
+                    <p>System design validation</p>
+                    <span class="framework-tag">Technical</span>
+                </div>
+                <div class="framework-card">
+                    <h4>💰 Grant Panel</h4>
+                    <p>Comparative prioritization</p>
+                    <span class="framework-tag">Academic</span>
+                </div>
+                <div class="framework-card">
+                    <h4>🕵️ Intelligence Analysis</h4>
+                    <p>Competing hypotheses (CIA method)</p>
+                    <span class="framework-tag">Intelligence</span>
+                </div>
+                <div class="framework-card">
+                    <h4>🎯 Delphi Method</h4>
+                    <p>Expert consensus building</p>
+                    <span class="framework-tag">Research</span>
+                </div>
+                <div class="framework-card">
+                    <h4>🎨 Design Critique</h4>
+                    <p>Structured design feedback</p>
+                    <span class="framework-tag">Design</span>
+                </div>
+                <div class="framework-card">
+                    <h4>🤝 Consensus Circle</h4>
+                    <p>Quaker-style consensus</p>
+                    <span class="framework-tag">Governance</span>
+                </div>
+                <div class="framework-card">
+                    <h4>🔬 Differential Diagnosis</h4>
+                    <p>Systematic diagnostic reasoning</p>
+                    <span class="framework-tag">Medical</span>
+                </div>
+                <div class="framework-card">
+                    <h4>❓ Socratic Method</h4>
+                    <p>Assumption testing through questioning</p>
+                    <span class="framework-tag">Philosophy</span>
+                </div>
+                <div class="framework-card">
+                    <h4>📈 SWOT Analysis</h4>
+                    <p>Strategic situational assessment</p>
+                    <span class="framework-tag">Business</span>
+                </div>
+                <div class="framework-card">
+                    <h4>🏥 Tumor Board</h4>
+                    <p>Multi-specialist consensus</p>
+                    <span class="framework-tag">Medical</span>
+                </div>
+                <div class="framework-card">
+                    <h4>🏛️ Parliamentary</h4>
+                    <p>Adversarial policy discussion</p>
+                    <span class="framework-tag">Governance</span>
+                </div>
+                <div class="framework-card">
+                    <h4>🎖️ War Gaming</h4>
+                    <p>Military scenario testing</p>
+                    <span class="framework-tag">Military</span>
+                </div>
+                <div class="framework-card">
+                    <h4>✍️ Writers' Workshop</h4>
+                    <p>Manuscript feedback (Clarion style)</p>
+                    <span class="framework-tag">Creative</span>
+                </div>
+                <div class="framework-card">
+                    <h4>⚖️ Regulatory Impact</h4>
+                    <p>Multi-dimensional policy analysis</p>
+                    <span class="framework-tag">Policy</span>
+                </div>
+                <div class="framework-card">
+                    <h4>⚖️ Hegelian Dialectic</h4>
+                    <p>Thesis-antithesis-synthesis</p>
+                    <span class="framework-tag">Philosophy</span>
+                </div>
+                <div class="framework-card">
+                    <h4>📜 Talmudic Dialectic</h4>
+                    <p>Multi-interpretation reasoning</p>
+                    <span class="framework-tag">Philosophy</span>
+                </div>
+                <div class="framework-card">
+                    <h4>🎓 Dissertation Committee</h4>
+                    <p>Multi-stage academic validation</p>
+                    <span class="framework-tag">Academic</span>
+                </div>
+                <div class="framework-card">
+                    <h4>📋 AAR</h4>
+                    <p>After-Action Review</p>
+                    <span class="framework-tag">Military</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Code Example Section -->
+    <section class="code-section">
+        <div class="container">
+            <h2 class="section-title">Simple API, Powerful Results</h2>
+            <div class="code-block">
+<span class="comment">// Make tough decisions with confidence</span>
+<span class="keyword">import</span> { run } <span class="keyword">from</span> <span class="string">"@institutional-reasoning/courtroom"</span>;
+
+<span class="keyword">const</span> <span class="function">result</span> = <span class="keyword">await</span> <span class="function">run</span>({
+  question: <span class="string">"Should we merge this PR?"</span>,
+  context: [
+    <span class="string">"Adds authentication feature"</span>,
+    <span class="string">"2000 lines changed"</span>,
+    <span class="string">"No tests included"</span>
+  ]
+});
+
+<span class="comment">// Get structured, reasoned verdict</span>
+console.<span class="function">log</span>(result.verdict.decision); <span class="comment">// "guilty" | "not_guilty"</span>
+console.<span class="function">log</span>(result.verdict.reasoning);
+console.<span class="function">log</span>(result.jury.jurors); <span class="comment">// Individual juror votes</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Installation Section -->
+    <section id="installation" class="installation">
+        <div class="container">
+            <h2 class="section-title">Get Started in Seconds</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 40px;">
+                Requires <a href="https://bun.sh" style="color: #667eea;">Bun</a> and an API key (Anthropic, OpenAI, or OpenRouter)
+            </p>
+            
+            <h3 style="margin-bottom: 15px; color: #333;">Clone the repository</h3>
+            <div class="install-command">git clone https://github.com/yourusername/institutional-reasoning.git && cd institutional-reasoning</div>
+            
+            <h3 style="margin: 30px 0 15px; color: #333;">Install dependencies</h3>
+            <div class="install-command">bun install</div>
+            
+            <h3 style="margin: 30px 0 15px; color: #333;">Set your API key</h3>
+            <div class="install-command">export ANTHROPIC_API_KEY=your_key_here</div>
+            
+            <h3 style="margin: 30px 0 15px; color: #333;">Run a framework</h3>
+            <div class="install-command">bun cli.ts courtroom case.json</div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>Built with ❤️ for better AI decision-making</p>
+            <p>
+                <a href="https://github.com/yourusername/institutional-reasoning">GitHub</a> • 
+                <a href="./docs">Documentation</a> • 
+                <a href="./examples">Examples</a>
+            </p>
+            <p style="margin-top: 30px; opacity: 0.6; font-size: 0.9rem;">
+                MIT License • 2026 Institutional Reasoning Project
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

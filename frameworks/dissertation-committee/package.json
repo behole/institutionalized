@@ -1,0 +1,10 @@
+{
+  "name": "@institutional-reasoning/dissertation-committee",
+  "version": "0.1.0",
+  "description": "Dissertation Committee framework for multi-stage work validation",
+  "type": "module",
+  "main": "./index.ts",
+  "dependencies": {
+    "@institutional-reasoning/core": "workspace:*"
+  }
+}
