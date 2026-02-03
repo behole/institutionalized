@@ -73,8 +73,22 @@
         "@institutional-reasoning/core": "workspace:*",
       },
     },
+    "frameworks/dissertation-committee": {
+      "name": "@institutional-reasoning/dissertation-committee",
+      "version": "0.1.0",
+      "dependencies": {
+        "@institutional-reasoning/core": "workspace:*",
+      },
+    },
     "frameworks/grant-panel": {
       "name": "@institutional-reasoning/grant-panel",
+      "version": "0.1.0",
+      "dependencies": {
+        "@institutional-reasoning/core": "workspace:*",
+      },
+    },
+    "frameworks/hegelian": {
+      "name": "@institutional-reasoning/hegelian",
       "version": "0.1.0",
       "dependencies": {
         "@institutional-reasoning/core": "workspace:*",
@@ -122,6 +136,13 @@
         "@institutional-reasoning/core": "workspace:*",
       },
     },
+    "frameworks/regulatory-impact": {
+      "name": "@institutional-reasoning/regulatory-impact",
+      "version": "0.1.0",
+      "dependencies": {
+        "@institutional-reasoning/core": "workspace:*",
+      },
+    },
     "frameworks/six-hats": {
       "name": "@institutional-reasoning/six-hats",
       "version": "0.1.0",
@@ -150,8 +171,29 @@
         "@institutional-reasoning/core": "workspace:*",
       },
     },
+    "frameworks/talmudic": {
+      "name": "@institutional-reasoning/talmudic",
+      "version": "0.1.0",
+      "dependencies": {
+        "@institutional-reasoning/core": "workspace:*",
+      },
+    },
     "frameworks/tumor-board": {
       "name": "@institutional-reasoning/tumor-board",
+      "version": "0.1.0",
+      "dependencies": {
+        "@institutional-reasoning/core": "workspace:*",
+      },
+    },
+    "frameworks/war-gaming": {
+      "name": "@institutional-reasoning/war-gaming",
+      "version": "0.1.0",
+      "dependencies": {
+        "@institutional-reasoning/core": "workspace:*",
+      },
+    },
+    "frameworks/writers-workshop": {
+      "name": "@institutional-reasoning/writers-workshop",
       "version": "0.1.0",
       "dependencies": {
         "@institutional-reasoning/core": "workspace:*",
@@ -192,7 +234,11 @@
 
     "@institutional-reasoning/differential-diagnosis": ["@institutional-reasoning/differential-diagnosis@workspace:frameworks/differential-diagnosis"],
 
+    "@institutional-reasoning/dissertation-committee": ["@institutional-reasoning/dissertation-committee@workspace:frameworks/dissertation-committee"],
+
     "@institutional-reasoning/grant-panel": ["@institutional-reasoning/grant-panel@workspace:frameworks/grant-panel"],
+
+    "@institutional-reasoning/hegelian": ["@institutional-reasoning/hegelian@workspace:frameworks/hegelian"],
 
     "@institutional-reasoning/intelligence-analysis": ["@institutional-reasoning/intelligence-analysis@workspace:frameworks/intelligence-analysis"],
 
@@ -208,6 +254,8 @@
 
     "@institutional-reasoning/red-blue": ["@institutional-reasoning/red-blue@workspace:frameworks/red-blue"],
 
+    "@institutional-reasoning/regulatory-impact": ["@institutional-reasoning/regulatory-impact@workspace:frameworks/regulatory-impact"],
+
     "@institutional-reasoning/six-hats": ["@institutional-reasoning/six-hats@workspace:frameworks/six-hats"],
 
     "@institutional-reasoning/socratic": ["@institutional-reasoning/socratic@workspace:frameworks/socratic"],
@@ -216,7 +264,13 @@
 
     "@institutional-reasoning/swot": ["@institutional-reasoning/swot@workspace:frameworks/swot"],
 
+    "@institutional-reasoning/talmudic": ["@institutional-reasoning/talmudic@workspace:frameworks/talmudic"],
+
     "@institutional-reasoning/tumor-board": ["@institutional-reasoning/tumor-board@workspace:frameworks/tumor-board"],
+
+    "@institutional-reasoning/war-gaming": ["@institutional-reasoning/war-gaming@workspace:frameworks/war-gaming"],
+
+    "@institutional-reasoning/writers-workshop": ["@institutional-reasoning/writers-workshop@workspace:frameworks/writers-workshop"],
 
     "@modelcontextprotocol/sdk": ["@modelcontextprotocol/sdk@1.25.3", "", { "dependencies": { "@hono/node-server": "^1.19.9", "ajv": "^8.17.1", "ajv-formats": "^3.0.1", "content-type": "^1.0.5", "cors": "^2.8.5", "cross-spawn": "^7.0.5", "eventsource": "^3.0.2", "eventsource-parser": "^3.0.0", "express": "^5.0.1", "express-rate-limit": "^7.5.0", "jose": "^6.1.1", "json-schema-typed": "^8.0.2", "pkce-challenge": "^5.0.0", "raw-body": "^3.0.0", "zod": "^3.25 || ^4.0", "zod-to-json-schema": "^3.25.0" }, "peerDependencies": { "@cfworker/json-schema": "^4.1.1" }, "optionalPeers": ["@cfworker/json-schema"] }, "sha512-vsAMBMERybvYgKbg/l4L1rhS7VXV1c0CtyJg72vwxONVX0l4ZfKVAnZEWTQixJGTzKnELjQ59e4NbdFDALRiAQ=="],
 

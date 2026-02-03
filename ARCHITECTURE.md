@@ -235,6 +235,26 @@ interface Benchmark {
 
 ## Multi-Provider Support
 
+Institutional Reasoning supports multiple LLM providers with intelligent routing and cost optimization.
+
+### Supported Providers
+
+| Provider | Best For | Key Models |
+|----------|----------|------------|
+| **Anthropic** | Heavyweight reasoning (Judge, Editor) | Claude 3.7 Sonnet, Claude 3 Opus |
+| **OpenAI** | Parallel agents, diverse perspectives | GPT-5, GPT-4o, GPT-4o Mini |
+| **OpenRouter** | Cost optimization, model experimentation | 100+ models from multiple providers |
+
+### Environment Setup
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+export OPENAI_API_KEY="sk-..."
+export OPENROUTER_API_KEY="sk-or-..."
+```
+
+The system auto-detects available providers. First available is used as default.
+
 ### Provider Interface
 ```typescript
 interface LLMProvider {
@@ -245,27 +265,39 @@ interface LLMProvider {
     temperature: number;
     maxTokens: number;
   }): Promise<LLMResponse>;
+  
+  calculateCost(usage: { inputTokens: number; outputTokens: number }, model: string): number;
 }
 ```
 
-### Supported Providers (Phase 1)
-- Anthropic Claude
-- OpenAI GPT
-- Open models via Ollama
+### Cost Optimization Strategy
 
-### Provider Selection
-```toml
-[providers]
-default = "anthropic"
+**Scenario: Courtroom with 5 jurors**
 
-[providers.anthropic]
-api_key_env = "ANTHROPIC_API_KEY"
-default_model = "claude-3-7-sonnet-20250219"
+| Approach | Cost | Savings |
+|----------|------|---------|
+| All Claude 3.7 Sonnet | ~$0.40 | - |
+| **Optimized (jury = GPT-4o Mini)** | **~$0.17** | **57%** |
 
-[providers.openai]
-api_key_env = "OPENAI_API_KEY"
-default_model = "gpt-4o"
+**Role-Based Selection:**
+- **Heavyweight (Judge, Editor):** Claude 3.7 Sonnet, GPT-5 Pro
+- **Parallel diversity (Jury, Reviewers):** GPT-4o Mini (cheaper at scale)
+- **Evidence building (Prosecutor):** Claude 3.7 Sonnet
+
+### Per-Role Provider Mixing
+
+```typescript
+const result = await runCourtroom(caseInput, {
+  models: {
+    prosecutor: "claude-3-7-sonnet-20250219",  // Anthropic
+    defense: "gpt-5",                           // OpenAI
+    jury: "gpt-4o-mini",                        // Cheaper for parallel
+    judge: "claude-3-7-sonnet-20250219"
+  }
+});
 ```
+
+Mixing providers improves decision quality through diverse reasoning patterns.
 
 ## OSS Release Plan
 

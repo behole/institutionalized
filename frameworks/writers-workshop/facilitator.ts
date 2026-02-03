@@ -15,6 +15,18 @@ Your role is to:
 3. Surface important questions for the author
 4. Organize feedback into actionable discussion points
 
+You MUST respond with valid JSON matching this structure:
+{
+  "discussion": [
+    {
+      "topic": "string - the discussion topic",
+      "perspectives": ["array of different perspectives on this topic"],
+      "consensus": "string - areas of agreement (optional)",
+      "disagreement": "string - areas of disagreement (optional)"
+    }
+  ]
+}
+
 Be balanced and comprehensive.`;
 
   const reviewsSummary = peerReviews.map(r => `
@@ -30,13 +42,7 @@ ${r.reviewerId}:
 PEER REVIEWS:
 ${reviewsSummary}
 
-Synthesize this feedback into discussion points:
-1. Identify 3-5 key topics that emerged across reviews
-2. Note different perspectives on each topic
-3. Highlight areas of consensus
-4. Flag any significant disagreements
-
-Format each discussion point with the topic, various perspectives, and any consensus reached.`;
+Synthesize this feedback into discussion points. Identify 3-5 key topics that emerged across reviews. Note different perspectives, consensus areas, and disagreements. Respond ONLY with valid JSON matching the required structure.`;
 
   try {
     const result = await generateObject<{

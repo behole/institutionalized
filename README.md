@@ -238,12 +238,14 @@ frameworks/<name>/
 
 ### API Keys
 
-Set environment variables or pass via config:
+Set environment variables:
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
 export OPENAI_API_KEY=sk-...
 export OPENROUTER_API_KEY=sk-or-...
 ```
+
+The system auto-detects available providers. See `ARCHITECTURE.md` for detailed multi-provider configuration.
 
 ### Per-Framework Config
 
@@ -308,10 +310,9 @@ Inspired by centuries of human institutional wisdom:
 
 ## 📚 Further Reading
 
-- `ARCHITECTURE.md` - Technical deep dive
+- `ARCHITECTURE.md` - Technical deep dive and multi-provider configuration
 - `frameworks-catalog.md` - All 26 cataloged frameworks with detailed descriptions
 - `mcp-server/SETUP.md` - MCP integration guide
-- `PROGRESS.md` - Implementation progress and milestones
 - `STATUS.md` - Current project status
 - `benchmark/run-benchmarks.ts` - Performance benchmarking
 - `website/index.html` - Landing page

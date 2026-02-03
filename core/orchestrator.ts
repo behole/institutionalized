@@ -176,3 +176,40 @@ export function parseJSON<T>(text: string): T {
 
   throw new Error("No valid JSON found in response");
 }
+
+/**
+ * Generate a typed object from LLM
+ * Convenience wrapper for structured output
+ */
+export async function generateObject<T>({
+  model,
+  system,
+  prompt,
+  temperature = 0.7,
+  maxTokens = 4096,
+  provider,
+}: {
+  model: string;
+  system?: string;
+  prompt: string;
+  temperature?: number;
+  maxTokens?: number;
+  provider?: LLMProvider;
+}): Promise<T> {
+  // Get provider if not passed
+  const llmProvider = provider || (await import("./providers/index")).getProvider();
+
+  const messages: Array<{ role: "user" | "assistant" | "system"; content: string }> = [
+    { role: "user", content: prompt },
+  ];
+
+  const response = await llmProvider.call({
+    model,
+    messages,
+    temperature,
+    maxTokens,
+    systemPrompt: system,
+  });
+
+  return parseJSON<T>(response.content);
+}
