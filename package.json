@@ -23,7 +23,7 @@
     "typecheck": "bun tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.1",
+    "@anthropic-ai/sdk": "^0.73.0",
     "openai": "^4.76.1"
   },
   "devDependencies": {
