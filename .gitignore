@@ -5,7 +5,7 @@
 *.env
 
 # API keys and secrets
-config.json
+/config.json
 secrets.json
 credentials.json
 api-keys.json
