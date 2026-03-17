@@ -1,17 +1,14 @@
-import Anthropic from "@anthropic-ai/sdk";
+import type { LLMProvider } from "@core/types";
+import { parseJSON } from "@core/orchestrator";
 import type { Case, Prosecution, Exhibit, CourtroomConfig } from "./types";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-export async function prosecute(
+export function buildProsecutionPrompt(
   caseInput: Case,
-  config: CourtroomConfig
-): Promise<Prosecution> {
+  _config: CourtroomConfig
+): string {
   const contextContent = caseInput.context.join("\n\n---\n\n");
 
-  const prompt = `You are a prosecutor in a courtroom evaluation system. Your role is to build a case for why the answer to this question should be "GUILTY" (meaning: take action, proceed, accept).
+  return `You are a prosecutor in a courtroom evaluation system. Your role is to build a case for why the answer to this question should be "GUILTY" (meaning: take action, proceed, accept).
 
 ## THE QUESTION
 ${caseInput.question}
@@ -56,37 +53,34 @@ Return valid JSON matching this structure:
 }
 
 IMPORTANT: Return ONLY valid JSON, no markdown formatting, no code blocks.`;
+}
 
-  const message = await anthropic.messages.create({
+export function parseProsecutionResponse(
+  text: string,
+  contextContent: string,
+  config: CourtroomConfig
+): Prosecution {
+  const prosecution = parseJSON<Prosecution>(text);
+  validateExhibits(prosecution.exhibits, contextContent, config);
+  return prosecution;
+}
+
+export async function prosecute(
+  caseInput: Case,
+  config: CourtroomConfig,
+  provider: LLMProvider
+): Promise<Prosecution> {
+  const contextContent = caseInput.context.join("\n\n---\n\n");
+  const prompt = buildProsecutionPrompt(caseInput, config);
+
+  const response = await provider.call({
     model: config.models.prosecutor,
-    max_tokens: 4096,
+    maxTokens: 4096,
     temperature: 0.7,
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
+    messages: [{ role: "user", content: prompt }],
   });
 
-  const content = message.content[0];
-  if (content.type !== "text") {
-    throw new Error("Expected text response from prosecutor");
-  }
-
-  // Parse JSON response
-  const text = content.text.trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error(`Prosecutor did not return valid JSON: ${text}`);
-  }
-
-  const prosecution = JSON.parse(jsonMatch[0]) as Prosecution;
-
-  // Validate exhibits
-  validateExhibits(prosecution.exhibits, contextContent, config);
-
-  return prosecution;
+  return parseProsecutionResponse(response.content, contextContent, config);
 }
 
 function validateExhibits(

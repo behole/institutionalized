@@ -1,15 +1,12 @@
-import Anthropic from "@anthropic-ai/sdk";
+import type { LLMProvider } from "@core/types";
+import { parseJSON } from "@core/orchestrator";
 import type { Case, Prosecution, Defense, CourtroomConfig } from "./types";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-export async function defend(
+export function buildDefensePrompt(
   caseInput: Case,
   prosecution: Prosecution,
-  config: CourtroomConfig
-): Promise<Defense> {
+  _config: CourtroomConfig
+): string {
   const contextContent = caseInput.context.join("\n\n---\n\n");
 
   const exhibitsText = prosecution.exhibits
@@ -23,7 +20,7 @@ export async function defend(
     )
     .join("\n");
 
-  const prompt = `You are a defense attorney in a courtroom evaluation system. The prosecution has built a case for "GUILTY" (take action). Your role is to mount a rebuttal arguing for "NOT GUILTY" (don't take action, or take different action).
+  return `You are a defense attorney in a courtroom evaluation system. The prosecution has built a case for "GUILTY" (take action). Your role is to mount a rebuttal arguing for "NOT GUILTY" (don't take action, or take different action).
 
 ## THE QUESTION
 ${caseInput.question}
@@ -81,37 +78,33 @@ Return valid JSON matching this structure:
 }
 
 IMPORTANT: Return ONLY valid JSON, no markdown formatting, no code blocks.`;
+}
 
-  const message = await anthropic.messages.create({
+export function parseDefenseResponse(
+  text: string,
+  prosecution: Prosecution
+): Defense {
+  const defense = parseJSON<Defense>(text);
+  validateDefense(defense, prosecution);
+  return defense;
+}
+
+export async function defend(
+  caseInput: Case,
+  prosecution: Prosecution,
+  config: CourtroomConfig,
+  provider: LLMProvider
+): Promise<Defense> {
+  const prompt = buildDefensePrompt(caseInput, prosecution, config);
+
+  const response = await provider.call({
     model: config.models.defense,
-    max_tokens: 4096,
+    maxTokens: 4096,
     temperature: 0.7,
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
+    messages: [{ role: "user", content: prompt }],
   });
 
-  const content = message.content[0];
-  if (content.type !== "text") {
-    throw new Error("Expected text response from defense");
-  }
-
-  // Parse JSON response
-  const text = content.text.trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error(`Defense did not return valid JSON: ${text}`);
-  }
-
-  const defense = JSON.parse(jsonMatch[0]) as Defense;
-
-  // Validate defense structure
-  validateDefense(defense, prosecution);
-
-  return defense;
+  return parseDefenseResponse(response.content, prosecution);
 }
 
 function validateDefense(defense: Defense, prosecution: Prosecution): void {

@@ -1,66 +1,25 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { parseJSON } from "@core/orchestrator";
+import type { LLMProvider } from "@core/types";
 import type {
   Case,
   Prosecution,
   Defense,
   JurorDeliberation,
-  JuryVerdict,
   CourtroomConfig,
   Vote,
 } from "./types";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// LLMProvider is passed to runner.runParallel() in orchestrator.ts
+// This file exports prompt-building and response-parsing for jury deliberation
+type _LLMProviderRef = LLMProvider; // referenced via orchestrator FrameworkRunner
 
-export async function deliberate(
+export function buildJurorPrompt(
   caseInput: Case,
   prosecution: Prosecution,
   defense: Defense,
-  config: CourtroomConfig
-): Promise<JuryVerdict> {
-  console.log(`\n🏛️  Jury deliberating (${config.parameters.jurySize} jurors in parallel)...`);
-
-  // Run all jurors in parallel
-  const jurorPromises = Array.from(
-    { length: config.parameters.jurySize },
-    (_, i) => runJuror(i + 1, caseInput, prosecution, defense, config)
-  );
-
-  const jurors = await Promise.all(jurorPromises);
-
-  // Tally votes
-  let guiltyCount = 0;
-  let notGuiltyCount = 0;
-  let abstainCount = 0;
-
-  for (const juror of jurors) {
-    if (juror.vote === "guilty") guiltyCount++;
-    else if (juror.vote === "not_guilty") notGuiltyCount++;
-    else abstainCount++;
-  }
-
-  const proceedsToJudge = guiltyCount >= config.parameters.juryThreshold;
-
-  console.log(`   Votes: ${guiltyCount} guilty, ${notGuiltyCount} not guilty, ${abstainCount} abstain`);
-  console.log(`   ${proceedsToJudge ? "✅ Proceeds to judge" : "❌ Case dismissed"}`);
-
-  return {
-    jurors,
-    guiltyCount,
-    notGuiltyCount,
-    abstainCount,
-    proceedsToJudge,
-  };
-}
-
-async function runJuror(
-  jurorNumber: number,
-  caseInput: Case,
-  prosecution: Prosecution,
-  defense: Defense,
-  config: CourtroomConfig
-): Promise<JurorDeliberation> {
+  _config: CourtroomConfig,
+  jurorNumber: number
+): string {
   const exhibitsText = prosecution.exhibits
     .map(
       (ex, i) => `
@@ -74,7 +33,7 @@ ${defense.exhibitChallenges.find((c) => c.exhibit === i + 1)?.challenge || "No c
     )
     .join("\n");
 
-  const prompt = `You are Juror ${jurorNumber} in a courtroom evaluation system. You must independently evaluate the case and cast a vote.
+  return `You are Juror ${jurorNumber} in a courtroom evaluation system. You must independently evaluate the case and cast a vote.
 
 ## THE QUESTION
 ${caseInput.question}
@@ -128,38 +87,14 @@ Return valid JSON matching this structure:
 }
 
 IMPORTANT: Return ONLY valid JSON, no markdown formatting, no code blocks.`;
+}
 
-  const message = await anthropic.messages.create({
-    model: config.models.jury,
-    max_tokens: 2048,
-    temperature: config.parameters.juryTemperature, // High temperature for variance
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-  });
-
-  const content = message.content[0];
-  if (content.type !== "text") {
-    throw new Error(`Juror ${jurorNumber} did not return text response`);
-  }
-
-  // Parse JSON response
-  const text = content.text.trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error(
-      `Juror ${jurorNumber} did not return valid JSON: ${text}`
-    );
-  }
-
-  const deliberation = JSON.parse(jsonMatch[0]) as JurorDeliberation;
-
-  // Validate
+export function parseJurorVerdict(
+  text: string,
+  jurorNumber: number
+): JurorDeliberation {
+  const deliberation = parseJSON<JurorDeliberation>(text);
   validateJurorDeliberation(jurorNumber, deliberation);
-
   return deliberation;
 }
 

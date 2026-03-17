@@ -1,4 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { parseJSON } from "@core/orchestrator";
+import type { LLMProvider } from "@core/types";
 import type {
   Case,
   Prosecution,
@@ -9,19 +10,17 @@ import type {
   Decision,
 } from "./types";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// LLMProvider is passed to runner.runAgent() in orchestrator.ts
+// This file exports prompt-building and response-parsing for the judge verdict
+type _LLMProviderRef = LLMProvider; // referenced via orchestrator FrameworkRunner
 
-export async function renderVerdict(
+export function buildVerdictPrompt(
   caseInput: Case,
   prosecution: Prosecution,
   defense: Defense,
   jury: JuryVerdict,
   config: CourtroomConfig
-): Promise<Verdict> {
-  console.log(`\n⚖️  Judge deliberating...`);
-
+): string {
   const juryAnalysis = jury.jurors
     .map(
       (j, i) => `
@@ -31,7 +30,7 @@ ${j.reasoning}
     )
     .join("\n---\n");
 
-  const prompt = `You are the judge in a courtroom evaluation system. You must render a final verdict after hearing from the prosecution, defense, and jury.
+  return `You are the judge in a courtroom evaluation system. You must render a final verdict after hearing from the prosecution, defense, and jury.
 
 ## THE QUESTION
 ${caseInput.question}
@@ -98,39 +97,11 @@ Return valid JSON matching this structure:
 }
 
 IMPORTANT: Return ONLY valid JSON, no markdown formatting, no code blocks.`;
+}
 
-  const message = await anthropic.messages.create({
-    model: config.models.judge,
-    max_tokens: 4096,
-    temperature: config.parameters.judgeTemperature, // Low temperature for consistency
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-  });
-
-  const content = message.content[0];
-  if (content.type !== "text") {
-    throw new Error("Judge did not return text response");
-  }
-
-  // Parse JSON response
-  const text = content.text.trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error(`Judge did not return valid JSON: ${text}`);
-  }
-
-  const verdict = JSON.parse(jsonMatch[0]) as Verdict;
-
-  // Validate
+export function parseVerdictResponse(text: string): Verdict {
+  const verdict = parseJSON<Verdict>(text);
   validateVerdict(verdict);
-
-  console.log(`   Decision: ${verdict.decision.toUpperCase()}`);
-  console.log(`   Confidence: ${(verdict.confidence * 100).toFixed(0)}%`);
-
   return verdict;
 }
 

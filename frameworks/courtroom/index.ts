@@ -7,6 +7,8 @@ import { runCourtroom } from "./orchestrator";
 import type { Case, CourtroomConfig, CourtroomResult } from "./types";
 import type { RunFlags } from "@core/types";
 import { DEFAULT_CONFIG } from "./types";
+import { createProvider } from "@core/providers";
+import { getAPIKey } from "@core/config";
 
 /**
  * Main entry point for CLI
@@ -30,7 +32,14 @@ export async function run(
     ...(flags.config || {}),
   };
 
-  return runCourtroom(caseInput, config);
+  // Create provider from flags
+  const providerName = flags.provider || "anthropic";
+  const provider = createProvider({
+    name: providerName,
+    apiKey: getAPIKey(providerName),
+  });
+
+  return runCourtroom(caseInput, config, provider);
 }
 
 // Re-export types and orchestrator for programmatic use
