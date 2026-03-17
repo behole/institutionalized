@@ -20,8 +20,8 @@ Requirements for production-grade library, npm package, and Claude Code skill.
 ### Providers
 
 - [x] **PROV-01**: Fix Anthropic provider system message bug (currently sends system prompt as user-turn message)
-- [ ] **PROV-02**: Refactor courtroom framework to use `LLMProvider` abstraction instead of direct Anthropic SDK calls
-- [ ] **PROV-03**: Fix 7 frameworks with hardcoded `$0.00` cost tracking to report accurate costs
+- [x] **PROV-02**: Refactor courtroom framework to use `LLMProvider` abstraction instead of direct Anthropic SDK calls
+- [x] **PROV-03**: Fix 7 frameworks with hardcoded `$0.00` cost tracking to report accurate costs
 - [ ] **PROV-04**: Fix MCP server `run(args, args)` double-pass bug
 - [x] **PROV-05**: Upgrade `@anthropic-ai/sdk` from ^0.32.1 to ^0.50.0+
 - [x] **PROV-06**: Add retry with exponential backoff for OpenAI/OpenRouter providers on 429/500 errors
@@ -97,8 +97,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CODE-06 | Phase 1 | Complete |
 | CODE-07 | Phase 1 | Complete |
 | PROV-01 | Phase 1 | Complete |
-| PROV-02 | Phase 2 | Pending |
-| PROV-03 | Phase 2 | Pending |
+| PROV-02 | Phase 2 | Complete |
+| PROV-03 | Phase 2 | Complete |
 | PROV-04 | Phase 3 | Pending |
 | PROV-05 | Phase 1 | Complete |
 | PROV-06 | Phase 1 | Complete |
