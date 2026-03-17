@@ -9,10 +9,10 @@ Requirements for production-grade library, npm package, and Claude Code skill.
 
 ### Code Quality
 
-- [ ] **CODE-01**: Add `typescript` as explicit devDependency and make `bun run typecheck` pass with strict mode
+- [x] **CODE-01**: Add `typescript` as explicit devDependency and make `bun run typecheck` pass with strict mode
 - [ ] **CODE-02**: Standardize all import paths to `@core/*` across all 26 frameworks
 - [ ] **CODE-03**: Replace `flags: Record<string, any>` with typed `RunFlags` interface in all 26 `run()` signatures
-- [ ] **CODE-04**: Implement typed error hierarchy (`InstitutionalError` → `ProviderError`, `ValidationError`, `FrameworkError`)
+- [x] **CODE-04**: Implement typed error hierarchy (`InstitutionalError` → `ProviderError`, `ValidationError`, `FrameworkError`)
 - [ ] **CODE-05**: Ensure all 26 frameworks consistently adopt `FrameworkRunner` for orchestration and audit trails
 - [ ] **CODE-06**: Centralize model constants in `core/config.ts` (`DEFAULT_MODELS`) replacing 26 hardcoded model strings
 - [ ] **CODE-07**: Add concurrency cap (semaphore) to `executeParallel()` to prevent rate limit bursts
@@ -89,10 +89,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CODE-01 | Phase 1 | Pending |
+| CODE-01 | Phase 1 | Complete |
 | CODE-02 | Phase 2 | Pending |
 | CODE-03 | Phase 1 | Pending |
-| CODE-04 | Phase 1 | Pending |
+| CODE-04 | Phase 1 | Complete |
 | CODE-05 | Phase 2 | Pending |
 | CODE-06 | Phase 1 | Pending |
 | CODE-07 | Phase 1 | Pending |

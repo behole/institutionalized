@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Typed error hierarchy exists — catching `InstitutionalError` catches `ProviderError`, `ValidationError`, and `FrameworkError`
   4. The Anthropic provider sends system prompts in the `system` parameter, not as a user-turn message
   5. `@anthropic-ai/sdk` is at ^0.50.0 and `executeParallel()` has a configurable concurrency cap
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 Plans:
 - [ ] 01-01-PLAN.md — TypeScript setup + typed error hierarchy
 - [ ] 01-02-PLAN.md — Anthropic system message bug fix + SDK upgrade
@@ -100,7 +100,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 (Phase 6 can proceed 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Hardening | 0/4 | Planning complete | - |
+| 1. Core Hardening | 1/4 | In Progress|  |
 | 2. Framework Standardization | 0/TBD | Not started | - |
 | 3. Registry and Entry Point Cleanup | 0/TBD | Not started | - |
 | 4. Test Infrastructure | 0/TBD | Not started | - |

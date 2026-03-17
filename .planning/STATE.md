@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 1 context gathered
-last_updated: "2026-03-16T23:55:37.248Z"
+stopped_at: Completed 01-core-hardening plan 01 (TypeScript + error hierarchy)
+last_updated: "2026-03-17T00:20:11.394Z"
 last_activity: 2026-03-16 — Roadmap created, all 29 requirements mapped across 6 phases
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 4
+  completed_plans: 1
   percent: 0
 ---
 
@@ -50,6 +50,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 01-core-hardening P01 | 137 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -61,6 +62,8 @@ Recent decisions affecting current work:
 - [Roadmap]: Fix Anthropic system message bug BEFORE upgrading @anthropic-ai/sdk — blast radius is all 26 frameworks simultaneously
 - [Roadmap]: Capture courtroom output fixtures before refactoring — most tech-debt-laden framework
 - [Roadmap]: Phase 6 (Skill) can run in parallel with Phase 5 (npm) once Phase 3 (Registry) is complete
+- [Phase 01-core-hardening]: ErrorCode uses const object pattern (not enum keyword) for ES module compatibility
+- [Phase 01-core-hardening]: ProviderError.cause required (non-optional) to enforce upstream cause preservation
 
 ### Pending Todos
 
@@ -74,6 +77,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-16T23:55:37.245Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-core-hardening/01-CONTEXT.md
+Last session: 2026-03-17T00:20:11.392Z
+Stopped at: Completed 01-core-hardening plan 01 (TypeScript + error hierarchy)
+Resume file: None
