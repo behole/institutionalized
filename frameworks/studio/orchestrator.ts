@@ -2,6 +2,7 @@
  * Orchestrator for Studio Critique framework
  */
 
+import { FrameworkRunner } from "@core/orchestrator";
 import type { LLMProvider } from "@core/types";
 import type { CreativeWork, StudioConfig, StudioResult } from "./types";
 import { observeWork, critiqueWork } from "./peer";
@@ -14,6 +15,8 @@ export async function runStudio(
   provider: LLMProvider,
   verbose: boolean = false
 ): Promise<StudioResult> {
+  const runner = new FrameworkRunner<CreativeWork, StudioResult>("studio", work);
+
   if (verbose) {
     console.log("\n" + "=".repeat(80));
     console.log("🎨 STUDIO CRITIQUE SESSION");
@@ -134,7 +137,7 @@ export async function runStudio(
     console.log("\n" + "=".repeat(80) + "\n");
   }
 
-  return {
+  const result: StudioResult = {
     work,
     observations,
     critiques,
@@ -144,6 +147,16 @@ export async function runStudio(
       timestamp: new Date().toISOString(),
       numPeers: config.parameters.numPeers,
       config,
+    },
+  };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: {
+      ...result.metadata,
+      costUSD: auditLog.metadata.totalCost,
     },
   };
 }

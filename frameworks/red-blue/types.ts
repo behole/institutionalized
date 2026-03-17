@@ -71,6 +71,7 @@ export interface RedBlueResult {
     timestamp: string;
     rounds: number;
     config: RedBlueConfig;
+    costUSD?: number;
   };
 }
 

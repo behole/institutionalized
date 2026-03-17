@@ -2,6 +2,7 @@
  * Orchestrator for Red Team / Blue Team framework
  */
 
+import { FrameworkRunner } from "@core/orchestrator";
 import type { LLMProvider } from "@core/types";
 import type { Target, RedBlueConfig, RedBlueResult } from "./types";
 import { proposeSystem } from "./blue-team";
@@ -14,6 +15,8 @@ export async function runRedBlue(
   provider: LLMProvider,
   verbose: boolean = false
 ): Promise<RedBlueResult> {
+  const runner = new FrameworkRunner<Target, RedBlueResult>("red-blue", target);
+
   if (verbose) {
     console.log("\n" + "=".repeat(80));
     console.log("🔴🔵 RED TEAM / BLUE TEAM EXERCISE");
@@ -122,7 +125,7 @@ export async function runRedBlue(
     console.log("=".repeat(80) + "\n");
   }
 
-  return {
+  const result: RedBlueResult = {
     target,
     blueProposal,
     redAttacks,
@@ -131,6 +134,16 @@ export async function runRedBlue(
       timestamp: new Date().toISOString(),
       rounds: config.parameters.rounds,
       config,
+    },
+  };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: {
+      ...result.metadata,
+      costUSD: auditLog.metadata.totalCost,
     },
   };
 }

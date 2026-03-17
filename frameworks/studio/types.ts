@@ -64,6 +64,7 @@ export interface StudioResult {
     timestamp: string;
     numPeers: number;
     config: StudioConfig;
+    costUSD?: number;
   };
 }
 
