@@ -3,6 +3,8 @@
  * Structured work-in-progress feedback for design work
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface DesignWork {
   title: string;
   stage: "concept" | "wireframe" | "prototype" | "final";
@@ -76,9 +78,9 @@ export interface DesignCritiqueResult {
 
 export const DEFAULT_CONFIG: DesignCritiqueConfig = {
   models: {
-    peer: "claude-3-7-sonnet-20250219",
-    stakeholder: "claude-3-7-sonnet-20250219",
-    facilitator: "claude-3-7-sonnet-20250219",
+    peer: DEFAULT_MODELS.CLAUDE_SONNET,
+    stakeholder: DEFAULT_MODELS.CLAUDE_SONNET,
+    facilitator: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.6,

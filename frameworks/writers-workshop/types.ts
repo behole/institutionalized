@@ -1,6 +1,8 @@
 // Core types for Writers' Workshop Framework
 // Manuscript feedback in Clarion/Clarion West style
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Manuscript {
   title: string;
   content: string;
@@ -77,10 +79,10 @@ export interface WritersWorkshopConfig {
 
 export const DEFAULT_CONFIG: WritersWorkshopConfig = {
   models: {
-    peer1: "claude-3-7-sonnet-20250219",
-    peer2: "claude-3-7-sonnet-20250219",
-    peer3: "claude-3-7-sonnet-20250219",
-    facilitator: "claude-3-7-sonnet-20250219",
+    peer1: DEFAULT_MODELS.CLAUDE_SONNET,
+    peer2: DEFAULT_MODELS.CLAUDE_SONNET,
+    peer3: DEFAULT_MODELS.CLAUDE_SONNET,
+    facilitator: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     peerCount: 3,

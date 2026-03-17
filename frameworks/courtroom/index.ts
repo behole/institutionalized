@@ -5,6 +5,7 @@
 
 import { runCourtroom } from "./orchestrator";
 import type { Case, CourtroomConfig, CourtroomResult } from "./types";
+import type { RunFlags } from "@core/types";
 import { DEFAULT_CONFIG } from "./types";
 
 /**
@@ -12,7 +13,7 @@ import { DEFAULT_CONFIG } from "./types";
  */
 export async function run(
   input: Case | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<CourtroomResult> {
   // If input is plain text, wrap it as a case
   const caseInput: Case =

@@ -4,6 +4,7 @@
  */
 
 import type { Policy, RegulatoryImpactConfig, RegulatoryImpactResult } from "./types";
+import type { RunFlags } from "@core/types";
 import { DEFAULT_CONFIG } from "./types";
 
 /**
@@ -11,7 +12,7 @@ import { DEFAULT_CONFIG } from "./types";
  */
 export async function run(
   input: Policy | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<RegulatoryImpactResult> {
   // If input is plain text, wrap it as a policy
   const policyInput: Policy =

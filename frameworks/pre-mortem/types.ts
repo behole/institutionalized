@@ -3,6 +3,8 @@
  * Identify failure modes before committing to a decision
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Plan {
   description: string; // The plan/decision/launch being evaluated
   context?: string[]; // Supporting information
@@ -62,8 +64,8 @@ export interface PreMortemResult {
 
 export const DEFAULT_CONFIG: PreMortemConfig = {
   models: {
-    pessimists: "claude-3-5-sonnet-20241022", // Diverse scenarios
-    facilitator: "claude-3-7-sonnet-20250219", // Quality synthesis
+    pessimists: DEFAULT_MODELS.CLAUDE_SONNET, // Diverse scenarios
+    facilitator: DEFAULT_MODELS.CLAUDE_SONNET, // Quality synthesis
   },
   parameters: {
     numPessimists: 5,

@@ -3,6 +3,8 @@
  * Adversarial policy discussion with formal structure
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Motion {
   motion: string;
   context: string;
@@ -67,8 +69,8 @@ export interface ParliamentaryConfig {
 
 export const DEFAULT_CONFIG: ParliamentaryConfig = {
   models: {
-    speaker: "claude-3-7-sonnet-20250219",
-    debater: "claude-3-7-sonnet-20250219",
+    speaker: DEFAULT_MODELS.CLAUDE_SONNET,
+    debater: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.6,

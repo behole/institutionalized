@@ -6,31 +6,32 @@
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
 import { parseJSON, executeParallel } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { LLMProvider, RunFlags } from "@core/types";
 import type { GrantProposal, ReviewerScore, PanelRanking, GrantPanelConfig, GrantPanelResult } from "./types";
 import { DEFAULT_CONFIG } from "./types";
 
 export async function run(
   input: { proposals: GrantProposal[] } | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<GrantPanelResult> {
   const proposals: GrantProposal[] = "proposals" in input
     ? input.proposals
     : parseProposalsFromContent(input.content || "");
 
   const config: GrantPanelConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  if (flags.budget) {
-    config.totalBudget = parseInt(flags.budget, 10);
+  const cliFlags = flags as Record<string, unknown>;
+  if (cliFlags.budget) {
+    config.totalBudget = parseInt(String(cliFlags.budget), 10);
   }
-  if (flags.reviewers) {
-    config.parameters.reviewersPerProposal = parseInt(flags.reviewers, 10);
+  if (cliFlags.reviewers) {
+    config.parameters.reviewersPerProposal = parseInt(String(cliFlags.reviewers), 10);
   }
 
   const providerName = flags.provider || "anthropic";
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
-  const verbose = flags.verbose || false;
+  const verbose = flags.debug ?? false;
 
   if (verbose) console.log("\n💰 GRANT REVIEW PANEL\n");
 

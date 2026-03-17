@@ -3,6 +3,8 @@
  * Systematic diagnostic reasoning from medical practice
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Symptoms {
   presenting: string;
   symptoms: string[];
@@ -63,8 +65,8 @@ export interface DifferentialDiagnosisResult {
 
 export const DEFAULT_CONFIG: DifferentialDiagnosisConfig = {
   models: {
-    diagnostician: "claude-3-7-sonnet-20250219",
-    specialist: "claude-3-7-sonnet-20250219",
+    diagnostician: DEFAULT_MODELS.CLAUDE_SONNET,
+    specialist: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.4,

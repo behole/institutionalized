@@ -4,6 +4,7 @@
  */
 
 import type { Manuscript, WritersWorkshopConfig, WritersWorkshopResult } from "./types";
+import type { RunFlags } from "@core/types";
 import { DEFAULT_CONFIG } from "./types";
 
 /**
@@ -11,7 +12,7 @@ import { DEFAULT_CONFIG } from "./types";
  */
 export async function run(
   input: Manuscript | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<WritersWorkshopResult> {
   // If input is plain text, wrap it as a manuscript
   const manuscriptInput: Manuscript =

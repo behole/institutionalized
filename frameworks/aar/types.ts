@@ -3,6 +3,8 @@
  * Learning from execution
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface ActionReview {
   situation: string;
   intended: string[];
@@ -59,7 +61,7 @@ export interface AARResult {
 
 export const DEFAULT_CONFIG: AARConfig = {
   models: {
-    facilitator: "claude-3-7-sonnet-20250219",
+    facilitator: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.4,

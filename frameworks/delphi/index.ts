@@ -6,31 +6,32 @@
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
 import { parseJSON, executeParallel } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { LLMProvider, RunFlags } from "@core/types";
 import type { Question, ExpertEstimate, RoundSummary, DelphiResult, DelphiConfig } from "./types";
 import { DEFAULT_CONFIG } from "./types";
 
 export async function run(
   input: Question | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<DelphiResult> {
   const question: Question = "question" in input
     ? input
     : { question: input.content || "" };
 
   const config: DelphiConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  if (flags.experts) {
-    config.parameters.expertCount = parseInt(flags.experts, 10);
+  const cliFlags = flags as Record<string, unknown>;
+  if (cliFlags.experts) {
+    config.parameters.expertCount = parseInt(String(cliFlags.experts), 10);
   }
-  if (flags.rounds) {
-    config.parameters.maxRounds = parseInt(flags.rounds, 10);
+  if (cliFlags.rounds) {
+    config.parameters.maxRounds = parseInt(String(cliFlags.rounds), 10);
   }
 
   const providerName = flags.provider || "anthropic";
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
-  const verbose = flags.verbose || false;
+  const verbose = flags.debug ?? false;
 
   if (verbose) console.log("\n🔮 DELPHI METHOD - EXPERT CONSENSUS\n");
 

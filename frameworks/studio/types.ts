@@ -3,6 +3,8 @@
  * Creative work evaluation with peer feedback
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface CreativeWork {
   work: string; // The creative work to critique (essay, design, code, etc.)
   context?: string[]; // Background, intent, constraints
@@ -67,9 +69,9 @@ export interface StudioResult {
 
 export const DEFAULT_CONFIG: StudioConfig = {
   models: {
-    peers: "claude-3-5-sonnet-20241022",
-    creator: "claude-3-7-sonnet-20250219",
-    instructor: "claude-3-7-sonnet-20250219",
+    peers: DEFAULT_MODELS.CLAUDE_SONNET,
+    creator: DEFAULT_MODELS.CLAUDE_SONNET,
+    instructor: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     numPeers: 4,

@@ -1,6 +1,8 @@
 // Core types for Dissertation Committee Framework
 // Multi-stage work validation with advisor and committee
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface DissertationWork {
   title: string;
   abstract: string;
@@ -80,10 +82,10 @@ export interface DissertationCommitteeConfig {
 
 export const DEFAULT_CONFIG: DissertationCommitteeConfig = {
   models: {
-    advisor: "claude-3-7-sonnet-20250219",
-    specialist1: "claude-3-7-sonnet-20250219",
-    specialist2: "claude-3-7-sonnet-20250219",
-    methodologist: "claude-3-7-sonnet-20250219",
+    advisor: DEFAULT_MODELS.CLAUDE_SONNET,
+    specialist1: DEFAULT_MODELS.CLAUDE_SONNET,
+    specialist2: DEFAULT_MODELS.CLAUDE_SONNET,
+    methodologist: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     committeeSize: 4,

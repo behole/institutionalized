@@ -6,13 +6,13 @@
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
 import { parseJSON, executeParallel } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { LLMProvider, RunFlags } from "@core/types";
 import type { Case, SpecialistInput, TeamDiscussion, Recommendation, TumorBoardConfig, TumorBoardResult } from "./types";
 import { DEFAULT_CONFIG } from "./types";
 
 export async function run(
   input: Case | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<TumorBoardResult> {
   const caseData: Case = "caseId" in input
     ? input
@@ -22,15 +22,16 @@ export async function run(
       };
 
   const config: TumorBoardConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  if (flags.specialties) {
-    config.specialties = flags.specialties.split(",");
+  const cliFlags = flags as Record<string, unknown>;
+  if (cliFlags.specialties) {
+    config.specialties = String(cliFlags.specialties).split(",");
   }
 
   const providerName = flags.provider || "anthropic";
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
-  const verbose = flags.verbose || false;
+  const verbose = flags.debug ?? false;
 
   if (verbose) console.log("\n🏥 MULTIDISCIPLINARY TEAM BOARD\n");
 

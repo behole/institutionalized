@@ -3,6 +3,8 @@
  * Comparative prioritization under resource constraints
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface GrantProposal {
   id: string;
   title: string;
@@ -67,8 +69,8 @@ export interface GrantPanelResult {
 
 export const DEFAULT_CONFIG: GrantPanelConfig = {
   models: {
-    reviewer: "claude-3-7-sonnet-20250219",
-    panel: "claude-3-7-sonnet-20250219",
+    reviewer: DEFAULT_MODELS.CLAUDE_SONNET,
+    panel: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.4,

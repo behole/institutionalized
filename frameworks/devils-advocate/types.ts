@@ -3,6 +3,8 @@
  * Formal challenge to proposals
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Proposal {
   description: string;
   rationale: string[];
@@ -58,9 +60,9 @@ export interface DevilsAdvocateResult {
 
 export const DEFAULT_CONFIG: DevilsAdvocateConfig = {
   models: {
-    advocate: "claude-3-7-sonnet-20250219",
-    proposer: "claude-3-7-sonnet-20250219",
-    arbiter: "claude-3-7-sonnet-20250219",
+    advocate: DEFAULT_MODELS.CLAUDE_SONNET,
+    proposer: DEFAULT_MODELS.CLAUDE_SONNET,
+    arbiter: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     advocateTemperature: 0.8,

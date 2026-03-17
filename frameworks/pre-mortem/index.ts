@@ -7,6 +7,7 @@ import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
 import { runPreMortem } from "./orchestrator";
 import type { Plan, PreMortemConfig, PreMortemResult } from "./types";
+import type { RunFlags } from "@core/types";
 import { DEFAULT_CONFIG } from "./types";
 
 /**
@@ -14,7 +15,7 @@ import { DEFAULT_CONFIG } from "./types";
  */
 export async function run(
   input: Plan | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<PreMortemResult> {
   // If input is plain text, wrap it as a plan
   const plan: Plan =
@@ -30,9 +31,11 @@ export async function run(
     ...(flags.config || {}),
   };
 
+  const cliFlags = flags as Record<string, unknown>;
+
   // Override from flags
-  if (flags.pessimists) {
-    config.parameters.numPessimists = parseInt(flags.pessimists, 10);
+  if (cliFlags.pessimists) {
+    config.parameters.numPessimists = parseInt(String(cliFlags.pessimists), 10);
   }
 
   // Create provider
@@ -48,7 +51,7 @@ export async function run(
     plan,
     config,
     provider,
-    flags.verbose || false
+    flags.debug ?? false
   );
 
   return result;

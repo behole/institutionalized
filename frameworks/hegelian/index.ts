@@ -4,6 +4,7 @@
  */
 
 import type { DialecticalProblem, HegelianConfig, HegelianResult } from "./types";
+import type { RunFlags } from "@core/types";
 import { DEFAULT_CONFIG } from "./types";
 
 /**
@@ -11,7 +12,7 @@ import { DEFAULT_CONFIG } from "./types";
  */
 export async function run(
   input: DialecticalProblem | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<HegelianResult> {
   // If input is plain text, wrap it as a problem
   const problemInput: DialecticalProblem =

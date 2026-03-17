@@ -7,6 +7,7 @@ import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
 import { runStudio } from "./orchestrator";
 import type { CreativeWork, StudioConfig, StudioResult } from "./types";
+import type { RunFlags } from "@core/types";
 import { DEFAULT_CONFIG } from "./types";
 
 /**
@@ -14,15 +15,17 @@ import { DEFAULT_CONFIG } from "./types";
  */
 export async function run(
   input: CreativeWork | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<StudioResult> {
+  const cliFlags = flags as Record<string, unknown>;
+
   // If input is plain text, wrap it as creative work
   const work: CreativeWork =
     "work" in input
       ? input
       : {
           work: input.content || "",
-          workType: flags.workType || "general",
+          workType: String(cliFlags.workType || "general") as CreativeWork["workType"],
         };
 
   // Get configuration
@@ -32,11 +35,11 @@ export async function run(
   };
 
   // Override from flags
-  if (flags.peers) {
-    config.parameters.numPeers = parseInt(flags.peers, 10);
+  if (cliFlags.peers) {
+    config.parameters.numPeers = parseInt(String(cliFlags.peers), 10);
   }
 
-  if (flags.noCreatorResponse) {
+  if (cliFlags.noCreatorResponse) {
     config.parameters.enableCreatorResponse = false;
   }
 
@@ -53,7 +56,7 @@ export async function run(
     work,
     config,
     provider,
-    flags.verbose || false
+    flags.debug ?? false
   );
 
   return result;

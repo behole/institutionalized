@@ -3,6 +3,8 @@
  * Adversarial stress-testing for security and architecture
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Target {
   system: string; // The system/design/architecture to test
   context?: string[]; // Supporting documentation
@@ -74,9 +76,9 @@ export interface RedBlueResult {
 
 export const DEFAULT_CONFIG: RedBlueConfig = {
   models: {
-    blueTeam: "claude-3-7-sonnet-20250219",
-    redTeam: "claude-3-7-sonnet-20250219",
-    observer: "claude-3-7-sonnet-20250219",
+    blueTeam: DEFAULT_MODELS.CLAUDE_SONNET,
+    redTeam: DEFAULT_MODELS.CLAUDE_SONNET,
+    observer: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     rounds: 3,

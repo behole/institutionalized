@@ -1,6 +1,8 @@
 // Core types for Talmudic Dialectic Framework
 // Multi-interpretation reasoning from Jewish textual tradition
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface TextualProblem {
   text: string;
   context?: string;
@@ -71,10 +73,10 @@ export interface TalmudicConfig {
 
 export const DEFAULT_CONFIG: TalmudicConfig = {
   models: {
-    interpreter1: "claude-3-7-sonnet-20250219",
-    interpreter2: "claude-3-7-sonnet-20250219",
-    interpreter3: "claude-3-7-sonnet-20250219",
-    resolver: "claude-3-7-sonnet-20250219",
+    interpreter1: DEFAULT_MODELS.CLAUDE_SONNET,
+    interpreter2: DEFAULT_MODELS.CLAUDE_SONNET,
+    interpreter3: DEFAULT_MODELS.CLAUDE_SONNET,
+    resolver: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     interpreterCount: 3,

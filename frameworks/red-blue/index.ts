@@ -7,6 +7,7 @@ import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
 import { runRedBlue } from "./orchestrator";
 import type { Target, RedBlueConfig, RedBlueResult } from "./types";
+import type { RunFlags } from "@core/types";
 import { DEFAULT_CONFIG } from "./types";
 
 /**
@@ -14,7 +15,7 @@ import { DEFAULT_CONFIG } from "./types";
  */
 export async function run(
   input: Target | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<RedBlueResult> {
   // If input is plain text, wrap it as a target
   const target: Target =
@@ -30,9 +31,11 @@ export async function run(
     ...(flags.config || {}),
   };
 
+  const cliFlags = flags as Record<string, unknown>;
+
   // Override from flags
-  if (flags.rounds) {
-    config.parameters.rounds = parseInt(flags.rounds, 10);
+  if (cliFlags.rounds) {
+    config.parameters.rounds = parseInt(String(cliFlags.rounds), 10);
   }
 
   // Create provider
@@ -48,7 +51,7 @@ export async function run(
     target,
     config,
     provider,
-    flags.verbose || false
+    flags.debug ?? false
   );
 
   return result;

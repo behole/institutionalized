@@ -3,6 +3,8 @@
  * Assumption testing through systematic questioning
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Statement {
   claim: string;
   context?: string;
@@ -47,8 +49,8 @@ export interface SocraticConfig {
 
 export const DEFAULT_CONFIG: SocraticConfig = {
   models: {
-    questioner: "claude-3-7-sonnet-20250219",
-    respondent: "claude-3-7-sonnet-20250219",
+    questioner: DEFAULT_MODELS.CLAUDE_SONNET,
+    respondent: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.5,

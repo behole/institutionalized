@@ -3,6 +3,8 @@
  * Multi-perspective analysis (Edward de Bono)
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Analysis {
   question: string;
   context?: string;
@@ -47,8 +49,8 @@ export interface SixHatsResult {
 
 export const DEFAULT_CONFIG: SixHatsConfig = {
   models: {
-    hat: "claude-3-7-sonnet-20250219",
-    facilitator: "claude-3-7-sonnet-20250219",
+    hat: DEFAULT_MODELS.CLAUDE_SONNET,
+    facilitator: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.6,

@@ -7,21 +7,24 @@ import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
 import { runPeerReview, getDefaultConfig, formatResult } from "./orchestrator";
 import type { Submission, PeerReviewConfig, PeerReviewResult } from "./types";
+import type { RunFlags } from "@core/types";
 
 /**
  * Main entry point for CLI
  */
 export async function run(
   input: Submission | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<PeerReviewResult> {
+  const cliFlags = flags as Record<string, unknown>;
+
   // If input is plain text, wrap it as a submission
   const submission: Submission =
     "work" in input
       ? input
       : {
           work: input.content || "",
-          reviewType: flags.reviewType || "general",
+          reviewType: String(cliFlags.reviewType || "general"),
         };
 
   // Get configuration
@@ -31,11 +34,11 @@ export async function run(
   };
 
   // Override from flags
-  if (flags.reviewers) {
-    config.parameters.numReviewers = parseInt(flags.reviewers, 10);
+  if (cliFlags.reviewers) {
+    config.parameters.numReviewers = parseInt(String(cliFlags.reviewers), 10);
   }
 
-  if (flags.noRebuttal) {
+  if (cliFlags.noRebuttal) {
     config.parameters.enableRebuttal = false;
   }
 
@@ -47,16 +50,18 @@ export async function run(
     apiKey,
   });
 
+  const verbose = flags.debug ?? false;
+
   // Run peer review
   const result = await runPeerReview(
     submission,
     config,
     provider,
-    flags.verbose || false
+    verbose
   );
 
   // Print formatted result if verbose
-  if (flags.verbose) {
+  if (verbose) {
     console.log(formatResult(result));
   }
 

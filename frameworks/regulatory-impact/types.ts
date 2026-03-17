@@ -1,6 +1,8 @@
 // Core types for Regulatory Impact Assessment Framework
 // Government policy analysis for comprehensive impact prediction
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Policy {
   title: string;
   description: string;
@@ -97,12 +99,12 @@ export interface RegulatoryImpactConfig {
 
 export const DEFAULT_CONFIG: RegulatoryImpactConfig = {
   models: {
-    economic: "claude-3-7-sonnet-20250219",
-    social: "claude-3-7-sonnet-20250219",
-    environmental: "claude-3-7-sonnet-20250219",
-    stakeholder: "claude-3-7-sonnet-20250219",
-    risk: "claude-3-7-sonnet-20250219",
-    synthesizer: "claude-3-7-sonnet-20250219",
+    economic: DEFAULT_MODELS.CLAUDE_SONNET,
+    social: DEFAULT_MODELS.CLAUDE_SONNET,
+    environmental: DEFAULT_MODELS.CLAUDE_SONNET,
+    stakeholder: DEFAULT_MODELS.CLAUDE_SONNET,
+    risk: DEFAULT_MODELS.CLAUDE_SONNET,
+    synthesizer: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.5,

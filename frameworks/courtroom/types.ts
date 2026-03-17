@@ -1,5 +1,7 @@
 // Core types for Courtroom POC
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Case {
   question: string;
   context: string[];
@@ -93,10 +95,10 @@ export interface CourtroomConfig {
 
 export const DEFAULT_CONFIG: CourtroomConfig = {
   models: {
-    prosecutor: "claude-3-7-sonnet-20250219",
-    defense: "claude-3-7-sonnet-20250219",
-    jury: "claude-3-7-sonnet-20250219",
-    judge: "claude-3-7-sonnet-20250219",
+    prosecutor: DEFAULT_MODELS.CLAUDE_SONNET,
+    defense: DEFAULT_MODELS.CLAUDE_SONNET,
+    jury: DEFAULT_MODELS.CLAUDE_SONNET,
+    judge: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     jurySize: 5,

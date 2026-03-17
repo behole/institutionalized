@@ -3,6 +3,8 @@
  * Deep proposal validation through doctoral examination
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Proposal {
   title: string;
   abstract: string;
@@ -51,8 +53,8 @@ export interface PhDDefenseOutput {
 
 export const DEFAULT_CONFIG: PhDDefenseConfig = {
   models: {
-    committee: "claude-3-7-sonnet-20250219",
-    chair: "claude-3-7-sonnet-20250219",
+    committee: DEFAULT_MODELS.CLAUDE_SONNET,
+    chair: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.5,

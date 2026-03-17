@@ -3,6 +3,8 @@
  * Structured situational assessment for strategic planning
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Situation {
   entity: string; // Company, product, project, etc.
   description: string;
@@ -63,9 +65,9 @@ export interface SWOTResult {
 
 export const DEFAULT_CONFIG: SWOTConfig = {
   models: {
-    internalAnalyst: "claude-3-7-sonnet-20250219",
-    externalAnalyst: "claude-3-7-sonnet-20250219",
-    strategist: "claude-3-7-sonnet-20250219",
+    internalAnalyst: DEFAULT_MODELS.CLAUDE_SONNET,
+    externalAnalyst: DEFAULT_MODELS.CLAUDE_SONNET,
+    strategist: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.5,

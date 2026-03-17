@@ -6,13 +6,13 @@
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
 import { parseJSON, executeParallel } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { LLMProvider, RunFlags } from "@core/types";
 import type { DesignWork, PeerFeedback, StakeholderInput, CritiqueSynthesis, DesignCritiqueConfig, DesignCritiqueResult } from "./types";
 import { DEFAULT_CONFIG } from "./types";
 
 export async function run(
   input: DesignWork | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<DesignCritiqueResult> {
   const design: DesignWork = "title" in input
     ? input
@@ -25,15 +25,16 @@ export async function run(
       };
 
   const config: DesignCritiqueConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  if (flags.peers) {
-    config.parameters.peerCount = parseInt(flags.peers, 10);
+  const cliFlags = flags as Record<string, unknown>;
+  if (cliFlags.peers) {
+    config.parameters.peerCount = parseInt(String(cliFlags.peers), 10);
   }
 
   const providerName = flags.provider || "anthropic";
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
-  const verbose = flags.verbose || false;
+  const verbose = flags.debug ?? false;
 
   if (verbose) console.log("\n🎨 DESIGN CRITIQUE\n");
 

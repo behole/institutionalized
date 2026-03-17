@@ -3,6 +3,8 @@
  * Diagnostic reasoning under uncertainty - CIA analytical method
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Problem {
   question: string;
   evidence: string[];
@@ -66,8 +68,8 @@ export interface IntelligenceAnalysisResult {
 
 export const DEFAULT_CONFIG: IntelligenceAnalysisConfig = {
   models: {
-    analyst: "claude-3-7-sonnet-20250219",
-    evaluator: "claude-3-7-sonnet-20250219",
+    analyst: DEFAULT_MODELS.CLAUDE_SONNET,
+    evaluator: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.5,

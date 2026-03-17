@@ -3,6 +3,8 @@
  * Multi-specialist consensus for complex decisions
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Case {
   caseId: string;
   summary: string;
@@ -62,8 +64,8 @@ export interface TumorBoardResult {
 
 export const DEFAULT_CONFIG: TumorBoardConfig = {
   models: {
-    specialist: "claude-3-7-sonnet-20250219",
-    chair: "claude-3-7-sonnet-20250219",
+    specialist: DEFAULT_MODELS.CLAUDE_SONNET,
+    chair: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.4,

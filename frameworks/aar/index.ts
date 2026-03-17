@@ -6,13 +6,13 @@
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
 import { parseJSON } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { LLMProvider, RunFlags } from "@core/types";
 import type { ActionReview, AARConfig, AARResult } from "./types";
 import { DEFAULT_CONFIG } from "./types";
 
 export async function run(
   input: ActionReview | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<AARResult> {
   const review: ActionReview = "situation" in input
     ? input
@@ -23,7 +23,7 @@ export async function run(
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
-  const verbose = flags.verbose || false;
+  const verbose = flags.debug ?? false;
 
   if (verbose) console.log("\n🔄 AFTER-ACTION REVIEW\n");
 

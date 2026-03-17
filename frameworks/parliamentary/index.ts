@@ -6,28 +6,29 @@
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
 import { parseJSON, executeParallel } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { LLMProvider, RunFlags } from "@core/types";
 import type { Motion, Speech, DebateRecord, Vote, ParliamentaryResult, ParliamentaryConfig } from "./types";
 import { DEFAULT_CONFIG } from "./types";
 
 export async function run(
   input: Motion | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<ParliamentaryResult> {
   const motion: Motion = "motion" in input
     ? input
     : { motion: input.content || "", context: "" };
 
   const config: ParliamentaryConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  if (flags.backbenchers) {
-    config.parameters.backbenchCount = parseInt(flags.backbenchers, 10);
+  const cliFlags = flags as Record<string, unknown>;
+  if (cliFlags.backbenchers) {
+    config.parameters.backbenchCount = parseInt(String(cliFlags.backbenchers), 10);
   }
 
   const providerName = flags.provider || "anthropic";
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
-  const verbose = flags.verbose || false;
+  const verbose = flags.debug ?? false;
 
   if (verbose) console.log("\n🏛️  PARLIAMENTARY DEBATE\n");
 

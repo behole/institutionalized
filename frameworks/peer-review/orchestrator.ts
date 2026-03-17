@@ -2,6 +2,7 @@
  * Orchestrator - coordinates the full peer review process
  */
 
+import { DEFAULT_MODELS } from "@core/config";
 import type { LLMProvider } from "../../core/types";
 import type {
   Submission,
@@ -124,9 +125,9 @@ export async function runPeerReview(
 export function getDefaultConfig(): PeerReviewConfig {
   return {
     models: {
-      reviewers: "claude-3-5-sonnet-20241022",
-      author: "claude-3-7-sonnet-20250219",
-      editor: "claude-3-7-sonnet-20250219",
+      reviewers: DEFAULT_MODELS.CLAUDE_SONNET,
+      author: DEFAULT_MODELS.CLAUDE_SONNET,
+      editor: DEFAULT_MODELS.CLAUDE_SONNET,
     },
     parameters: {
       numReviewers: 3,

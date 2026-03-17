@@ -1,6 +1,8 @@
 // Core types for War Gaming Framework
 // Military scenario testing for strategic planning
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Scenario {
   description: string;
   context: string[];
@@ -93,10 +95,10 @@ export interface WarGamingConfig {
 
 export const DEFAULT_CONFIG: WarGamingConfig = {
   models: {
-    "blue-force": "claude-3-7-sonnet-20250219",
-    "red-force": "claude-3-7-sonnet-20250219",
-    control: "claude-3-7-sonnet-20250219",
-    observer: "claude-3-7-sonnet-20250219",
+    "blue-force": DEFAULT_MODELS.CLAUDE_SONNET,
+    "red-force": DEFAULT_MODELS.CLAUDE_SONNET,
+    control: DEFAULT_MODELS.CLAUDE_SONNET,
+    observer: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     maxTurns: 5,

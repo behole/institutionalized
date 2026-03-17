@@ -4,6 +4,7 @@
  */
 
 import type { DissertationWork, DissertationCommitteeConfig, DissertationCommitteeResult } from "./types";
+import type { RunFlags } from "@core/types";
 import { DEFAULT_CONFIG } from "./types";
 
 /**
@@ -11,7 +12,7 @@ import { DEFAULT_CONFIG } from "./types";
  */
 export async function run(
   input: DissertationWork | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<DissertationCommitteeResult> {
   // If input is plain text, wrap it as a dissertation work
   const workInput: DissertationWork =

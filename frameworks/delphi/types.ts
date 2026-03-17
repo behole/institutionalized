@@ -3,6 +3,8 @@
  * Anonymous expert consensus building through iterative rounds
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Question {
   question: string;
   context?: string;
@@ -65,8 +67,8 @@ export interface DelphiConfig {
 
 export const DEFAULT_CONFIG: DelphiConfig = {
   models: {
-    expert: "claude-3-7-sonnet-20250219",
-    facilitator: "claude-3-7-sonnet-20250219",
+    expert: DEFAULT_MODELS.CLAUDE_SONNET,
+    facilitator: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.6,

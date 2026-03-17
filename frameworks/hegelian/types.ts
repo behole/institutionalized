@@ -1,6 +1,8 @@
 // Core types for Hegelian Dialectic Framework
 // Thesis-Antithesis-Synthesis for resolving contradictions
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface DialecticalProblem {
   context: string;
   thesis: string;
@@ -72,9 +74,9 @@ export interface HegelianConfig {
 
 export const DEFAULT_CONFIG: HegelianConfig = {
   models: {
-    thesis: "claude-3-7-sonnet-20250219",
-    antithesis: "claude-3-7-sonnet-20250219",
-    synthesis: "claude-3-7-sonnet-20250219",
+    thesis: DEFAULT_MODELS.CLAUDE_SONNET,
+    antithesis: DEFAULT_MODELS.CLAUDE_SONNET,
+    synthesis: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.8,

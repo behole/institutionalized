@@ -6,13 +6,13 @@
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
 import { parseJSON, executeParallel } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { LLMProvider, RunFlags } from "@core/types";
 import type { ArchitectureProposal, SpecialistReview, BoardDecision, ArchitectureReviewConfig, ArchitectureReviewResult } from "./types";
 import { DEFAULT_CONFIG } from "./types";
 
 export async function run(
   input: ArchitectureProposal | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<ArchitectureReviewResult> {
   const proposal: ArchitectureProposal = "title" in input
     ? input
@@ -23,15 +23,16 @@ export async function run(
       };
 
   const config: ArchitectureReviewConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  if (flags.domains) {
-    config.domains = flags.domains.split(",");
+  const cliFlags = flags as Record<string, unknown>;
+  if (cliFlags.domains) {
+    config.domains = String(cliFlags.domains).split(",");
   }
 
   const providerName = flags.provider || "anthropic";
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
-  const verbose = flags.verbose || false;
+  const verbose = flags.debug ?? false;
 
   if (verbose) console.log("\n🏛️  ARCHITECTURE REVIEW BOARD\n");
 

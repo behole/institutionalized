@@ -6,28 +6,29 @@
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
 import { parseJSON, executeParallel } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { LLMProvider, RunFlags } from "@core/types";
 import type { Proposal, ParticipantVoice, ConsensusRound, ConsensusDecision, ConsensusCircleConfig, ConsensusCircleResult } from "./types";
 import { DEFAULT_CONFIG } from "./types";
 
 export async function run(
   input: Proposal | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<ConsensusCircleResult> {
   const proposal: Proposal = "question" in input
     ? input
     : { question: input.content || "", context: "" };
 
   const config: ConsensusCircleConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  if (flags.participants) {
-    config.parameters.participantCount = parseInt(flags.participants, 10);
+  const cliFlags = flags as Record<string, unknown>;
+  if (cliFlags.participants) {
+    config.parameters.participantCount = parseInt(String(cliFlags.participants), 10);
   }
 
   const providerName = flags.provider || "anthropic";
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
-  const verbose = flags.verbose || false;
+  const verbose = flags.debug ?? false;
 
   if (verbose) console.log("\n🕊️  CONSENSUS CIRCLE\n");
 

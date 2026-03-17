@@ -3,6 +3,8 @@
  * Quaker-style decision-making through consensus without voting
  */
 
+import { DEFAULT_MODELS } from "@core/config";
+
 export interface Proposal {
   question: string;
   context: string;
@@ -62,8 +64,8 @@ export interface ConsensusCircleResult {
 
 export const DEFAULT_CONFIG: ConsensusCircleConfig = {
   models: {
-    participant: "claude-3-7-sonnet-20250219",
-    clerk: "claude-3-7-sonnet-20250219",
+    participant: DEFAULT_MODELS.CLAUDE_SONNET,
+    clerk: DEFAULT_MODELS.CLAUDE_SONNET,
   },
   parameters: {
     temperature: 0.6,

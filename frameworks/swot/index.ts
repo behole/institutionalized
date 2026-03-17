@@ -6,13 +6,13 @@
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
 import { parseJSON } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { LLMProvider, RunFlags } from "@core/types";
 import type { Situation, InternalAnalysis, ExternalAnalysis, StrategicRecommendations, SWOTConfig, SWOTResult } from "./types";
 import { DEFAULT_CONFIG } from "./types";
 
 export async function run(
   input: Situation | { content: string },
-  flags: Record<string, any> = {}
+  flags: RunFlags = {}
 ): Promise<SWOTResult> {
   const situation: Situation = "entity" in input
     ? input
@@ -24,7 +24,7 @@ export async function run(
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
-  const verbose = flags.verbose || false;
+  const verbose = flags.debug ?? false;
 
   if (verbose) console.log("\n📊 SWOT ANALYSIS\n");
 
