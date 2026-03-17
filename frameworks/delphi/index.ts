@@ -161,7 +161,7 @@ async function synthesizeConsensus(
 
   const finalRound = rounds[rounds.length - 1];
   const roundsText = rounds.map((r) =>
-    `Round ${r.round}: Median=${r.median}, Mean=${r.mean}, Range=${r.range.min}-${r.range.max}, Convergence=${r.convergence.toFixed(3)}`
+    `Round ${r.round}: Median=${r.statistics.median}, Mean=${r.statistics.mean}, Range=${r.statistics.range.min}-${r.statistics.range.max}, Convergence=${r.convergence.toFixed(3)}`
   ).join("\n");
 
   const response = await provider.call({

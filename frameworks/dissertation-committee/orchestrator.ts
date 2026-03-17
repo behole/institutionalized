@@ -95,7 +95,7 @@ export async function runCommitteeReview(
   };
 }
 
-function formCommittee(work: DissertationWork, config: DissertationCommitteeConfig): CommitteeMember[] {
+function formDefaultCommittee(work: DissertationWork, config: DissertationCommitteeConfig): CommitteeMember[] {
   const committee: CommitteeMember[] = [
     {
       name: "Primary Advisor",
