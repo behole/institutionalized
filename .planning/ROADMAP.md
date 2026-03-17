@@ -37,7 +37,7 @@ Plans:
 - [x] 01-02-PLAN.md — Anthropic system message bug fix + SDK upgrade
 - [x] 01-03-PLAN.md — Retry/timeout infrastructure + concurrency semaphore
 - [x] 01-04-PLAN.md — RunFlags interface + DEFAULT_MODELS across all 26 frameworks
-- [ ] 01-05-PLAN.md — Gap closure: fix 15 remaining TypeScript strict-mode errors
+- [x] 01-05-PLAN.md — Gap closure: fix 15 remaining TypeScript strict-mode errors
 
 ### Phase 2: Framework Standardization
 **Goal**: All 26 frameworks follow consistent patterns — FrameworkRunner for orchestration, `@core/*` imports, and accurate cost tracking
@@ -48,7 +48,12 @@ Plans:
   2. All 26 frameworks use `@core/*` import paths with zero relative `../../core` traversals
   3. Running any of the 7 previously-broken frameworks (courtroom, writers-workshop, hegelian, regulatory-impact, war-gaming, talmudic, dissertation-committee) reports a non-zero cost in the audit trail
   4. Courtroom framework routes through `LLMProvider` abstraction — provider selection and cost tracking work the same as any other framework
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 02-01-PLAN.md — Courtroom fixture capture + full LLMProvider/FrameworkRunner refactor
+- [ ] 02-02-PLAN.md — 6 broken generateObject frameworks migration (hegelian, writers-workshop, talmudic, regulatory-impact, war-gaming, dissertation-committee)
+- [ ] 02-03-PLAN.md — 4 orchestrator frameworks FrameworkRunner adoption (pre-mortem, red-blue, studio, peer-review) + peer-review import fix
+- [ ] 02-04-PLAN.md — 15 index.ts-consolidated frameworks FrameworkRunner adoption + final cross-cutting audit
 
 ### Phase 3: Registry and Entry Point Cleanup
 **Goal**: A single `core/registry.ts` source of truth eliminates duplication between CLI and MCP, and the MCP server correctly exposes all 26 frameworks
@@ -102,7 +107,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 (Phase 6 can proceed 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Hardening | 5/5 | Complete   | 2026-03-17 |
-| 2. Framework Standardization | 0/TBD | Not started | - |
+| 2. Framework Standardization | 0/4 | Planning complete | - |
 | 3. Registry and Entry Point Cleanup | 0/TBD | Not started | - |
 | 4. Test Infrastructure | 0/TBD | Not started | - |
 | 5. npm Package | 0/TBD | Not started | - |
