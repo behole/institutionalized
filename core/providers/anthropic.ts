@@ -10,18 +10,17 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   async call(params: LLMCallParams): Promise<LLMResponse> {
-    const messages = params.systemPrompt
-      ? [{ role: "system" as const, content: params.systemPrompt }, ...params.messages]
-      : params.messages;
-
     const response = await this.client.messages.create({
       model: params.model,
       max_tokens: params.maxTokens || 4096,
       temperature: params.temperature ?? 0.7,
-      messages: messages.map((m) => ({
-        role: m.role === "system" ? "user" : m.role,
-        content: m.content,
-      })),
+      system: params.systemPrompt,
+      messages: params.messages
+        .filter((m) => m.role !== "system")
+        .map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        })),
     });
 
     const content = response.content[0];
