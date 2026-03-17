@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { LLMProvider, LLMCallParams, LLMResponse } from "../types";
+import { withRetry } from "../retry";
 
 export class AnthropicProvider implements LLMProvider {
   name = "anthropic";
@@ -10,36 +11,48 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   async call(params: LLMCallParams): Promise<LLMResponse> {
-    const response = await this.client.messages.create({
-      model: params.model,
-      max_tokens: params.maxTokens || 4096,
-      temperature: params.temperature ?? 0.7,
-      system: params.systemPrompt,
-      messages: params.messages
-        .filter((m) => m.role !== "system")
-        .map((m) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-        })),
-    });
+    const context = { model: params.model };
 
-    const content = response.content[0];
-    if (content.type !== "text") {
-      throw new Error("Expected text response from Anthropic");
-    }
+    return withRetry(
+      async (signal) => {
+        // Combine caller-supplied signal with per-attempt timeout signal
+        const combinedSignal = params.signal
+          ? AbortSignal.any([signal, params.signal])
+          : signal;
 
-    return {
-      content: content.text,
-      model: response.model,
-      usage: {
-        inputTokens: response.usage.input_tokens,
-        outputTokens: response.usage.output_tokens,
+        const response = await this.client.messages.create({
+          model: params.model,
+          max_tokens: params.maxTokens || 4096,
+          temperature: params.temperature ?? 0.7,
+          system: params.systemPrompt,
+          messages: params.messages
+            .filter((m) => m.role !== "system")
+            .map((m) => ({
+              role: m.role as "user" | "assistant",
+              content: m.content,
+            })),
+        }, { signal: combinedSignal });
+
+        const content = response.content[0];
+        if (content.type !== "text") {
+          throw new Error("Expected text response from Anthropic");
+        }
+
+        return {
+          content: content.text,
+          model: response.model,
+          usage: {
+            inputTokens: response.usage.input_tokens,
+            outputTokens: response.usage.output_tokens,
+          },
+          metadata: {
+            id: response.id,
+            stopReason: response.stop_reason ?? undefined,
+          },
+        };
       },
-      metadata: {
-        id: response.id,
-        stopReason: response.stop_reason ?? undefined,
-      },
-    };
+      { context }
+    );
   }
 
   calculateCost(

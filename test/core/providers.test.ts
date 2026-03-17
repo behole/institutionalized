@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test";
+import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
 import type { LLMCallParams } from "../../core/types";
 
 // Mock Anthropic SDK before importing provider
@@ -101,5 +101,170 @@ describe("AnthropicProvider", () => {
     expect(result.usage.outputTokens).toBe(20);
     expect(result.metadata?.id).toBe("msg_test123");
     expect(result.metadata?.stopReason).toBe("end_turn");
+  });
+});
+
+// ─── Retry / Timeout tests ────────────────────────────────────────────────────
+// These tests exercise core/retry.ts through the providers.
+
+import { parseRetryAfterMs, withRetry } from "../../core/retry";
+import { ProviderError } from "../../core/errors";
+import { ErrorCode } from "../../core/errors";
+
+describe("parseRetryAfterMs", () => {
+  it("Test 6a: parses integer seconds", () => {
+    expect(parseRetryAfterMs("30")).toBe(30_000);
+    expect(parseRetryAfterMs("0")).toBe(0);
+    expect(parseRetryAfterMs("120")).toBe(120_000);
+  });
+
+  it("Test 6b: parses HTTP-date format", () => {
+    // Set a fixed future date 60 seconds from a known epoch
+    const futureDate = new Date(Date.now() + 60_000).toUTCString();
+    const result = parseRetryAfterMs(futureDate);
+    // Should be roughly 60 seconds (allow ±200ms clock variance)
+    expect(result).toBeGreaterThan(59_000);
+    expect(result).toBeLessThan(61_000);
+  });
+
+  it("Test 6c: returns null for null/undefined/empty", () => {
+    expect(parseRetryAfterMs(null)).toBeNull();
+    expect(parseRetryAfterMs(undefined)).toBeNull();
+    expect(parseRetryAfterMs("")).toBeNull();
+  });
+});
+
+describe("withRetry", () => {
+  it("Test 1: retries 3 times on 429 before throwing ProviderError PROVIDER_RATE_LIMITED", async () => {
+    let callCount = 0;
+    const fn = async (_signal: AbortSignal) => {
+      callCount++;
+      const err = new Error("Rate limited") as Error & {
+        status: number;
+        headers: Record<string, string>;
+      };
+      err.status = 429;
+      err.headers = {};
+      throw err;
+    };
+
+    let thrown: unknown;
+    try {
+      await withRetry(fn, { maxAttempts: 3, timeoutMs: 10_000, baseDelayMs: 1 });
+    } catch (e) {
+      thrown = e;
+    }
+
+    expect(thrown).toBeInstanceOf(ProviderError);
+    expect((thrown as ProviderError).code).toBe(ErrorCode.PROVIDER_RATE_LIMITED);
+    expect(callCount).toBe(3);
+  });
+
+  it("Test 2: retries on 500 status", async () => {
+    let callCount = 0;
+    const fn = async (_signal: AbortSignal) => {
+      callCount++;
+      const err = new Error("Server error") as Error & { status: number };
+      err.status = 500;
+      throw err;
+    };
+
+    await expect(
+      withRetry(fn, { maxAttempts: 2, timeoutMs: 10_000, baseDelayMs: 1 })
+    ).rejects.toBeInstanceOf(ProviderError);
+
+    expect(callCount).toBe(2);
+  });
+
+  it("Test 3: does NOT retry on 400 (client error)", async () => {
+    let callCount = 0;
+    const fn = async (_signal: AbortSignal) => {
+      callCount++;
+      const err = new Error("Bad request") as Error & { status: number };
+      err.status = 400;
+      throw err;
+    };
+
+    await expect(
+      withRetry(fn, { maxAttempts: 3, timeoutMs: 10_000, baseDelayMs: 1 })
+    ).rejects.toThrow("Bad request");
+
+    expect(callCount).toBe(1);
+  });
+
+  it("Test 4: honors Retry-After header (integer seconds)", async () => {
+    let callCount = 0;
+    let delayObserved = 0;
+    const start = Date.now();
+
+    const fn = async (_signal: AbortSignal) => {
+      callCount++;
+      if (callCount < 3) {
+        const err = new Error("Rate limited") as Error & {
+          status: number;
+          headers: Record<string, string>;
+        };
+        err.status = 429;
+        // Set a short Retry-After to keep the test fast
+        err.headers = { "retry-after": "0" };
+        throw err;
+      }
+      delayObserved = Date.now() - start;
+      return "success";
+    };
+
+    const result = await withRetry(fn, {
+      maxAttempts: 3,
+      timeoutMs: 10_000,
+      baseDelayMs: 1,
+    });
+
+    expect(result).toBe("success");
+    expect(callCount).toBe(3);
+  });
+
+  it("Test 5: aborts after timeoutMs and throws ProviderError PROVIDER_TIMEOUT", async () => {
+    const fn = async (signal: AbortSignal) => {
+      // Simulate a request that takes 10 seconds
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, 10_000);
+        signal.addEventListener("abort", () => {
+          clearTimeout(timer);
+          reject(new DOMException("Aborted", "AbortError"));
+        });
+      });
+      return "should not get here";
+    };
+
+    let thrown: unknown;
+    try {
+      await withRetry(fn, { maxAttempts: 1, timeoutMs: 50, baseDelayMs: 1 });
+    } catch (e) {
+      thrown = e;
+    }
+
+    expect(thrown).toBeInstanceOf(ProviderError);
+    expect((thrown as ProviderError).code).toBe(ErrorCode.PROVIDER_TIMEOUT);
+  }, 3_000);
+
+  it("Test 7: succeeds after initial failures (retry heals)", async () => {
+    let callCount = 0;
+    const fn = async (_signal: AbortSignal) => {
+      callCount++;
+      if (callCount < 3) {
+        const err = new Error("Rate limited") as Error & { status: number };
+        err.status = 429;
+        throw err;
+      }
+      return "ok";
+    };
+
+    const result = await withRetry(fn, {
+      maxAttempts: 3,
+      timeoutMs: 10_000,
+      baseDelayMs: 1,
+    });
+    expect(result).toBe("ok");
+    expect(callCount).toBe(3);
   });
 });

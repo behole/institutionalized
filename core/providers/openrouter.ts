@@ -1,4 +1,5 @@
 import type { LLMProvider, LLMCallParams, LLMResponse } from "../types";
+import { withRetry } from "../retry";
 
 export class OpenRouterProvider implements LLMProvider {
   name = "openrouter";
@@ -14,45 +15,63 @@ export class OpenRouterProvider implements LLMProvider {
       ? [{ role: "system" as const, content: params.systemPrompt }, ...params.messages]
       : params.messages;
 
-    const response = await fetch(`${this.baseURL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
-        "HTTP-Referer": "https://github.com/institutional-reasoning",
-        "X-Title": "Institutional Reasoning",
-      },
-      body: JSON.stringify({
-        model: params.model,
-        messages: messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-        temperature: params.temperature ?? 0.7,
-        max_tokens: params.maxTokens || 4096,
-      }),
-    });
+    const context = { model: params.model };
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
-    }
+    return withRetry(
+      async (signal) => {
+        const combinedSignal = params.signal
+          ? AbortSignal.any([signal, params.signal])
+          : signal;
 
-    const data = await response.json();
-    const choice = data.choices[0];
+        const response = await fetch(`${this.baseURL}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.apiKey}`,
+            "HTTP-Referer": "https://github.com/institutional-reasoning",
+            "X-Title": "Institutional Reasoning",
+          },
+          body: JSON.stringify({
+            model: params.model,
+            messages: messages.map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+            temperature: params.temperature ?? 0.7,
+            max_tokens: params.maxTokens || 4096,
+          }),
+          signal: combinedSignal,
+        });
 
-    return {
-      content: choice.message.content,
-      model: data.model,
-      usage: {
-        inputTokens: data.usage.prompt_tokens,
-        outputTokens: data.usage.completion_tokens,
+        if (!response.ok) {
+          const error = await response.text();
+          const err = new Error(`OpenRouter API error: ${response.status} - ${error}`) as Error & {
+            status: number;
+            response: Response;
+          };
+          err.status = response.status;
+          err.response = response;
+          throw err;
+        }
+
+        const data = await response.json();
+        const choice = data.choices[0];
+
+        return {
+          content: choice.message.content,
+          model: data.model,
+          usage: {
+            inputTokens: data.usage.prompt_tokens,
+            outputTokens: data.usage.completion_tokens,
+          },
+          metadata: {
+            id: data.id,
+            stopReason: choice.finish_reason,
+          },
+        };
       },
-      metadata: {
-        id: data.id,
-        stopReason: choice.finish_reason,
-      },
-    };
+      { context }
+    );
   }
 
   calculateCost(
