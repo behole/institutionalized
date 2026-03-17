@@ -44,6 +44,7 @@ export interface SixHatsResult {
   metadata: {
     timestamp: string;
     config: SixHatsConfig;
+    costUSD?: number;
   };
 }
 

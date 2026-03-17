@@ -5,7 +5,7 @@
 
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
-import { parseJSON, executeParallel } from "@core/orchestrator";
+import { parseJSON, FrameworkRunner } from "@core/orchestrator";
 import type { LLMProvider, RunFlags } from "@core/types";
 import type { ArchitectureProposal, SpecialistReview, BoardDecision, ArchitectureReviewConfig, ArchitectureReviewResult } from "./types";
 import { DEFAULT_CONFIG } from "./types";
@@ -36,11 +36,13 @@ export async function run(
 
   if (verbose) console.log("\n🏛️  ARCHITECTURE REVIEW BOARD\n");
 
+  const runner = new FrameworkRunner<ArchitectureProposal, ArchitectureReviewResult>("architecture-review", proposal);
+
   // Phase 1: Domain specialists review
-  const reviews = await conductReviews(proposal, config, provider, verbose);
+  const reviews = await conductReviews(proposal, config, provider, runner, verbose);
 
   // Phase 2: Board chair synthesizes decision
-  const decision = await synthesizeDecision(proposal, reviews, config, provider, verbose);
+  const decision = await synthesizeDecision(proposal, reviews, config, provider, runner, verbose);
 
   if (verbose) {
     console.log(`\nDecision: ${decision.decision.toUpperCase()}`);
@@ -48,11 +50,18 @@ export async function run(
     console.log(`Required Changes: ${decision.requiredChanges.length}\n`);
   }
 
-  return {
+  const result: ArchitectureReviewResult = {
     proposal,
     reviews,
     decision,
     metadata: { timestamp: new Date().toISOString(), config },
+  };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
   };
 }
 
@@ -60,19 +69,19 @@ async function conductReviews(
   proposal: ArchitectureProposal,
   config: ArchitectureReviewConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<ArchitectureProposal, ArchitectureReviewResult>,
   verbose: boolean
 ): Promise<SpecialistReview[]> {
   if (verbose) console.log("Phase 1: Domain specialist reviews...\n");
 
-  const tasks = config.domains.map((domain) => async () => {
-    if (verbose) console.log(`  ${domain} specialist reviewing...`);
-
-    const response = await provider.call({
-      model: config.models.specialist,
-      temperature: config.parameters.temperature,
-      messages: [{
-        role: "user",
-        content: `You are an Architecture Review Board member specializing in: ${domain}
+  const responses = await runner.runParallel(
+    config.domains.map((domain) => {
+      if (verbose) console.log(`  ${domain} specialist reviewing...`);
+      return {
+        name: `specialist-${domain.toLowerCase().replace(/\s+/g, "-")}`,
+        provider,
+        model: config.models.specialist,
+        prompt: `You are an Architecture Review Board member specializing in: ${domain}
 
 ARCHITECTURE PROPOSAL: ${proposal.title}
 
@@ -97,14 +106,13 @@ Review this architecture from your domain perspective (${domain}) and provide as
 }
 
 Be thorough and identify potential issues specific to your domain.`,
-      }],
-      maxTokens: 2048,
-    });
+        temperature: config.parameters.temperature,
+        maxTokens: 2048,
+      };
+    })
+  );
 
-    return parseJSON<SpecialistReview>(response.content);
-  });
-
-  return executeParallel(tasks);
+  return responses.map((response) => parseJSON<SpecialistReview>(response.content));
 }
 
 async function synthesizeDecision(
@@ -112,6 +120,7 @@ async function synthesizeDecision(
   reviews: SpecialistReview[],
   config: ArchitectureReviewConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<ArchitectureProposal, ArchitectureReviewResult>,
   verbose: boolean
 ): Promise<BoardDecision> {
   if (verbose) console.log("\nPhase 2: Board chair synthesizing decision...\n");
@@ -120,12 +129,11 @@ async function synthesizeDecision(
     `${review.domain}:\nVerdict: ${review.verdict}\nRisk Level: ${review.riskLevel}\nConcerns: ${review.concerns.join(", ")}\nRecommendations: ${review.recommendations.join(", ")}\nRationale: ${review.rationale}\n`
   ).join("\n---\n\n");
 
-  const response = await provider.call({
-    model: config.models.chair,
-    temperature: config.parameters.temperature,
-    messages: [{
-      role: "user",
-      content: `You are the Architecture Review Board chair.
+  const response = await runner.runAgent(
+    "chair",
+    provider,
+    config.models.chair,
+    `You are the Architecture Review Board chair.
 
 PROPOSAL: ${proposal.title}
 
@@ -147,9 +155,9 @@ Decision criteria:
 - "approved_with_conditions": Minor issues, can proceed with documented conditions
 - "major_revisions": Significant concerns requiring redesign and re-review
 - "rejected": Fundamental flaws, not viable approach`,
-    }],
-    maxTokens: 2048,
-  });
+    config.parameters.temperature,
+    2048
+  );
 
   return parseJSON<BoardDecision>(response.content);
 }

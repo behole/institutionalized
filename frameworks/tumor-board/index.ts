@@ -5,7 +5,7 @@
 
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
-import { parseJSON, executeParallel } from "@core/orchestrator";
+import { parseJSON, FrameworkRunner } from "@core/orchestrator";
 import type { LLMProvider, RunFlags } from "@core/types";
 import type { Case, SpecialistInput, TeamDiscussion, Recommendation, TumorBoardConfig, TumorBoardResult } from "./types";
 import { DEFAULT_CONFIG } from "./types";
@@ -35,14 +35,16 @@ export async function run(
 
   if (verbose) console.log("\n🏥 MULTIDISCIPLINARY TEAM BOARD\n");
 
+  const runner = new FrameworkRunner<Case, TumorBoardResult>("tumor-board", caseData);
+
   // Phase 1: Specialist inputs
-  const specialistInputs = await gatherSpecialistInputs(caseData, config, provider, verbose);
+  const specialistInputs = await gatherSpecialistInputs(caseData, config, provider, runner, verbose);
 
   // Phase 2: Team discussion
-  const discussion = await facilitateDiscussion(caseData, specialistInputs, config, provider, verbose);
+  const discussion = await facilitateDiscussion(caseData, specialistInputs, config, provider, runner, verbose);
 
   // Phase 3: Consensus recommendation
-  const recommendation = await formulateRecommendation(caseData, specialistInputs, discussion, config, provider, verbose);
+  const recommendation = await formulateRecommendation(caseData, specialistInputs, discussion, config, provider, runner, verbose);
 
   if (verbose) {
     console.log(`\nSpecialists Consulted: ${specialistInputs.length}`);
@@ -50,12 +52,19 @@ export async function run(
     console.log(`Primary Recommendation: ${recommendation.primaryRecommendation}\n`);
   }
 
-  return {
+  const result: TumorBoardResult = {
     case: caseData,
     specialistInputs,
     discussion,
     recommendation,
     metadata: { timestamp: new Date().toISOString(), config },
+  };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
   };
 }
 
@@ -63,19 +72,19 @@ async function gatherSpecialistInputs(
   caseData: Case,
   config: TumorBoardConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Case, TumorBoardResult>,
   verbose: boolean
 ): Promise<SpecialistInput[]> {
   if (verbose) console.log("Phase 1: Gathering specialist inputs...\n");
 
-  const tasks = config.specialties.map((specialty) => async () => {
-    if (verbose) console.log(`  ${specialty} reviewing...`);
-
-    const response = await provider.call({
-      model: config.models.specialist,
-      temperature: config.parameters.temperature,
-      messages: [{
-        role: "user",
-        content: `You are a ${specialty} specialist in a multidisciplinary team meeting.
+  const responses = await runner.runParallel(
+    config.specialties.map((specialty) => {
+      if (verbose) console.log(`  ${specialty} reviewing...`);
+      return {
+        name: `specialist-${specialty.toLowerCase().replace(/\s+/g, "-")}`,
+        provider,
+        model: config.models.specialist,
+        prompt: `You are a ${specialty} specialist in a multidisciplinary team meeting.
 
 CASE: ${caseData.caseId}
 
@@ -94,14 +103,13 @@ Provide your specialist input in JSON:
   "concerns": ["concern 1", ...],
   "contraindications": ["contraindication 1", ...]
 }`,
-      }],
-      maxTokens: 1536,
-    });
+        temperature: config.parameters.temperature,
+        maxTokens: 1536,
+      };
+    })
+  );
 
-    return parseJSON<SpecialistInput>(response.content);
-  });
-
-  return executeParallel(tasks);
+  return responses.map((response) => parseJSON<SpecialistInput>(response.content));
 }
 
 async function facilitateDiscussion(
@@ -109,6 +117,7 @@ async function facilitateDiscussion(
   specialistInputs: SpecialistInput[],
   config: TumorBoardConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Case, TumorBoardResult>,
   verbose: boolean
 ): Promise<TeamDiscussion> {
   if (verbose) console.log("\nPhase 2: Facilitating team discussion...\n");
@@ -117,12 +126,11 @@ async function facilitateDiscussion(
     `${input.specialty}:\nAssessment: ${input.assessment}\nRecommendations: ${input.recommendations.join(", ")}\nConcerns: ${input.concerns.join(", ")}`
   ).join("\n\n");
 
-  const response = await provider.call({
-    model: config.models.chair,
-    temperature: config.parameters.temperature,
-    messages: [{
-      role: "user",
-      content: `You are chairing a multidisciplinary team discussion.
+  const response = await runner.runAgent(
+    "chair-discussion",
+    provider,
+    config.models.chair,
+    `You are chairing a multidisciplinary team discussion.
 
 CASE: ${caseData.caseId}
 
@@ -141,9 +149,9 @@ Synthesize the team discussion in JSON:
   ],
   "criticalFactors": ["critical factor 1", ...]
 }`,
-    }],
-    maxTokens: 1536,
-  });
+    config.parameters.temperature,
+    1536
+  );
 
   return parseJSON<TeamDiscussion>(response.content);
 }
@@ -154,6 +162,7 @@ async function formulateRecommendation(
   discussion: TeamDiscussion,
   config: TumorBoardConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Case, TumorBoardResult>,
   verbose: boolean
 ): Promise<Recommendation> {
   if (verbose) console.log("\nPhase 3: Formulating consensus recommendation...\n");
@@ -162,12 +171,11 @@ async function formulateRecommendation(
     `${input.specialty}: ${input.recommendations.join(", ")}`
   ).join("\n");
 
-  const response = await provider.call({
-    model: config.models.chair,
-    temperature: config.parameters.temperature,
-    messages: [{
-      role: "user",
-      content: `Formulate the multidisciplinary team's consensus recommendation.
+  const response = await runner.runAgent(
+    "chair-recommendation",
+    provider,
+    config.models.chair,
+    `Formulate the multidisciplinary team's consensus recommendation.
 
 CASE: ${caseData.caseId}
 
@@ -190,9 +198,9 @@ Provide consensus recommendation in JSON:
   "followUpPlan": ["follow-up step 1", ...],
   "contingencies": ["if X happens, then Y", ...]
 }`,
-    }],
-    maxTokens: 2048,
-  });
+    config.parameters.temperature,
+    2048
+  );
 
   return parseJSON<Recommendation>(response.content);
 }

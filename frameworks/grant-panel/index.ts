@@ -5,7 +5,7 @@
 
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
-import { parseJSON, executeParallel } from "@core/orchestrator";
+import { parseJSON, FrameworkRunner } from "@core/orchestrator";
 import type { LLMProvider, RunFlags } from "@core/types";
 import type { GrantProposal, ReviewerScore, PanelRanking, GrantPanelConfig, GrantPanelResult } from "./types";
 import { DEFAULT_CONFIG } from "./types";
@@ -35,11 +35,13 @@ export async function run(
 
   if (verbose) console.log("\n💰 GRANT REVIEW PANEL\n");
 
+  const runner = new FrameworkRunner<{ proposals: GrantProposal[] }, GrantPanelResult>("grant-panel", { proposals });
+
   // Phase 1: Independent reviewer scoring
-  const reviews = await scoreProposals(proposals, config, provider, verbose);
+  const reviews = await scoreProposals(proposals, config, provider, runner, verbose);
 
   // Phase 2: Panel calibration and ranking
-  const ranking = await calibrateAndRank(proposals, reviews, config, provider, verbose);
+  const ranking = await calibrateAndRank(proposals, reviews, config, provider, runner, verbose);
 
   if (verbose) {
     console.log(`\nProposals Reviewed: ${proposals.length}`);
@@ -47,11 +49,18 @@ export async function run(
     console.log(`Total Allocated: $${ranking.allocations.reduce((sum, a) => sum + a.amount, 0).toLocaleString()}\n`);
   }
 
-  return {
+  const result: GrantPanelResult = {
     proposals,
     reviews,
     ranking,
     metadata: { timestamp: new Date().toISOString(), config },
+  };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
   };
 }
 
@@ -71,23 +80,28 @@ async function scoreProposals(
   proposals: GrantProposal[],
   config: GrantPanelConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<{ proposals: GrantProposal[] }, GrantPanelResult>,
   verbose: boolean
 ): Promise<ReviewerScore[]> {
   if (verbose) console.log("Phase 1: Independent reviewer scoring...\n");
 
-  const tasks: Array<() => Promise<ReviewerScore>> = [];
+  const agentSpecs: Array<{
+    name: string;
+    provider: LLMProvider;
+    model: string;
+    prompt: string;
+    temperature: number;
+    maxTokens: number;
+  }> = [];
 
   for (const proposal of proposals) {
     for (let i = 0; i < config.parameters.reviewersPerProposal; i++) {
-      tasks.push(async () => {
-        if (verbose) console.log(`  Reviewer ${i + 1} scoring "${proposal.title}"...`);
-
-        const response = await provider.call({
-          model: config.models.reviewer,
-          temperature: config.parameters.temperature,
-          messages: [{
-            role: "user",
-            content: `You are a grant reviewer evaluating proposals.
+      if (verbose) console.log(`  Reviewer ${i + 1} scoring "${proposal.title}"...`);
+      agentSpecs.push({
+        name: `reviewer-${proposal.id}-${i + 1}`,
+        provider,
+        model: config.models.reviewer,
+        prompt: `You are a grant reviewer evaluating proposals.
 
 PROPOSAL: ${proposal.title}
 REQUESTED: $${proposal.requestedAmount.toLocaleString()} for ${proposal.duration}
@@ -112,16 +126,14 @@ Score this proposal (0-10 scale for each criterion) in JSON:
   "weaknesses": ["weakness 1", ...],
   "comments": "overall assessment"
 }`,
-          }],
-          maxTokens: 1536,
-        });
-
-        return parseJSON<ReviewerScore>(response.content);
+        temperature: config.parameters.temperature,
+        maxTokens: 1536,
       });
     }
   }
 
-  return executeParallel(tasks);
+  const responses = await runner.runParallel(agentSpecs);
+  return responses.map((response) => parseJSON<ReviewerScore>(response.content));
 }
 
 async function calibrateAndRank(
@@ -129,6 +141,7 @@ async function calibrateAndRank(
   reviews: ReviewerScore[],
   config: GrantPanelConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<{ proposals: GrantProposal[] }, GrantPanelResult>,
   verbose: boolean
 ): Promise<PanelRanking> {
   if (verbose) console.log("\nPhase 2: Panel calibration and ranking...\n");
@@ -143,12 +156,11 @@ async function calibrateAndRank(
     return `Proposal: ${proposal.title} (${proposal.id})\nRequested: $${proposal.requestedAmount.toLocaleString()}\nAverage Score: ${avgScore.toFixed(2)}\nReviews: ${reviews.map(r => `Score: ${r.overallScore}, Strengths: ${r.strengths.join(", ")}, Weaknesses: ${r.weaknesses.join(", ")}`).join(" | ")}\n`;
   }).join("\n---\n\n");
 
-  const response = await provider.call({
-    model: config.models.panel,
-    temperature: config.parameters.temperature,
-    messages: [{
-      role: "user",
-      content: `You are the grant review panel chair calibrating scores and making funding decisions.
+  const response = await runner.runAgent(
+    "panel-chair",
+    provider,
+    config.models.panel,
+    `You are the grant review panel chair calibrating scores and making funding decisions.
 
 TOTAL BUDGET: $${config.totalBudget.toLocaleString()}
 
@@ -177,9 +189,9 @@ Rank proposals and make funding recommendations in JSON:
 }
 
 Rank by quality, allocate budget to highest-ranked proposals until exhausted.`,
-    }],
-    maxTokens: 2048,
-  });
+    config.parameters.temperature,
+    2048
+  );
 
   return parseJSON<PanelRanking>(response.content);
 }

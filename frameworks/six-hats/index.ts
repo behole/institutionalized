@@ -5,7 +5,7 @@
 
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
-import { parseJSON, executeParallel } from "@core/orchestrator";
+import { parseJSON, FrameworkRunner } from "@core/orchestrator";
 import type { LLMProvider, RunFlags } from "@core/types";
 import type { Analysis, HatPerspective, SixHatsConfig, SixHatsResult } from "./types";
 import { DEFAULT_CONFIG } from "./types";
@@ -60,22 +60,31 @@ export async function run(
 
   if (verbose) console.log("\n🎩 SIX THINKING HATS ANALYSIS\n");
 
+  const runner = new FrameworkRunner<Analysis, SixHatsResult>("six-hats", analysis);
+
   // Phase 1: All hats think in parallel
-  const perspectives = await gatherPerspectives(analysis, config, provider, verbose);
+  const perspectives = await gatherPerspectives(analysis, config, provider, runner, verbose);
 
   // Phase 2: Facilitator synthesizes
-  const synthesis = await synthesize(analysis, perspectives, config, provider, verbose);
+  const synthesis = await synthesize(analysis, perspectives, config, provider, runner, verbose);
 
   if (verbose) {
     console.log(`\nPerspectives: ${perspectives.length}`);
     console.log(`Key Insights: ${synthesis.keyInsights.length}\n`);
   }
 
-  return {
+  const result: SixHatsResult = {
     analysis,
     perspectives,
     synthesis,
     metadata: { timestamp: new Date().toISOString(), config },
+  };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
   };
 }
 
@@ -83,19 +92,17 @@ async function gatherPerspectives(
   analysis: Analysis,
   config: SixHatsConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Analysis, SixHatsResult>,
   verbose: boolean
 ): Promise<HatPerspective[]> {
   if (verbose) console.log("Phase 1: Gathering perspectives from all six hats...\n");
 
-  const tasks = HATS.map((hat) => async () => {
-    if (verbose) console.log(`  ${hat.name}...`);
-
-    const response = await provider.call({
+  const responses = await runner.runParallel(
+    HATS.map((hat) => ({
+      name: `hat-${hat.color}`,
+      provider,
       model: config.models.hat,
-      temperature: config.parameters.temperature,
-      messages: [{
-        role: "user",
-        content: `You are wearing the ${hat.name} in Edward de Bono's Six Thinking Hats method.
+      prompt: `You are wearing the ${hat.name} in Edward de Bono's Six Thinking Hats method.
 
 ${hat.prompt}
 
@@ -105,18 +112,16 @@ ${analysis.question}
 ${analysis.context ? `CONTEXT:\n${analysis.context}\n` : ""}
 
 Provide your analysis from this hat's perspective (2-4 paragraphs).`,
-      }],
+      temperature: config.parameters.temperature,
       maxTokens: 1024,
-    });
+    }))
+  );
 
-    return {
-      hat: hat.color,
-      name: hat.name,
-      analysis: response.content.trim(),
-    };
-  });
-
-  return executeParallel(tasks);
+  return responses.map((response, i) => ({
+    hat: HATS[i].color,
+    name: HATS[i].name,
+    analysis: response.content.trim(),
+  }));
 }
 
 async function synthesize(
@@ -124,6 +129,7 @@ async function synthesize(
   perspectives: HatPerspective[],
   config: SixHatsConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Analysis, SixHatsResult>,
   verbose: boolean
 ): Promise<SixHatsResult["synthesis"]> {
   if (verbose) console.log("\nPhase 2: Facilitator synthesizing all perspectives...\n");
@@ -132,12 +138,11 @@ async function synthesize(
     (p) => `${p.name}:\n${p.analysis}\n`
   ).join("\n---\n\n");
 
-  const response = await provider.call({
-    model: config.models.facilitator,
-    temperature: config.parameters.temperature,
-    messages: [{
-      role: "user",
-      content: `You are the Blue Hat facilitator in a Six Thinking Hats session.
+  const response = await runner.runAgent(
+    "facilitator",
+    provider,
+    config.models.facilitator,
+    `You are the Blue Hat facilitator in a Six Thinking Hats session.
 
 QUESTION ANALYZED:
 ${analysis.question}
@@ -158,9 +163,9 @@ Synthesize all perspectives into a comprehensive analysis in JSON:
     "emotions": ["emotional factor 1", ...]
   }
 }`,
-    }],
-    maxTokens: 2048,
-  });
+    config.parameters.temperature,
+    2048
+  );
 
   return parseJSON<SixHatsResult["synthesis"]>(response.content);
 }

@@ -64,6 +64,7 @@ export interface GrantPanelResult {
   metadata: {
     timestamp: string;
     config: GrantPanelConfig;
+    costUSD?: number;
   };
 }
 

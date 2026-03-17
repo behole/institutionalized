@@ -48,6 +48,7 @@ export interface PhDDefenseOutput {
   metadata: {
     timestamp: string;
     config: PhDDefenseConfig;
+    costUSD?: number;
   };
 }
 

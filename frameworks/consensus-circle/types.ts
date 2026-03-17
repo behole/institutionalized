@@ -59,6 +59,7 @@ export interface ConsensusCircleResult {
   metadata: {
     timestamp: string;
     config: ConsensusCircleConfig;
+    costUSD?: number;
   };
 }
 

@@ -49,6 +49,7 @@ export interface ArchitectureReviewResult {
   metadata: {
     timestamp: string;
     config: ArchitectureReviewConfig;
+    costUSD?: number;
   };
 }
 

@@ -5,7 +5,7 @@
 
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
-import { parseJSON, executeParallel } from "@core/orchestrator";
+import { parseJSON, FrameworkRunner } from "@core/orchestrator";
 import type { LLMProvider, RunFlags } from "@core/types";
 import type { Proposal, CommitteeMember, DefenseResult, PhDDefenseConfig, PhDDefenseOutput } from "./types";
 import { DEFAULT_CONFIG } from "./types";
@@ -39,22 +39,31 @@ export async function run(
 
   if (verbose) console.log("\n🎓 PhD DEFENSE\n");
 
+  const runner = new FrameworkRunner<Proposal, PhDDefenseOutput>("phd-defense", proposal);
+
   // Phase 1: Committee members examine proposal
-  const committee = await examineProposal(proposal, config, provider, verbose);
+  const committee = await examineProposal(proposal, config, provider, runner, verbose);
 
   // Phase 2: Chair synthesizes decision
-  const defense = await renderDecision(proposal, committee, config, provider, verbose);
+  const defense = await renderDecision(proposal, committee, config, provider, runner, verbose);
 
   if (verbose) {
     console.log(`\nDecision: ${defense.decision.toUpperCase()}`);
     console.log(`Required Revisions: ${defense.requiredRevisions.length}\n`);
   }
 
-  return {
+  const result: PhDDefenseOutput = {
     proposal,
     committee,
     defense,
     metadata: { timestamp: new Date().toISOString(), config },
+  };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
   };
 }
 
@@ -62,21 +71,21 @@ async function examineProposal(
   proposal: Proposal,
   config: PhDDefenseConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Proposal, PhDDefenseOutput>,
   verbose: boolean
 ): Promise<CommitteeMember[]> {
   if (verbose) console.log("Phase 1: Committee examination...\n");
 
   const specialties = config.specialties.slice(0, config.parameters.committeeSize);
 
-  const tasks = specialties.map((specialty) => async () => {
-    if (verbose) console.log(`  ${specialty} specialist examining...`);
-
-    const response = await provider.call({
-      model: config.models.committee,
-      temperature: config.parameters.temperature,
-      messages: [{
-        role: "user",
-        content: `You are a PhD committee member with expertise in: ${specialty}
+  const responses = await runner.runParallel(
+    specialties.map((specialty) => {
+      if (verbose) console.log(`  ${specialty} specialist examining...`);
+      return {
+        name: `committee-${specialty.toLowerCase().replace(/\s+/g, "-")}`,
+        provider,
+        model: config.models.committee,
+        prompt: `You are a PhD committee member with expertise in: ${specialty}
 
 PROPOSAL TITLE: ${proposal.title}
 
@@ -99,14 +108,13 @@ As an expert in ${specialty}, examine this proposal and provide your assessment 
 }
 
 Be rigorous and thorough. Ask hard questions that test the depth of understanding.`,
-      }],
-      maxTokens: 2048,
-    });
+        temperature: config.parameters.temperature,
+        maxTokens: 2048,
+      };
+    })
+  );
 
-    return parseJSON<CommitteeMember>(response.content);
-  });
-
-  return executeParallel(tasks);
+  return responses.map((response) => parseJSON<CommitteeMember>(response.content));
 }
 
 async function renderDecision(
@@ -114,6 +122,7 @@ async function renderDecision(
   committee: CommitteeMember[],
   config: PhDDefenseConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Proposal, PhDDefenseOutput>,
   verbose: boolean
 ): Promise<DefenseResult> {
   if (verbose) console.log("\nPhase 2: Chair rendering decision...\n");
@@ -122,12 +131,11 @@ async function renderDecision(
     `Committee Member ${idx + 1} (${member.specialty}):\nQuestions: ${member.questions.join(", ")}\nAssessment: ${member.assessment}\nConcerns: ${member.concerns.join(", ")}\n`
   ).join("\n---\n\n");
 
-  const response = await provider.call({
-    model: config.models.chair,
-    temperature: config.parameters.temperature,
-    messages: [{
-      role: "user",
-      content: `You are the PhD defense committee chair.
+  const response = await runner.runAgent(
+    "chair",
+    provider,
+    config.models.chair,
+    `You are the PhD defense committee chair.
 
 PROPOSAL: ${proposal.title}
 
@@ -149,9 +157,9 @@ Standards:
 - "pass_with_revisions": Minor clarifications required
 - "major_revisions": Significant work needed, re-defense may be required
 - "fail": Fundamental issues, proposal not viable`,
-    }],
-    maxTokens: 2048,
-  });
+    config.parameters.temperature,
+    2048
+  );
 
   return parseJSON<DefenseResult>(response.content);
 }
