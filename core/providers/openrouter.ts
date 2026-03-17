@@ -1,6 +1,25 @@
 import type { LLMProvider, LLMCallParams, LLMResponse } from "../types";
 import { withRetry } from "../retry";
 
+interface OpenRouterChatResponse {
+  id: string;
+  object: string;
+  model: string;
+  choices: Array<{
+    index: number;
+    message: {
+      role: string;
+      content: string;
+    };
+    finish_reason: string;
+  }>;
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
 export class OpenRouterProvider implements LLMProvider {
   name = "openrouter";
   private apiKey: string;
@@ -54,7 +73,7 @@ export class OpenRouterProvider implements LLMProvider {
           throw err;
         }
 
-        const data = await response.json();
+        const data = await response.json() as OpenRouterChatResponse;
         const choice = data.choices[0];
 
         return {

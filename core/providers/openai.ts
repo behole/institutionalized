@@ -2,6 +2,25 @@ import type { LLMProvider, LLMCallParams, LLMResponse } from "../types";
 import { withRetry } from "../retry";
 import { ProviderError, ErrorCode } from "../errors";
 
+interface OpenAIChatResponse {
+  id: string;
+  object: string;
+  model: string;
+  choices: Array<{
+    index: number;
+    message: {
+      role: string;
+      content: string;
+    };
+    finish_reason: string;
+  }>;
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
 export class OpenAIProvider implements LLMProvider {
   name = "openai";
   private apiKey: string;
@@ -56,7 +75,7 @@ export class OpenAIProvider implements LLMProvider {
           throw err;
         }
 
-        const data = await response.json();
+        const data = await response.json() as OpenAIChatResponse;
         const choice = data.choices[0];
 
         return {
