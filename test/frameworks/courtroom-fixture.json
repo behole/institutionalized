@@ -1,0 +1,92 @@
+{
+  "case": {
+    "question": "Should we deprecate the legacy `/v1/users` endpoint and migrate all callers to `/v2/users`?",
+    "context": [
+      "The v1 users endpoint was introduced in 2021. It returns user objects without the `roles` field, which was added in v2 (2023). Internally, the v1 endpoint now calls the v2 handler and strips the roles field before returning.",
+      "Current API traffic logs show that 3 internal services still call /v1/users: dashboard-service (35% of v1 traffic), notification-service (40%), and report-generator (25%). All three were updated to support v2 in Q3 2024 but still have v1 as the default in their config.",
+      "The v2 endpoint has been stable for 18 months with no breaking changes. SLA metrics show 99.97% uptime vs v1's 99.91% (v1 has an extra translation layer)."
+    ]
+  },
+  "prosecution": {
+    "caseStatement": "The defendant, the legacy /v1/users endpoint, is guilty of holding back the platform. Three internal services already support v2 but have not migrated, leaving unnecessary dual-maintenance burden on the API team. Every day v1 remains active, the translation layer adds latency and introduces a potential divergence point. The evidence shows that v1 is strictly inferior — slower, less reliable, and missing the roles field that enables proper authorization downstream.",
+    "exhibits": [
+      {
+        "sourceQuote": "Current API traffic logs show that 3 internal services still call /v1/users: dashboard-service (35% of v1 traffic), notification-service (40%), and report-generator (25%). All three were updated to support v2 in Q3 2024 but still have v1 as the default in their config.",
+        "targetQuote": "All three services have v2 support but remain on v1 due to configuration inertia",
+        "harm": "Each service team will need to be contacted individually for a config change that should already be done, consuming at least one sprint of coordination overhead per team — 3 sprints total — for a change that has no technical risk since the code is already in place."
+      },
+      {
+        "sourceQuote": "SLA metrics show 99.97% uptime vs v1's 99.91% (v1 has an extra translation layer)",
+        "targetQuote": "The v1 translation layer degrades reliability below v2 baseline",
+        "harm": "The 0.06% reliability gap translates to approximately 5.25 additional hours of v1 downtime per year versus v2. For notification-service, which represents 40% of v1 traffic, degraded availability during that window means missed user notifications — a direct user-facing quality regression that is completely avoidable."
+      }
+    ],
+    "harmAnalysis": "Keeping /v1/users active requires the API team to maintain the translation layer indefinitely, meaning any v2 schema changes must be evaluated for v1 compatibility impact even when no external consumers exist. The three internal services are already capable of using v2 but are locked in by configuration defaults — the only harm from deprecation is a one-time config update per service, whereas the harm from non-deprecation compounds with each v2 evolution."
+  },
+  "defense": {
+    "counterArgument": "The prosecution's case rests on configuration inertia being trivially fixable, but this ignores the operational risk of forced migration timelines. While the three services technically support v2, 'supports' and 'has been validated at production scale on v2' are different claims. The prosecution provides no evidence that dashboard-service, notification-service, or report-generator have been load-tested on v2. A rushed deprecation could surface edge cases that were never exercised in the v2 code paths those services added in Q3 2024.",
+    "exhibitChallenges": [
+      {
+        "exhibit": 1,
+        "challenge": "The exhibit states services 'were updated to support v2 in Q3 2024 but still have v1 as the default in their config.' This phrasing is ambiguous — it says the code supports v2, not that the v2 code paths have been exercised under real traffic. The Q3 2024 update may have been a precautionary addition, not a validated migration. Treating a config change as zero-risk because the code was written is the kind of reasoning that causes production incidents."
+      },
+      {
+        "exhibit": 2,
+        "challenge": "The 0.06% reliability difference is real but the harm claim overstates it. The exhibit projects 5.25 hours of additional downtime annually — but this assumes the translation layer causes all of v1's reliability gap. The context does not confirm causation, only correlation. The gap could stem from monitoring differences, deployment cadence, or other factors unrelated to the translation layer itself."
+      }
+    ],
+    "harmDispute": "The prosecution frames maintaining v1 as perpetual dual-maintenance, but the actual maintenance burden is minimal: the translation layer strips one field. The risk of an uncontrolled deprecation — where a config change propagates during a high-traffic period and exposes untested v2 code paths — is more concrete than the projected annual downtime savings.",
+    "alternative": "A not-guilty verdict does not mean v1 remains forever. The alternative is a controlled migration: each service team opts in with explicit load testing on v2 in staging, followed by a canary rollout. Once all three services confirm v2 stability, /v1/users can be deprecated with evidence rather than assumption. This takes 6-8 weeks and eliminates the production risk the prosecution ignores."
+  },
+  "jury": {
+    "jurors": [
+      {
+        "reasoning": "The prosecution's core argument is compelling: all three services already have the code to use v2, and the only blocker is a config default. The defense raises a valid concern about load testing, but the exhibit clearly states the services 'were updated to support v2' — this implies deliberate implementation, not accidental compatibility. The reliability data (99.97% vs 99.91%) provides objective support for migration. I vote guilty: the migration should proceed, with a requirement that each service run a canary before full cutover.",
+        "vote": "guilty"
+      },
+      {
+        "reasoning": "The defense's challenge to Exhibit 1 is the strongest point in the case. 'Updated to support v2' and 'validated on v2 at production load' are genuinely different claims, and the prosecution provides no evidence of load testing. The translation layer's reliability impact is real but small. I am not convinced the deprecation should be forced — but I agree a controlled migration plan is warranted. The prosecution hasn't made the case that urgency justifies the risk of a config-driven cutover without validation. Not guilty — but a structured migration timeline should be mandated.",
+        "vote": "not_guilty"
+      },
+      {
+        "reasoning": "Both sides agree that migration should eventually happen — they disagree on timeline and validation requirements. The prosecution's harm analysis about compounding maintenance debt is persuasive: every v2 schema evolution requires v1 compatibility review even with no external consumers. The defense's 6-8 week controlled migration proposal is reasonable, but that's an implementation detail, not a reason to vote not guilty on the core question of whether deprecation should proceed. I vote guilty: approve deprecation with a required validation checklist.",
+        "vote": "guilty"
+      },
+      {
+        "reasoning": "I find the defense's framing most accurate. The question is not 'should v1 eventually go away' (obviously yes) but 'should we deprecate it now.' The prosecution has not established urgency. The translation layer overhead is small. The risk of touching three production services simultaneously — even via config change — is non-trivial. Without evidence of v2 load testing on each service, voting guilty on immediate deprecation is premature. I vote not guilty, with a recommended 90-day migration plan.",
+        "vote": "not_guilty"
+      },
+      {
+        "reasoning": "The prosecution's strongest evidence is that the services already have v2 support and have had it for six months. Six months of coexistence without migration suggests the teams have deprioritized it — which means a forcing function is needed. The defense's alternative (opt-in migration with load testing) is what should have happened in Q3 2024. Continuing to wait enables further drift. I vote guilty: deprecate with a 60-day transition window requiring each service to validate on v2 and flip their config.",
+        "vote": "guilty"
+      }
+    ],
+    "guiltyCount": 3,
+    "notGuiltyCount": 2,
+    "abstainCount": 0,
+    "proceedsToJudge": true
+  },
+  "verdict": {
+    "decision": "guilty",
+    "reasoning": "The prosecution established that three internal services retain /v1/users as their default endpoint despite implementing v2 support six months ago in Q3 2024. This is configuration inertia, not a technical blocker. The defense raised a legitimate concern about whether v2 code paths have been validated at production load — this is not a trivial objection and the prosecution did not directly rebut it. However, the jury reached the threshold (3 guilty, 2 not guilty) and the weight of evidence supports proceeding.\n\nThe reliability data (99.97% v2 vs 99.91% v1) provides objective, quantifiable grounds for migration. The translation layer represents ongoing technical debt: any v2 schema evolution requires v1 compatibility review even with no external consumers. The prosecution correctly identified that the harm of continued inaction compounds over time.\n\nThe defense's 6-8 week controlled migration proposal is sound and should be incorporated into the guilty verdict as a requirement. Deprecation is approved, but must be executed through a validation-gated process: each service must run a canary deployment on v2 in staging before flipping the production config. This addresses the defense's core concern without indefinitely delaying the migration.",
+    "rationale": "Deprecate /v1/users with a mandatory 60-day validation-gated migration: each service must canary on v2 before production cutover.",
+    "actions": [
+      "Set a formal deprecation date for /v1/users: 60 days from decision",
+      "Require each of the three services (dashboard-service, notification-service, report-generator) to run v2 in staging under representative load for at least 5 business days before flipping production config",
+      "Add monitoring alerts for any /v1/users traffic that remains after the deprecation date",
+      "Remove the v1 translation layer from the API codebase once all three services confirm v2 stability"
+    ],
+    "confidence": 0.78
+  },
+  "metadata": {
+    "timestamp": "2026-03-17T00:00:00.000Z",
+    "duration": 47823,
+    "costUSD": 0.0,
+    "modelUsage": {
+      "prosecutor": "claude-3-7-sonnet-20250219",
+      "defense": "claude-3-7-sonnet-20250219",
+      "jury": "claude-3-7-sonnet-20250219",
+      "judge": "claude-3-7-sonnet-20250219"
+    }
+  }
+}
