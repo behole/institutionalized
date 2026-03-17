@@ -37,7 +37,7 @@ export class AnthropicProvider implements LLMProvider {
       },
       metadata: {
         id: response.id,
-        stopReason: response.stop_reason,
+        stopReason: response.stop_reason ?? undefined,
       },
     };
   }
@@ -46,11 +46,16 @@ export class AnthropicProvider implements LLMProvider {
     usage: { inputTokens: number; outputTokens: number },
     model: string
   ): number {
-    // Anthropic pricing (as of Jan 2026)
+    // Anthropic pricing (as of March 2026)
     // https://www.anthropic.com/pricing
     const pricing: Record<string, { input: number; output: number }> = {
-      "claude-3-7-sonnet-20250219": { input: 3.0, output: 15.0 }, // per million tokens
+      // Claude 4.x models
+      "claude-opus-4-5": { input: 15.0, output: 75.0 }, // per million tokens
+      "claude-sonnet-4-5": { input: 3.0, output: 15.0 },
+      // Claude 3.x models
+      "claude-3-7-sonnet-20250219": { input: 3.0, output: 15.0 },
       "claude-3-5-sonnet-20241022": { input: 3.0, output: 15.0 },
+      "claude-3-5-haiku-20241022": { input: 0.8, output: 4.0 },
       "claude-3-opus-20240229": { input: 15.0, output: 75.0 },
       "claude-3-haiku-20240307": { input: 0.25, output: 1.25 },
     };
