@@ -55,6 +55,7 @@ export interface DevilsAdvocateResult {
   metadata: {
     timestamp: string;
     config: DevilsAdvocateConfig;
+    costUSD?: number;
   };
 }
 

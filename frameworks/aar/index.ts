@@ -5,7 +5,7 @@
 
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
-import { parseJSON } from "@core/orchestrator";
+import { parseJSON, FrameworkRunner } from "@core/orchestrator";
 import type { LLMProvider, RunFlags } from "@core/types";
 import type { ActionReview, AARConfig, AARResult } from "./types";
 import { DEFAULT_CONFIG } from "./types";
@@ -27,28 +27,35 @@ export async function run(
 
   if (verbose) console.log("\n🔄 AFTER-ACTION REVIEW\n");
 
-  const result = await conductAAR(review, config, provider, verbose);
+  const runner = new FrameworkRunner<ActionReview, AARResult>("aar", review);
+
+  const result = await conductAAR(review, config, provider, runner, verbose);
 
   if (verbose) {
     console.log(`\nKey Insights: ${result.learnings.keyInsights.length}`);
     console.log(`Action Items: ${result.actionItems.immediate.length + result.actionItems.systemicChanges.length}\n`);
   }
 
-  return result;
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
+  };
 }
 
 async function conductAAR(
   review: ActionReview,
   config: AARConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<ActionReview, AARResult>,
   verbose: boolean
 ): Promise<AARResult> {
-  const response = await provider.call({
-    model: config.models.facilitator,
-    temperature: config.parameters.temperature,
-    messages: [{
-      role: "user",
-      content: `Conduct an After-Action Review (blameless post-mortem):
+  const response = await runner.runAgent(
+    "facilitator",
+    provider,
+    config.models.facilitator,
+    `Conduct an After-Action Review (blameless post-mortem):
 
 SITUATION: ${review.situation}
 
@@ -80,10 +87,10 @@ Provide comprehensive AAR in JSON:
     "processImprovements": ["improvement 1", ...],
     "trainingNeeds": ["training need 1", ...]
   }
-}`
-    }],
-    maxTokens: 4096,
-  });
+}`,
+    config.parameters.temperature,
+    4096
+  );
 
   const parsed = parseJSON<{ analysis: any; learnings: any; actionItems: any }>(response.content);
 

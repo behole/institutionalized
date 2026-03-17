@@ -5,7 +5,7 @@
 
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
-import { parseJSON } from "@core/orchestrator";
+import { parseJSON, FrameworkRunner } from "@core/orchestrator";
 import type { LLMProvider, RunFlags } from "@core/types";
 import type { Proposal, DevilsAdvocateConfig, DevilsAdvocateResult, Opposition, Rebuttal, Verdict } from "./types";
 import { DEFAULT_CONFIG } from "./types";
@@ -27,43 +27,52 @@ export async function run(
 
   if (verbose) console.log("\n😈 DEVIL'S ADVOCATE\n");
 
+  const runner = new FrameworkRunner<Proposal, DevilsAdvocateResult>("devils-advocate", proposal);
+
   // Phase 1: Opposition
   if (verbose) console.log("Phase 1: Challenging the proposal...");
-  const opposition = await challengeProposal(proposal, config, provider);
+  const opposition = await challengeProposal(proposal, config, provider, runner);
 
   // Phase 2: Rebuttal
   if (verbose) console.log("Phase 2: Proposer responds...");
-  const rebuttal = await rebut(proposal, opposition, config, provider);
+  const rebuttal = await rebut(proposal, opposition, config, provider, runner);
 
   // Phase 3: Verdict
   if (verbose) console.log("Phase 3: Arbiter decides...\n");
-  const verdict = await decide(proposal, opposition, rebuttal, config, provider);
+  const verdict = await decide(proposal, opposition, rebuttal, config, provider, runner);
 
   if (verbose) {
     console.log(`Decision: ${verdict.decision.toUpperCase()}`);
     console.log(`Verdict: ${verdict.verdict}\n`);
   }
 
-  return {
+  const result: DevilsAdvocateResult = {
     proposal,
     opposition,
     rebuttal,
     verdict,
     metadata: { timestamp: new Date().toISOString(), config },
   };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
+  };
 }
 
 async function challengeProposal(
   proposal: Proposal,
   config: DevilsAdvocateConfig,
-  provider: LLMProvider
+  provider: LLMProvider,
+  runner: FrameworkRunner<Proposal, DevilsAdvocateResult>
 ): Promise<Opposition> {
-  const response = await provider.call({
-    model: config.models.advocate,
-    temperature: config.parameters.advocateTemperature,
-    messages: [{
-      role: "user",
-      content: `You are the Devil's Advocate. Challenge this proposal:
+  const response = await runner.runAgent(
+    "advocate",
+    provider,
+    config.models.advocate,
+    `You are the Devil's Advocate. Challenge this proposal:
 
 ${proposal.description}
 
@@ -76,10 +85,10 @@ Provide JSON:
   "counterArguments": ["counter 1", ...],
   "alternativeProposals": ["alternative 1", ...],
   "questionsNotAnswered": ["question 1", ...]
-}`
-    }],
-    maxTokens: 2048,
-  });
+}`,
+    config.parameters.advocateTemperature,
+    2048
+  );
 
   return parseJSON<Opposition>(response.content);
 }
@@ -88,14 +97,14 @@ async function rebut(
   proposal: Proposal,
   opposition: Opposition,
   config: DevilsAdvocateConfig,
-  provider: LLMProvider
+  provider: LLMProvider,
+  runner: FrameworkRunner<Proposal, DevilsAdvocateResult>
 ): Promise<Rebuttal> {
-  const response = await provider.call({
-    model: config.models.proposer,
-    temperature: 0.6,
-    messages: [{
-      role: "user",
-      content: `Respond to these objections to your proposal:
+  const response = await runner.runAgent(
+    "proposer",
+    provider,
+    config.models.proposer,
+    `Respond to these objections to your proposal:
 
 PROPOSAL: ${proposal.description}
 
@@ -107,10 +116,10 @@ Provide JSON:
   "addressedObjections": [{"objection": "...", "response": "..."}, ...],
   "strengthenedCase": "...",
   "concessions": ["concession 1", ...]
-}`
-    }],
-    maxTokens: 2048,
-  });
+}`,
+    0.6,
+    2048
+  );
 
   return parseJSON<Rebuttal>(response.content);
 }
@@ -120,14 +129,14 @@ async function decide(
   opposition: Opposition,
   rebuttal: Rebuttal,
   config: DevilsAdvocateConfig,
-  provider: LLMProvider
+  provider: LLMProvider,
+  runner: FrameworkRunner<Proposal, DevilsAdvocateResult>
 ): Promise<Verdict> {
-  const response = await provider.call({
-    model: config.models.arbiter,
-    temperature: config.parameters.arbiterTemperature,
-    messages: [{
-      role: "user",
-      content: `As arbiter, decide on this proposal after seeing opposition and rebuttal.
+  const response = await runner.runAgent(
+    "arbiter",
+    provider,
+    config.models.arbiter,
+    `As arbiter, decide on this proposal after seeing opposition and rebuttal.
 
 PROPOSAL: ${proposal.description}
 OBJECTIONS: ${opposition.objections.length}
@@ -139,10 +148,10 @@ Provide JSON:
   "reasoning": "...",
   "conditions": ["condition 1", ...],
   "verdict": "one sentence summary"
-}`
-    }],
-    maxTokens: 2048,
-  });
+}`,
+    config.parameters.arbiterTemperature,
+    2048
+  );
 
   return parseJSON<Verdict>(response.content);
 }

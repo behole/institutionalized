@@ -63,6 +63,7 @@ export interface IntelligenceAnalysisResult {
   metadata: {
     timestamp: string;
     config: IntelligenceAnalysisConfig;
+    costUSD?: number;
   };
 }
 

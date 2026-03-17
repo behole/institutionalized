@@ -33,6 +33,7 @@ export interface SocraticResult {
   metadata: {
     timestamp: string;
     config: SocraticConfig;
+    costUSD?: number;
   };
 }
 

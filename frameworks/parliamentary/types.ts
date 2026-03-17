@@ -53,6 +53,7 @@ export interface ParliamentaryResult {
   metadata: {
     timestamp: string;
     config: ParliamentaryConfig;
+    costUSD?: number;
   };
 }
 

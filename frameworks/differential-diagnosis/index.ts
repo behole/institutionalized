@@ -5,7 +5,7 @@
 
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
-import { parseJSON } from "@core/orchestrator";
+import { parseJSON, FrameworkRunner } from "@core/orchestrator";
 import type { LLMProvider, RunFlags } from "@core/types";
 import type { Symptoms, Diagnosis, DiagnosticTest, FinalDiagnosis, DifferentialDiagnosisConfig, DifferentialDiagnosisResult } from "./types";
 import { DEFAULT_CONFIG } from "./types";
@@ -28,14 +28,16 @@ export async function run(
 
   if (verbose) console.log("\n🩺 DIFFERENTIAL DIAGNOSIS\n");
 
+  const runner = new FrameworkRunner<Symptoms, DifferentialDiagnosisResult>("differential-diagnosis", symptoms);
+
   // Phase 1: Generate differential diagnoses
-  const differentials = await generateDifferentials(symptoms, config, provider, verbose);
+  const differentials = await generateDifferentials(symptoms, config, provider, runner, verbose);
 
   // Phase 2: Recommend diagnostic tests
-  const recommendedTests = await recommendTests(symptoms, differentials, config, provider, verbose);
+  const recommendedTests = await recommendTests(symptoms, differentials, config, provider, runner, verbose);
 
   // Phase 3: Synthesize final diagnosis
-  const finalDiagnosis = await synthesizeDiagnosis(symptoms, differentials, recommendedTests, config, provider, verbose);
+  const finalDiagnosis = await synthesizeDiagnosis(symptoms, differentials, recommendedTests, config, provider, runner, verbose);
 
   if (verbose) {
     console.log(`\nDifferentials Generated: ${differentials.length}`);
@@ -43,12 +45,19 @@ export async function run(
     console.log(`Confidence: ${finalDiagnosis.confidence}\n`);
   }
 
-  return {
+  const result: DifferentialDiagnosisResult = {
     symptoms,
     differentials,
     recommendedTests,
     finalDiagnosis,
     metadata: { timestamp: new Date().toISOString(), config },
+  };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
   };
 }
 
@@ -56,16 +65,16 @@ async function generateDifferentials(
   symptoms: Symptoms,
   config: DifferentialDiagnosisConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Symptoms, DifferentialDiagnosisResult>,
   verbose: boolean
 ): Promise<Diagnosis[]> {
   if (verbose) console.log("Phase 1: Generating differential diagnoses...\n");
 
-  const response = await provider.call({
-    model: config.models.diagnostician,
-    temperature: config.parameters.temperature,
-    messages: [{
-      role: "user",
-      content: `You are a diagnostician using systematic differential diagnosis.
+  const response = await runner.runAgent(
+    "diagnostician-differential",
+    provider,
+    config.models.diagnostician,
+    `You are a diagnostician using systematic differential diagnosis.
 
 PRESENTING PROBLEM:
 ${symptoms.presenting}
@@ -90,9 +99,9 @@ Generate up to ${config.parameters.maxDifferentials} differential diagnoses, ord
     ...
   ]
 }`,
-    }],
-    maxTokens: 3072,
-  });
+    config.parameters.temperature,
+    3072
+  );
 
   const parsed = parseJSON<{ diagnoses: Diagnosis[] }>(response.content);
   return parsed.diagnoses;
@@ -103,6 +112,7 @@ async function recommendTests(
   differentials: Diagnosis[],
   config: DifferentialDiagnosisConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Symptoms, DifferentialDiagnosisResult>,
   verbose: boolean
 ): Promise<DiagnosticTest[]> {
   if (verbose) console.log("\nPhase 2: Recommending diagnostic tests...\n");
@@ -111,12 +121,11 @@ async function recommendTests(
     `${d.diagnosis} (${d.likelihood}%): ${d.reasoning}`
   ).join("\n");
 
-  const response = await provider.call({
-    model: config.models.diagnostician,
-    temperature: config.parameters.temperature,
-    messages: [{
-      role: "user",
-      content: `Recommend diagnostic tests to distinguish between these differentials.
+  const response = await runner.runAgent(
+    "diagnostician-tests",
+    provider,
+    config.models.diagnostician,
+    `Recommend diagnostic tests to distinguish between these differentials.
 
 PRESENTING: ${symptoms.presenting}
 
@@ -137,9 +146,9 @@ Recommend tests with high discriminating power in JSON:
 }
 
 Prioritize tests that help rule in/out multiple differentials.`,
-    }],
-    maxTokens: 2048,
-  });
+    config.parameters.temperature,
+    2048
+  );
 
   const parsed = parseJSON<{ tests: DiagnosticTest[] }>(response.content);
   return parsed.tests;
@@ -151,6 +160,7 @@ async function synthesizeDiagnosis(
   tests: DiagnosticTest[],
   config: DifferentialDiagnosisConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Symptoms, DifferentialDiagnosisResult>,
   verbose: boolean
 ): Promise<FinalDiagnosis> {
   if (verbose) console.log("\nPhase 3: Synthesizing final diagnosis...\n");
@@ -163,12 +173,11 @@ async function synthesizeDiagnosis(
     `${t.test}: ${t.purpose} (discriminating power: ${t.discriminatingPower})`
   ).join("\n");
 
-  const response = await provider.call({
-    model: config.models.specialist,
-    temperature: config.parameters.temperature,
-    messages: [{
-      role: "user",
-      content: `Synthesize the diagnostic workup.
+  const response = await runner.runAgent(
+    "specialist-synthesis",
+    provider,
+    config.models.specialist,
+    `Synthesize the diagnostic workup.
 
 PRESENTING: ${symptoms.presenting}
 
@@ -190,9 +199,9 @@ Provide final assessment in JSON:
   "treatmentRecommendations": ["recommendation 1", ...],
   "monitoringPlan": ["monitor 1", ...]
 }`,
-    }],
-    maxTokens: 2048,
-  });
+    config.parameters.temperature,
+    2048
+  );
 
   return parseJSON<FinalDiagnosis>(response.content);
 }

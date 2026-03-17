@@ -60,6 +60,7 @@ export interface DifferentialDiagnosisResult {
   metadata: {
     timestamp: string;
     config: DifferentialDiagnosisConfig;
+    costUSD?: number;
   };
 }
 

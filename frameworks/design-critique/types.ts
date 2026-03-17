@@ -73,6 +73,7 @@ export interface DesignCritiqueResult {
   metadata: {
     timestamp: string;
     config: DesignCritiqueConfig;
+    costUSD?: number;
   };
 }
 

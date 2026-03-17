@@ -60,6 +60,7 @@ export interface SWOTResult {
   metadata: {
     timestamp: string;
     config: SWOTConfig;
+    costUSD?: number;
   };
 }
 

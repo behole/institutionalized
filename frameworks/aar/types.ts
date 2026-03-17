@@ -56,6 +56,7 @@ export interface AARResult {
   metadata: {
     timestamp: string;
     config: AARConfig;
+    costUSD?: number;
   };
 }
 

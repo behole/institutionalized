@@ -5,7 +5,7 @@
 
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
-import { parseJSON, executeParallel } from "@core/orchestrator";
+import { parseJSON, FrameworkRunner } from "@core/orchestrator";
 import type { LLMProvider, RunFlags } from "@core/types";
 import type { Question, ExpertEstimate, RoundSummary, DelphiResult, DelphiConfig } from "./types";
 import { DEFAULT_CONFIG } from "./types";
@@ -35,6 +35,8 @@ export async function run(
 
   if (verbose) console.log("\n🔮 DELPHI METHOD - EXPERT CONSENSUS\n");
 
+  const runner = new FrameworkRunner<Question, DelphiResult>("delphi", question);
+
   const rounds: RoundSummary[] = [];
   let converged = false;
 
@@ -42,7 +44,7 @@ export async function run(
     if (verbose) console.log(`\nRound ${round}...`);
 
     const previousRound = rounds[rounds.length - 1];
-    const estimates = await conductRound(question, round, previousRound, config, provider, verbose);
+    const estimates = await conductRound(question, round, previousRound, config, provider, runner, verbose);
     const summary = calculateRoundStatistics(round, estimates);
     rounds.push(summary);
 
@@ -52,18 +54,25 @@ export async function run(
     }
   }
 
-  const finalConsensus = await synthesizeConsensus(question, rounds, config, provider, verbose);
+  const finalConsensus = await synthesizeConsensus(question, rounds, config, provider, runner, verbose);
 
   if (verbose) {
     console.log(`\nFinal Consensus: ${finalConsensus.estimate}`);
     console.log(`Confidence: ${finalConsensus.confidence}\n`);
   }
 
-  return {
+  const result: DelphiResult = {
     question,
     rounds,
     finalConsensus,
     metadata: { timestamp: new Date().toISOString(), config },
+  };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
   };
 }
 
@@ -73,12 +82,14 @@ async function conductRound(
   previousRound: RoundSummary | undefined,
   config: DelphiConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Question, DelphiResult>,
   verbose: boolean
 ): Promise<ExpertEstimate[]> {
-  const tasks = Array.from({ length: config.parameters.expertCount }, (_, i) => async () => {
-    const expertId = `expert-${i + 1}`;
+  const responses = await runner.runParallel(
+    Array.from({ length: config.parameters.expertCount }, (_, i) => {
+      const expertId = `expert-${i + 1}`;
 
-    let prompt = `You are an independent expert participating in a Delphi study (anonymous, Round ${round}).
+      let prompt = `You are an independent expert participating in a Delphi study (anonymous, Round ${round}).
 
 QUESTION:
 ${question.question}
@@ -86,16 +97,16 @@ ${question.question}
 ${question.context ? `CONTEXT:\n${question.context}\n` : ""}
 ${question.targetMetric ? `TARGET METRIC: ${question.targetMetric}\n` : ""}`;
 
-    if (previousRound) {
-      prompt += `\nPREVIOUS ROUND STATISTICS (anonymous):
+      if (previousRound) {
+        prompt += `\nPREVIOUS ROUND STATISTICS (anonymous):
 - Median: ${previousRound.statistics.median}
 - Range: ${previousRound.statistics.range.min} - ${previousRound.statistics.range.max}
 - IQR: ${previousRound.statistics.iqr.q1} - ${previousRound.statistics.iqr.q3}
 
 You may revise your estimate based on group feedback.`;
-    }
+      }
 
-    prompt += `\n\nProvide your estimate in JSON:
+      prompt += `\n\nProvide your estimate in JSON:
 {
   "estimate": <number>,
   "confidence": <0-10>,
@@ -103,13 +114,19 @@ You may revise your estimate based on group feedback.`;
   "assumptions": ["assumption 1", ...]
 }`;
 
-    const response = await provider.call({
-      model: config.models.expert,
-      temperature: config.parameters.temperature,
-      messages: [{ role: "user", content: prompt }],
-      maxTokens: 1024,
-    });
+      return {
+        name: expertId,
+        provider,
+        model: config.models.expert,
+        prompt,
+        temperature: config.parameters.temperature,
+        maxTokens: 1024,
+      };
+    })
+  );
 
+  return responses.map((response, i) => {
+    const expertId = `expert-${i + 1}`;
     const parsed = parseJSON<Omit<ExpertEstimate, "expertId" | "round">>(response.content);
     return {
       expertId,
@@ -117,8 +134,6 @@ You may revise your estimate based on group feedback.`;
       ...parsed,
     };
   });
-
-  return executeParallel(tasks);
 }
 
 function calculateRoundStatistics(round: number, estimates: ExpertEstimate[]): RoundSummary {
@@ -155,6 +170,7 @@ async function synthesizeConsensus(
   rounds: RoundSummary[],
   config: DelphiConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Question, DelphiResult>,
   verbose: boolean
 ): Promise<DelphiResult["finalConsensus"]> {
   if (verbose) console.log("\nSynthesizing final consensus...\n");
@@ -164,12 +180,11 @@ async function synthesizeConsensus(
     `Round ${r.round}: Median=${r.statistics.median}, Mean=${r.statistics.mean}, Range=${r.statistics.range.min}-${r.statistics.range.max}, Convergence=${r.convergence.toFixed(3)}`
   ).join("\n");
 
-  const response = await provider.call({
-    model: config.models.facilitator,
-    temperature: config.parameters.temperature,
-    messages: [{
-      role: "user",
-      content: `Synthesize the Delphi study results.
+  const response = await runner.runAgent(
+    "facilitator",
+    provider,
+    config.models.facilitator,
+    `Synthesize the Delphi study results.
 
 QUESTION: ${question.question}
 
@@ -188,9 +203,9 @@ Provide consensus in JSON:
   "outliers": [{"estimate": <number>, "reasoning": "..."}, ...],
   "convergenceAchieved": <boolean>
 }`,
-    }],
-    maxTokens: 1536,
-  });
+    config.parameters.temperature,
+    1536
+  );
 
   return parseJSON<DelphiResult["finalConsensus"]>(response.content);
 }

@@ -5,7 +5,7 @@
 
 import { createProvider } from "@core/providers";
 import { getAPIKey } from "@core/config";
-import { parseJSON } from "@core/orchestrator";
+import { parseJSON, FrameworkRunner } from "@core/orchestrator";
 import type { LLMProvider, RunFlags } from "@core/types";
 import type { Statement, SocraticExchange, SocraticResult, SocraticConfig } from "./types";
 import { DEFAULT_CONFIG } from "./types";
@@ -32,12 +32,14 @@ export async function run(
 
   if (verbose) console.log("\n🏛️  SOCRATIC METHOD\n");
 
+  const runner = new FrameworkRunner<Statement, SocraticResult>("socratic", statement);
+
   const exchanges: SocraticExchange[] = [];
 
   for (let round = 1; round <= config.parameters.maxRounds; round++) {
     if (verbose) console.log(`\nRound ${round}...`);
 
-    const exchange = await conductExchange(statement, exchanges, round, config, provider, verbose);
+    const exchange = await conductExchange(statement, exchanges, round, config, provider, runner, verbose);
     exchanges.push(exchange);
 
     // Stop if we've reached a natural conclusion
@@ -48,7 +50,7 @@ export async function run(
     }
   }
 
-  const conclusion = await synthesizeConclusion(statement, exchanges, config, provider, verbose);
+  const conclusion = await synthesizeConclusion(statement, exchanges, config, provider, runner, verbose);
 
   if (verbose) {
     console.log(`\nExchanges: ${exchanges.length}`);
@@ -56,11 +58,18 @@ export async function run(
     console.log(`Exposed Assumptions: ${conclusion.exposedAssumptions.length}\n`);
   }
 
-  return {
+  const result: SocraticResult = {
     statement,
     exchanges,
     conclusion,
     metadata: { timestamp: new Date().toISOString(), config },
+  };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
   };
 }
 
@@ -70,6 +79,7 @@ async function conductExchange(
   round: number,
   config: SocraticConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Statement, SocraticResult>,
   verbose: boolean
 ): Promise<SocraticExchange> {
   // Socrates asks question
@@ -92,12 +102,14 @@ Provide in JSON:
   "question": "your probing question"
 }`;
 
-  const questionResponse = await provider.call({
-    model: config.models.questioner,
-    temperature: config.parameters.temperature,
-    messages: [{ role: "user", content: questionPrompt }],
-    maxTokens: 512,
-  });
+  const questionResponse = await runner.runAgent(
+    `questioner-round-${round}`,
+    provider,
+    config.models.questioner,
+    questionPrompt,
+    config.parameters.temperature,
+    512
+  );
 
   const { question } = parseJSON<{ question: string }>(questionResponse.content);
   if (verbose) console.log(`  Q: ${question}`);
@@ -120,12 +132,14 @@ Respond thoughtfully in JSON:
 
 Be honest. If you realize you don't know or find a contradiction, acknowledge it.`;
 
-  const answerResponse = await provider.call({
-    model: config.models.respondent,
-    temperature: config.parameters.temperature,
-    messages: [{ role: "user", content: responsePrompt }],
-    maxTokens: 1024,
-  });
+  const answerResponse = await runner.runAgent(
+    `respondent-round-${round}`,
+    provider,
+    config.models.respondent,
+    responsePrompt,
+    config.parameters.temperature,
+    1024
+  );
 
   const answer = parseJSON<Omit<SocraticExchange, "round" | "question">>(answerResponse.content);
   if (verbose) console.log(`  A: ${answer.response}`);
@@ -142,6 +156,7 @@ async function synthesizeConclusion(
   exchanges: SocraticExchange[],
   config: SocraticConfig,
   provider: LLMProvider,
+  runner: FrameworkRunner<Statement, SocraticResult>,
   verbose: boolean
 ): Promise<SocraticResult["conclusion"]> {
   if (verbose) console.log("\nSynthesizing conclusion...\n");
@@ -150,12 +165,11 @@ async function synthesizeConclusion(
     `Round ${e.round}:\nQ: ${e.question}\nA: ${e.response}${e.exposedAssumption ? `\nAssumption: ${e.exposedAssumption}` : ""}${e.contradiction ? `\nContradiction: ${e.contradiction}` : ""}`
   ).join("\n\n");
 
-  const response = await provider.call({
-    model: config.models.questioner,
-    temperature: config.parameters.temperature,
-    messages: [{
-      role: "user",
-      content: `Synthesize the Socratic dialogue.
+  const response = await runner.runAgent(
+    "questioner-conclusion",
+    provider,
+    config.models.questioner,
+    `Synthesize the Socratic dialogue.
 
 ORIGINAL CLAIM: ${statement.claim}
 
@@ -171,9 +185,9 @@ Provide conclusion in JSON:
   "epistemicStatus": "clarified" | "refined" | "refuted" | "acknowledged_ignorance",
   "synthesis": "what we learned from this dialogue"
 }`,
-    }],
-    maxTokens: 1536,
-  });
+    config.parameters.temperature,
+    1536
+  );
 
   return parseJSON<SocraticResult["conclusion"]>(response.content);
 }

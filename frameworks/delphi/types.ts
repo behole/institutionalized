@@ -49,6 +49,7 @@ export interface DelphiResult {
   metadata: {
     timestamp: string;
     config: DelphiConfig;
+    costUSD?: number;
   };
 }
 
