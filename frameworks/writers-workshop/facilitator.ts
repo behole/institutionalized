@@ -1,14 +1,13 @@
 import type { Manuscript, WritersWorkshopConfig, PeerReview, DiscussionPoint } from "./types";
-import { generateObject } from "@institutional-reasoning/core";
+import { parseJSON } from "@core/orchestrator";
+import type { LLMProvider } from "@core/types";
 
-export async function facilitateDiscussion(
+export function buildFacilitatorPrompt(
   manuscript: Manuscript,
   peerReviews: PeerReview[],
   config: WritersWorkshopConfig
-): Promise<DiscussionPoint[]> {
-  const model = config.models.facilitator;
-  
-  const systemPrompt = `You are a workshop facilitator synthesizing peer feedback into a structured discussion.
+): { system: string; user: string } {
+  const system = `You are a workshop facilitator synthesizing peer feedback into a structured discussion.
 Your role is to:
 1. Identify common themes across reviews
 2. Note areas of agreement and disagreement
@@ -37,22 +36,41 @@ ${r.reviewerId}:
 - Concerns: ${r.constructive.craftConcerns.join("; ")}
 `).join("\n");
 
-  const userPrompt = `MANUSCRIPT: "${manuscript.title}"
+  const user = `MANUSCRIPT: "${manuscript.title}"
 
 PEER REVIEWS:
 ${reviewsSummary}
 
 Synthesize this feedback into discussion points. Identify 3-5 key topics that emerged across reviews. Note different perspectives, consensus areas, and disagreements. Respond ONLY with valid JSON matching the required structure.`;
 
+  return { system, user };
+}
+
+export function parseFacilitatorResponse(text: string): DiscussionPoint[] {
+  const result = parseJSON<{ discussion: DiscussionPoint[] }>(text);
+  return result.discussion;
+}
+
+export async function facilitateDiscussion(
+  manuscript: Manuscript,
+  peerReviews: PeerReview[],
+  config: WritersWorkshopConfig,
+  provider: LLMProvider
+): Promise<DiscussionPoint[]> {
+  const { system, user } = buildFacilitatorPrompt(manuscript, peerReviews, config);
+
   try {
-    const result = await generateObject<{
-      discussion: DiscussionPoint[];
-    }>({
-      model,
-      system: systemPrompt,
-      prompt: userPrompt,
+    const response = await provider.call({
+      model: config.models.facilitator,
+      messages: [{ role: "user", content: user }],
       temperature: 0.5,
+      systemPrompt: system,
+      maxTokens: 4096,
     });
+
+    const result = parseJSON<{
+      discussion: DiscussionPoint[];
+    }>(response.content);
 
     return result.discussion;
   } catch (error) {

@@ -1,11 +1,14 @@
+import { FrameworkRunner } from "@core/orchestrator";
+import type { LLMProvider } from "@core/types";
 import type { Manuscript, WritersWorkshopResult, WritersWorkshopConfig, PeerReview, DiscussionPoint, WorkshopSummary } from "./types";
 import { DEFAULT_CONFIG } from "./types";
-import { conductPeerReview } from "./peer";
-import { facilitateDiscussion } from "./facilitator";
+import { buildPeerReviewPrompt, parsePeerReviewResponse } from "./peer";
+import { buildFacilitatorPrompt, parseFacilitatorResponse } from "./facilitator";
 
 export async function runWorkshop(
   manuscript: Manuscript,
-  config: WritersWorkshopConfig = DEFAULT_CONFIG
+  config: WritersWorkshopConfig = DEFAULT_CONFIG,
+  provider: LLMProvider
 ): Promise<WritersWorkshopResult> {
   const startTime = Date.now();
 
@@ -17,15 +20,27 @@ export async function runWorkshop(
   if (manuscript.wordCount) console.log(`   Word Count: ${manuscript.wordCount}`);
   console.log();
 
-  // Step 1: Peer reviews (parallel)
+  const runner = new FrameworkRunner<Manuscript, WritersWorkshopResult>("writers-workshop", manuscript);
+
+  // Step 1: Peer reviews (sequential -- the structure IS the value)
   console.log("✍️  Phase 1: Peer Reviews");
   const peerReviews: PeerReview[] = [];
   const peerNames = Object.keys(config.models).filter(k => k.startsWith("peer"));
-  
+
   for (let i = 0; i < config.parameters.peerCount && i < peerNames.length; i++) {
     const peerName = peerNames[i];
     console.log(`   📝 ${peerName} reviewing...`);
-    const review = await conductPeerReview(manuscript, peerName, config);
+    const { system, user } = buildPeerReviewPrompt(manuscript, peerName, config);
+    const response = await runner.runAgent(
+      peerName,
+      provider,
+      config.models[peerName],
+      user,
+      config.parameters.temperature,
+      4096,
+      system
+    );
+    const review = parsePeerReviewResponse(response.content, peerName);
     peerReviews.push(review);
     console.log(`   ✅ ${peerName} complete`);
   }
@@ -34,7 +49,17 @@ export async function runWorkshop(
   let discussion: DiscussionPoint[] = [];
   if (config.parameters.enableDiscussion && peerReviews.length > 1) {
     console.log("\n✍️  Phase 2: Facilitated Discussion");
-    discussion = await facilitateDiscussion(manuscript, peerReviews, config);
+    const { system, user } = buildFacilitatorPrompt(manuscript, peerReviews, config);
+    const facilitatorResponse = await runner.runAgent(
+      "facilitator",
+      provider,
+      config.models.facilitator,
+      user,
+      0.5,
+      4096,
+      system
+    );
+    discussion = parseFacilitatorResponse(facilitatorResponse.content);
     console.log(`   ✅ ${discussion.length} discussion points synthesized`);
   }
 
@@ -44,7 +69,6 @@ export async function runWorkshop(
   console.log(`   ✅ Summary generated`);
 
   const duration = Date.now() - startTime;
-  const costUSD = 0.0; // Placeholder
 
   console.log("\n" + "=".repeat(80));
   console.log(`🎯 WORKSHOP COMPLETE`);
@@ -67,7 +91,7 @@ export async function runWorkshop(
   summary.nextSteps.forEach(s => console.log(`  • ${s}`));
   console.log();
 
-  return {
+  const result: WritersWorkshopResult = {
     manuscript,
     peerReviews,
     discussion,
@@ -75,11 +99,16 @@ export async function runWorkshop(
     metadata: {
       timestamp: new Date().toISOString(),
       duration,
-      costUSD,
+      costUSD: 0, // will be replaced from auditLog
       peerCount: peerReviews.length,
       modelUsage: config.models,
     },
   };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+  result.metadata.costUSD = auditLog.metadata.totalCost;
+
+  return result;
 }
 
 function generateSummary(
