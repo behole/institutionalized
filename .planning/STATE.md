@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-core-hardening-03-PLAN.md
-last_updated: "2026-03-17T00:27:29.715Z"
+stopped_at: Completed 01-core-hardening-04-PLAN.md
+last_updated: "2026-03-17T00:35:42.015Z"
 last_activity: 2026-03-16 — Roadmap created, all 29 requirements mapped across 6 phases
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-core-hardening P01 | 137 | 2 tasks | 5 files |
 | Phase 01-core-hardening P02 | 8 | 2 tasks | 5 files |
 | Phase 01-core-hardening P03 | 4 | 2 tasks | 7 files |
+| Phase 01-core-hardening P04 | 12 | 2 tasks | 55 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ Recent decisions affecting current work:
 - [Phase 01-core-hardening]: withRetry baseDelayMs overridable for test-speed (no fake timers needed)
 - [Phase 01-core-hardening]: Bun toSatisfy() incompatible with rejects chain — use try/catch + toBeInstanceOf instead
 - [Phase 01-core-hardening]: executeParallel uses Promise.allSettled + AggregateError (all-complete) replacing Promise.all fail-fast
+- [Phase 01-core-hardening]: RunFlags interface maps flags.verbose to flags.debug — debug is the typed public API name for verbose logging
+- [Phase 01-core-hardening]: CLI-specific flags accessed via (flags as Record<string, unknown>) cast to maintain typed run() signature while preserving CLI contract
+- [Phase 01-core-hardening]: DEFAULT_MODELS uses 'as const' assertion — all values are string literals, enabling exhaustive type-safe model references
 
 ### Pending Todos
 
@@ -84,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-17T00:27:29.712Z
-Stopped at: Completed 01-core-hardening-03-PLAN.md
+Last session: 2026-03-17T00:35:42.012Z
+Stopped at: Completed 01-core-hardening-04-PLAN.md
 Resume file: None
