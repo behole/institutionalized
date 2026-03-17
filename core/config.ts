@@ -6,7 +6,7 @@
 export interface BaseFrameworkConfig {
   models: Record<string, string>;
   parameters: Record<string, number | boolean | string>;
-  validation?: Record<string, any>;
+  validation?: Record<string, unknown>;
   provider?: "anthropic" | "openai" | "openrouter";
 }
 

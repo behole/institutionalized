@@ -25,6 +25,7 @@ export interface LLMCallParams {
   temperature?: number;
   maxTokens?: number;
   systemPrompt?: string;
+  signal?: AbortSignal;
 }
 
 export interface LLMProvider {
