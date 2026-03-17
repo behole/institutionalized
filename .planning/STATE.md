@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-17T01:38:14.310Z"
+stopped_at: Completed 02-framework-standardization 02-03-PLAN.md
+last_updated: "2026-03-17T14:18:17.220Z"
 last_activity: 2026-03-16 — Roadmap created, all 29 requirements mapped across 6 phases
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 9
+  completed_plans: 6
   percent: 0
 ---
 
@@ -55,6 +55,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-core-hardening P03 | 4 | 2 tasks | 7 files |
 | Phase 01-core-hardening P04 | 12 | 2 tasks | 55 files |
 | Phase 01-core-hardening P05 | 5 | 2 tasks | 4 files |
+| Phase 02-framework-standardization P03 | 3 | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,8 @@ Recent decisions affecting current work:
 - [Phase 01-core-hardening]: DEFAULT_MODELS uses 'as const' assertion — all values are string literals, enabling exhaustive type-safe model references
 - [Phase 01-core-hardening]: Keep OpenAIChatResponse and OpenRouterChatResponse as co-located interfaces (not shared) to avoid cross-file coupling for simple DTOs
 - [Phase 01-core-hardening]: Rename local formCommittee to formDefaultCommittee — import from ./committee is the intended runtime function, local was shadowing it
+- [Phase 02-framework-standardization]: FrameworkRunner wraps orchestrator-level result via finalize() — agent functions retain own provider.call() internals for minimal refactor blast radius
+- [Phase 02-framework-standardization]: costUSD added as optional field to 4 result metadata types to match audit trail output without breaking existing callers
 
 ### Pending Todos
 
@@ -91,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-17T01:38:14.301Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-framework-standardization/02-CONTEXT.md
+Last session: 2026-03-17T14:18:17.218Z
+Stopped at: Completed 02-framework-standardization 02-03-PLAN.md
+Resume file: None
