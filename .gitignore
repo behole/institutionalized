@@ -36,8 +36,6 @@ bun.lockb
 
 # Test outputs
 coverage/
-*.test.js
-*.test.ts
 
 # Temporary files
 tmp/
