@@ -1,6 +1,19 @@
 // Configuration management for frameworks
 
 /**
+ * Canonical model identifiers used across all frameworks.
+ * Update here to change models project-wide.
+ */
+export const DEFAULT_MODELS = {
+  CLAUDE_SONNET: "claude-3-7-sonnet-20250219",
+  CLAUDE_HAIKU: "claude-3-5-haiku-20241022",
+  CLAUDE_OPUS: "claude-3-opus-20240229",
+  GPT4O: "gpt-4o",
+  GPT4O_MINI: "gpt-4o-mini",
+  DEFAULT: "claude-3-7-sonnet-20250219",
+} as const;
+
+/**
  * Base configuration interface all frameworks should extend
  */
 export interface BaseFrameworkConfig {
