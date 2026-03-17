@@ -12,7 +12,7 @@ The library's core architecture is sound — 26 frameworks, a clean provider abs
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Core Hardening** - Fix the foundation: strict TypeScript, typed errors, provider bugs, and SDK upgrade (completed 2026-03-17)
+- [ ] **Phase 1: Core Hardening** - Fix the foundation: strict TypeScript, typed errors, provider bugs, and SDK upgrade
 - [ ] **Phase 2: Framework Standardization** - Bring all 26 frameworks up to the same pattern against the cleaned core
 - [ ] **Phase 3: Registry and Entry Point Cleanup** - Create single source of truth and wire CLI/MCP to it
 - [ ] **Phase 4: Test Infrastructure** - Mock provider tests for all 26 frameworks; remove CI safety net
@@ -31,12 +31,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Typed error hierarchy exists — catching `InstitutionalError` catches `ProviderError`, `ValidationError`, and `FrameworkError`
   4. The Anthropic provider sends system prompts in the `system` parameter, not as a user-turn message
   5. `@anthropic-ai/sdk` is at ^0.50.0 and `executeParallel()` has a configurable concurrency cap
-**Plans:** 4/4 plans complete
+**Plans:** 5 plans
 Plans:
-- [ ] 01-01-PLAN.md — TypeScript setup + typed error hierarchy
-- [ ] 01-02-PLAN.md — Anthropic system message bug fix + SDK upgrade
-- [ ] 01-03-PLAN.md — Retry/timeout infrastructure + concurrency semaphore
-- [ ] 01-04-PLAN.md — RunFlags interface + DEFAULT_MODELS across all 26 frameworks
+- [x] 01-01-PLAN.md — TypeScript setup + typed error hierarchy
+- [x] 01-02-PLAN.md — Anthropic system message bug fix + SDK upgrade
+- [x] 01-03-PLAN.md — Retry/timeout infrastructure + concurrency semaphore
+- [x] 01-04-PLAN.md — RunFlags interface + DEFAULT_MODELS across all 26 frameworks
+- [ ] 01-05-PLAN.md — Gap closure: fix 15 remaining TypeScript strict-mode errors
 
 ### Phase 2: Framework Standardization
 **Goal**: All 26 frameworks follow consistent patterns — FrameworkRunner for orchestration, `@core/*` imports, and accurate cost tracking
@@ -100,7 +101,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 (Phase 6 can proceed 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Hardening | 4/4 | Complete   | 2026-03-17 |
+| 1. Core Hardening | 4/5 | Gap closure planned | - |
 | 2. Framework Standardization | 0/TBD | Not started | - |
 | 3. Registry and Entry Point Cleanup | 0/TBD | Not started | - |
 | 4. Test Infrastructure | 0/TBD | Not started | - |
