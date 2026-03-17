@@ -1,10 +1,13 @@
+import { FrameworkRunner } from "@core/orchestrator";
+import type { LLMProvider } from "@core/types";
 import type { DissertationWork, DissertationCommitteeResult, DissertationCommitteeConfig, CommitteeMember, StageReview, CommitteeConsensus, DevelopmentPlan } from "./types";
 import { DEFAULT_CONFIG } from "./types";
-import { conductReview, formCommittee } from "./committee";
+import { conductReview, formCommittee, buildReviewPrompt, parseReviewResponse } from "./committee";
 
 export async function runCommitteeReview(
   work: DissertationWork,
-  config: DissertationCommitteeConfig = DEFAULT_CONFIG
+  config: DissertationCommitteeConfig = DEFAULT_CONFIG,
+  provider: LLMProvider
 ): Promise<DissertationCommitteeResult> {
   const startTime = Date.now();
 
@@ -17,23 +20,57 @@ export async function runCommitteeReview(
   console.log(`   Abstract: ${work.abstract.substring(0, 100)}${work.abstract.length > 100 ? "..." : ""}`);
   console.log();
 
+  const runner = new FrameworkRunner<DissertationWork, DissertationCommitteeResult>("dissertation-committee", work);
+
   // Step 1: Form committee
   console.log("🎓 Phase 1: Committee Formation");
   const committee = formCommittee(work, config);
   console.log(`   ✅ Committee formed (${committee.length} members):`);
   committee.forEach(m => console.log(`      • ${m.name} (${m.role}) - ${m.specialty}`));
 
-  // Step 2: Individual reviews (parallel)
+  // Step 2: Individual reviews (sequential)
   console.log("\n🎓 Phase 2: Individual Reviews");
   const stageReviews: StageReview[] = [];
-  
+
   for (const member of committee) {
     console.log(`   📝 ${member.name} reviewing...`);
-    const review = await conductReview(work, member, config);
-    stageReviews.push(review);
-    console.log(`   ✅ ${member.name}: ${review.verdict.toUpperCase()}`);
-    if (review.requiredChanges && review.requiredChanges.length > 0) {
-      console.log(`      Required changes: ${review.requiredChanges.length}`);
+    const modelKey = member.role === "advisor" ? "advisor" :
+                     member.role === "methodologist" ? "methodologist" :
+                     member.role === "specialist" ? `specialist${Math.floor(Math.random() * 2) + 1}` :
+                     "advisor";
+    const model = config.models[modelKey as keyof typeof config.models];
+    const { system, user } = buildReviewPrompt(work, member, config);
+
+    try {
+      const response = await runner.runAgent(
+        `reviewer-${member.name.replace(/\s+/g, "-").toLowerCase()}`,
+        provider,
+        model,
+        user,
+        config.parameters.temperature,
+        4096,
+        system
+      );
+      const review = parseReviewResponse(response.content, work, member);
+      stageReviews.push(review);
+      console.log(`   ✅ ${member.name}: ${review.verdict.toUpperCase()}`);
+      if (review.requiredChanges && review.requiredChanges.length > 0) {
+        console.log(`      Required changes: ${review.requiredChanges.length}`);
+      }
+    } catch (error) {
+      console.warn(`Review failed for ${member.name}:`, error);
+      stageReviews.push({
+        stage: work.stage,
+        reviewer: member.name,
+        assessment: {
+          strengths: ["Work received for review"],
+          weaknesses: ["Complete review pending"],
+          questions: ["Please resubmit for full review"],
+        },
+        verdict: "revise",
+        requiredChanges: ["Address all committee feedback"],
+        suggestions: ["Provide more complete work sample"],
+      });
     }
   }
 
@@ -54,7 +91,6 @@ export async function runCommitteeReview(
   console.log(`   Milestones: ${developmentPlan.milestones.length}`);
 
   const duration = Date.now() - startTime;
-  const costUSD = 0.0; // Placeholder
 
   console.log("\n" + "=".repeat(80));
   console.log(`🎯 COMMITTEE REVIEW COMPLETE`);
@@ -80,7 +116,7 @@ export async function runCommitteeReview(
   developmentPlan.immediateActions.forEach(a => console.log(`  → ${a}`));
   console.log();
 
-  return {
+  const result: DissertationCommitteeResult = {
     work,
     committee,
     stageReviews,
@@ -89,10 +125,15 @@ export async function runCommitteeReview(
     metadata: {
       timestamp: new Date().toISOString(),
       duration,
-      costUSD,
+      costUSD: 0, // will be replaced from auditLog
       modelUsage: config.models,
     },
   };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+  result.metadata.costUSD = auditLog.metadata.totalCost;
+
+  return result;
 }
 
 function formDefaultCommittee(work: DissertationWork, config: DissertationCommitteeConfig): CommitteeMember[] {
@@ -177,7 +218,7 @@ function generateDevelopmentPlan(
     .filter((v, i, a) => a.indexOf(v) === i);
 
   // Determine timeline based on stage
-  const timeline = work.stage === "proposal" 
+  const timeline = work.stage === "proposal"
     ? "6-12 months to completion"
     : work.stage === "chapters"
     ? "3-6 months to completion"

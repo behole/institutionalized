@@ -1,10 +1,19 @@
+import { FrameworkRunner } from "@core/orchestrator";
+import type { LLMProvider } from "@core/types";
 import type { Policy, RegulatoryImpactResult, RegulatoryImpactConfig, EconomicImpact, SocialImpact, EnvironmentalImpact, StakeholderFeedback, RiskAssessment } from "./types";
 import { DEFAULT_CONFIG } from "./types";
-import { analyzeEconomic, analyzeSocial, analyzeEnvironmental, gatherStakeholderFeedback, assessRisks } from "./analysts";
+import {
+  buildEconomicPrompt, parseEconomicResponse,
+  buildSocialPrompt, parseSocialResponse,
+  buildEnvironmentalPrompt, parseEnvironmentalResponse,
+  buildStakeholderPrompt, parseStakeholderResponse,
+  buildRiskPrompt, parseRiskResponse
+} from "./analysts";
 
 export async function runAssessment(
   policy: Policy,
-  config: RegulatoryImpactConfig = DEFAULT_CONFIG
+  config: RegulatoryImpactConfig = DEFAULT_CONFIG,
+  provider: LLMProvider
 ): Promise<RegulatoryImpactResult> {
   const startTime = Date.now();
 
@@ -16,27 +25,106 @@ export async function runAssessment(
   console.log(`   Objectives: ${policy.objectives.join("; ") || "Not specified"}`);
   console.log();
 
+  const runner = new FrameworkRunner<Policy, RegulatoryImpactResult>("regulatory-impact", policy);
+
   // Step 1: Multi-dimensional analysis (parallel)
   console.log("📋 Phase 1: Multi-Dimensional Analysis");
-  
-  const [economic, social, environmental] = await Promise.all([
-    analyzeEconomic(policy, config),
-    analyzeSocial(policy, config),
-    analyzeEnvironmental(policy, config),
+
+  const { system: econSystem, user: econUser } = buildEconomicPrompt(policy, config);
+  const { system: socialSystem, user: socialUser } = buildSocialPrompt(policy, config);
+  const { system: envSystem, user: envUser } = buildEnvironmentalPrompt(policy, config);
+
+  const [econResponse, socialResponse, envResponse] = await runner.runParallel([
+    {
+      name: "economic-analyst",
+      provider,
+      model: config.models.economic,
+      prompt: econUser,
+      temperature: config.parameters.temperature,
+      maxTokens: 4096,
+      systemPrompt: econSystem,
+    },
+    {
+      name: "social-analyst",
+      provider,
+      model: config.models.social,
+      prompt: socialUser,
+      temperature: config.parameters.temperature,
+      maxTokens: 4096,
+      systemPrompt: socialSystem,
+    },
+    {
+      name: "environmental-analyst",
+      provider,
+      model: config.models.environmental,
+      prompt: envUser,
+      temperature: config.parameters.temperature,
+      maxTokens: 4096,
+      systemPrompt: envSystem,
+    },
   ]);
+
+  const economic = parseEconomicResponse(econResponse.content);
+  const social = parseSocialResponse(socialResponse.content);
+  const environmental = parseEnvironmentalResponse(envResponse.content);
 
   console.log(`   ✅ Economic impact analyzed`);
   console.log(`   ✅ Social impact analyzed`);
   console.log(`   ✅ Environmental impact analyzed`);
 
-  // Step 2: Stakeholder feedback
+  // Step 2: Stakeholder feedback (sequential -- each represents a distinct voice)
   console.log("\n📋 Phase 2: Stakeholder Feedback");
-  const stakeholderFeedback = await gatherStakeholderFeedback(policy, config);
+  const stakeholderTypes = [
+    "Industry/Business Representatives",
+    "Consumer Advocates",
+    "Civil Liberties Groups",
+    "Environmental Organizations",
+    "Labor Unions",
+    "Small Business Owners",
+    "Technology Companies",
+    "Public Interest Groups",
+  ];
+  const selectedStakeholders = stakeholderTypes.slice(0, config.parameters.stakeholderCount);
+  const stakeholderFeedback: StakeholderFeedback[] = [];
+
+  for (const stakeholder of selectedStakeholders) {
+    const { system, user } = buildStakeholderPrompt(policy, stakeholder, config);
+    try {
+      const response = await runner.runAgent(
+        `stakeholder-${stakeholder.replace(/\s+/g, "-").toLowerCase()}`,
+        provider,
+        config.models.stakeholder,
+        user,
+        config.parameters.temperature,
+        4096,
+        system
+      );
+      stakeholderFeedback.push(parseStakeholderResponse(response.content, stakeholder));
+    } catch (error) {
+      console.warn(`Failed to get feedback from ${stakeholder}:`, error);
+      stakeholderFeedback.push({
+        stakeholder,
+        concerns: ["Unable to provide detailed feedback"],
+        support: [],
+        suggestions: ["Please provide more policy details"],
+      });
+    }
+  }
   console.log(`   ✅ ${stakeholderFeedback.length} stakeholder perspectives gathered`);
 
   // Step 3: Risk assessment
   console.log("\n📋 Phase 3: Risk Assessment");
-  const risks = await assessRisks(policy, economic, social, environmental, config);
+  const { system: riskSystem, user: riskUser } = buildRiskPrompt(policy, economic, social, environmental, config);
+  const riskResponse = await runner.runAgent(
+    "risk-analyst",
+    provider,
+    config.models.risk,
+    riskUser,
+    config.parameters.temperature,
+    4096,
+    riskSystem
+  );
+  const risks = parseRiskResponse(riskResponse.content);
   console.log(`   ✅ ${risks.risks.length} risks identified`);
 
   // Step 4: Synthesize recommendation
@@ -45,7 +133,6 @@ export async function runAssessment(
   console.log(`   ✅ Recommendation: ${recommendation.decision.toUpperCase()}`);
 
   const duration = Date.now() - startTime;
-  const costUSD = 0.0; // Placeholder
 
   console.log("\n" + "=".repeat(80));
   console.log(`🎯 ASSESSMENT COMPLETE`);
@@ -77,7 +164,7 @@ export async function runAssessment(
   }
   console.log();
 
-  return {
+  const result: RegulatoryImpactResult = {
     policy,
     economic,
     social,
@@ -88,10 +175,15 @@ export async function runAssessment(
     metadata: {
       timestamp: new Date().toISOString(),
       duration,
-      costUSD,
+      costUSD: 0, // will be replaced from auditLog
       modelUsage: config.models,
     },
   };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+  result.metadata.costUSD = auditLog.metadata.totalCost;
+
+  return result;
 }
 
 function synthesizeRecommendation(
@@ -103,8 +195,8 @@ function synthesizeRecommendation(
 ): { decision: "proceed" | "revise" | "reject"; rationale: string; conditions?: string[] } {
   // Count high risks
   const highRisks = risks.risks.filter(r => r.likelihood === "high" && r.impact === "high").length;
-  const mediumRisks = risks.risks.filter(r => 
-    (r.likelihood === "high" || r.impact === "high") && 
+  const mediumRisks = risks.risks.filter(r =>
+    (r.likelihood === "high" || r.impact === "high") &&
     !(r.likelihood === "high" && r.impact === "high")
   ).length;
 

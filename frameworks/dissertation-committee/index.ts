@@ -6,6 +6,8 @@
 import type { DissertationWork, DissertationCommitteeConfig, DissertationCommitteeResult } from "./types";
 import type { RunFlags } from "@core/types";
 import { DEFAULT_CONFIG } from "./types";
+import { createProvider } from "@core/providers";
+import { getAPIKey } from "@core/config";
 
 /**
  * Main entry point for CLI
@@ -32,9 +34,13 @@ export async function run(
     ...(flags.config || {}),
   };
 
+  // Create provider from flags
+  const providerName = (flags as Record<string, unknown>).provider as string || "anthropic";
+  const provider = createProvider({ name: providerName, apiKey: getAPIKey(providerName) });
+
   // Import and run the orchestrator
   const { runCommitteeReview } = await import("./orchestrator");
-  return runCommitteeReview(workInput, config);
+  return runCommitteeReview(workInput, config, provider);
 }
 
 // Re-export types for programmatic use
