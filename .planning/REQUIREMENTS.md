@@ -15,7 +15,7 @@ Requirements for production-grade library, npm package, and Claude Code skill.
 - [x] **CODE-04**: Implement typed error hierarchy (`InstitutionalError` → `ProviderError`, `ValidationError`, `FrameworkError`)
 - [ ] **CODE-05**: Ensure all 26 frameworks consistently adopt `FrameworkRunner` for orchestration and audit trails
 - [ ] **CODE-06**: Centralize model constants in `core/config.ts` (`DEFAULT_MODELS`) replacing 26 hardcoded model strings
-- [ ] **CODE-07**: Add concurrency cap (semaphore) to `executeParallel()` to prevent rate limit bursts
+- [x] **CODE-07**: Add concurrency cap (semaphore) to `executeParallel()` to prevent rate limit bursts
 
 ### Providers
 
@@ -24,8 +24,8 @@ Requirements for production-grade library, npm package, and Claude Code skill.
 - [ ] **PROV-03**: Fix 7 frameworks with hardcoded `$0.00` cost tracking to report accurate costs
 - [ ] **PROV-04**: Fix MCP server `run(args, args)` double-pass bug
 - [x] **PROV-05**: Upgrade `@anthropic-ai/sdk` from ^0.32.1 to ^0.50.0+
-- [ ] **PROV-06**: Add retry with exponential backoff for OpenAI/OpenRouter providers on 429/500 errors
-- [ ] **PROV-07**: Add configurable per-agent timeouts via AbortController
+- [x] **PROV-06**: Add retry with exponential backoff for OpenAI/OpenRouter providers on 429/500 errors
+- [x] **PROV-07**: Add configurable per-agent timeouts via AbortController
 
 ### Registry
 
@@ -95,14 +95,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CODE-04 | Phase 1 | Complete |
 | CODE-05 | Phase 2 | Pending |
 | CODE-06 | Phase 1 | Pending |
-| CODE-07 | Phase 1 | Pending |
+| CODE-07 | Phase 1 | Complete |
 | PROV-01 | Phase 1 | Complete |
 | PROV-02 | Phase 2 | Pending |
 | PROV-03 | Phase 2 | Pending |
 | PROV-04 | Phase 3 | Pending |
 | PROV-05 | Phase 1 | Complete |
-| PROV-06 | Phase 1 | Pending |
-| PROV-07 | Phase 1 | Pending |
+| PROV-06 | Phase 1 | Complete |
+| PROV-07 | Phase 1 | Complete |
 | REG-01 | Phase 3 | Pending |
 | REG-02 | Phase 3 | Pending |
 | REG-03 | Phase 3 | Pending |

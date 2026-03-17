@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-core-hardening-02-PLAN.md
-last_updated: "2026-03-17T00:20:42.950Z"
+stopped_at: Completed 01-core-hardening-03-PLAN.md
+last_updated: "2026-03-17T00:27:29.715Z"
 last_activity: 2026-03-16 — Roadmap created, all 29 requirements mapped across 6 phases
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 *Updated after each plan completion*
 | Phase 01-core-hardening P01 | 137 | 2 tasks | 5 files |
 | Phase 01-core-hardening P02 | 8 | 2 tasks | 5 files |
+| Phase 01-core-hardening P03 | 4 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ Recent decisions affecting current work:
 - [Phase 01-core-hardening]: ProviderError.cause required (non-optional) to enforce upstream cause preservation
 - [Phase 01-core-hardening]: Fix Anthropic system prompt bug FIRST (5d84ffa), then upgrade SDK (73510e5) — two bisectable commits
 - [Phase 01-core-hardening]: Remove openai SDK package — OpenAI provider uses raw fetch, SDK not needed
+- [Phase 01-core-hardening]: withRetry baseDelayMs overridable for test-speed (no fake timers needed)
+- [Phase 01-core-hardening]: Bun toSatisfy() incompatible with rejects chain — use try/catch + toBeInstanceOf instead
+- [Phase 01-core-hardening]: executeParallel uses Promise.allSettled + AggregateError (all-complete) replacing Promise.all fail-fast
 
 ### Pending Todos
 
@@ -80,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-17T00:20:42.947Z
-Stopped at: Completed 01-core-hardening-02-PLAN.md
+Last session: 2026-03-17T00:27:29.712Z
+Stopped at: Completed 01-core-hardening-03-PLAN.md
 Resume file: None
