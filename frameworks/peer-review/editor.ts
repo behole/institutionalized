@@ -2,7 +2,7 @@
  * Editor agent - synthesizes reviews and rebuttal into final decision
  */
 
-import type { LLMProvider } from "../../core/types";
+import type { LLMProvider } from "@core/types";
 import type {
   Submission,
   Review,

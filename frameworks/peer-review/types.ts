@@ -58,5 +58,6 @@ export interface PeerReviewResult {
   metadata: {
     timestamp: string;
     config: PeerReviewConfig;
+    costUSD?: number;
   };
 }

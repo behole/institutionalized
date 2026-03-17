@@ -59,6 +59,7 @@ export interface PreMortemResult {
     timestamp: string;
     numPessimists: number;
     config: PreMortemConfig;
+    costUSD?: number;
   };
 }
 

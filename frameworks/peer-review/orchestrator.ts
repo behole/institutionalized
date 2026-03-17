@@ -3,7 +3,8 @@
  */
 
 import { DEFAULT_MODELS } from "@core/config";
-import type { LLMProvider } from "../../core/types";
+import { FrameworkRunner } from "@core/orchestrator";
+import type { LLMProvider } from "@core/types";
 import type {
   Submission,
   Review,
@@ -22,6 +23,8 @@ export async function runPeerReview(
   provider: LLMProvider,
   verbose: boolean = false
 ): Promise<PeerReviewResult> {
+  const runner = new FrameworkRunner<Submission, PeerReviewResult>("peer-review", submission);
+
   if (verbose) {
     console.log("\n🔬 PEER REVIEW PROCESS INITIATED");
     console.log(`Configuration:`);
@@ -110,7 +113,7 @@ export async function runPeerReview(
     console.log("\n✅ PEER REVIEW COMPLETE\n");
   }
 
-  return {
+  const result: PeerReviewResult = {
     submission,
     reviews,
     rebuttal,
@@ -118,6 +121,16 @@ export async function runPeerReview(
     metadata: {
       timestamp: new Date().toISOString(),
       config,
+    },
+  };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: {
+      ...result.metadata,
+      costUSD: auditLog.metadata.totalCost,
     },
   };
 }

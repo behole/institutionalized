@@ -2,7 +2,7 @@
  * Reviewer agent - conducts independent review with specific focus
  */
 
-import type { LLMProvider } from "../../core/types";
+import type { LLMProvider } from "@core/types";
 import type { Submission, Review, PeerReviewConfig } from "./types";
 
 export async function conductReview(

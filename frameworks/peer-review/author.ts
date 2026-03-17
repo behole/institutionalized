@@ -2,7 +2,7 @@
  * Author agent - responds to reviewer critiques
  */
 
-import type { LLMProvider } from "../../core/types";
+import type { LLMProvider } from "@core/types";
 import type { Submission, Review, Rebuttal, PeerReviewConfig } from "./types";
 
 export async function createRebuttal(

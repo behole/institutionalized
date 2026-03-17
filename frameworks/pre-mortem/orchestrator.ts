@@ -2,6 +2,7 @@
  * Orchestrator for Pre-mortem framework
  */
 
+import { FrameworkRunner } from "@core/orchestrator";
 import type { LLMProvider } from "@core/types";
 import type { Plan, PreMortemConfig, PreMortemResult } from "./types";
 import { imagineFailure } from "./pessimist";
@@ -13,6 +14,8 @@ export async function runPreMortem(
   provider: LLMProvider,
   verbose: boolean = false
 ): Promise<PreMortemResult> {
+  const runner = new FrameworkRunner<Plan, PreMortemResult>("pre-mortem", plan);
+
   if (verbose) {
     console.log("\n" + "=".repeat(80));
     console.log("⏪ PRE-MORTEM EXERCISE");
@@ -94,7 +97,7 @@ export async function runPreMortem(
     console.log("\n" + "=".repeat(80) + "\n");
   }
 
-  return {
+  const result: PreMortemResult = {
     plan,
     scenarios,
     assessment,
@@ -102,6 +105,16 @@ export async function runPreMortem(
       timestamp: new Date().toISOString(),
       numPessimists: config.parameters.numPessimists,
       config,
+    },
+  };
+
+  const { auditLog } = await runner.finalize(result, "complete");
+
+  return {
+    ...result,
+    metadata: {
+      ...result.metadata,
+      costUSD: auditLog.metadata.totalCost,
     },
   };
 }
