@@ -1,6 +1,7 @@
 // Agent orchestration primitives for institutional frameworks
 import type { LLMProvider, LLMCallParams, LLMResponse } from "./types";
 import { AuditTrail } from "./observability";
+import { sanitizeInput } from "./sanitize";
 import type { ZodType } from "zod";
 
 /**
@@ -167,6 +168,12 @@ export class FrameworkRunner<TInput, TResult> {
     systemPrompt?: string
   ): Promise<LLMResponse> {
     const startTime = Date.now();
+
+    // Sanitize prompt and system prompt before sending to provider
+    prompt = sanitizeInput(prompt);
+    if (systemPrompt !== undefined) {
+      systemPrompt = sanitizeInput(systemPrompt);
+    }
 
     const params: LLMCallParams = {
       model,

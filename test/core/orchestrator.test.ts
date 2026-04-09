@@ -2,6 +2,7 @@ import { describe, test, expect } from "bun:test";
 import { executeParallel, executeSequential, parseJSON, Semaphore, FrameworkRunner } from "@core/orchestrator";
 import { ProviderError } from "../../core/errors";
 import { z } from "zod";
+import { MockProvider } from "../../core/providers/mock";
 
 describe("executeParallel", () => {
   test("should execute tasks in parallel", async () => {
@@ -278,6 +279,31 @@ describe("executeSequential", () => {
 
     await expect(executeSequential(tasks)).rejects.toThrow("second failed");
     expect(executed).toEqual([1, 2]); // Third task should not execute
+  });
+});
+
+describe("FrameworkRunner.runAgent sanitization", () => {
+  test("strips null bytes from prompt before sending to provider", async () => {
+    const provider = new MockProvider([
+      { content: "response", model: "mock", usage: { inputTokens: 5, outputTokens: 10 } },
+    ]);
+
+    const runner = new FrameworkRunner("test", { input: "test" });
+    await runner.runAgent("agent", provider, "mock", "hello\x00world");
+
+    // The provider should receive the sanitized prompt
+    expect(provider.calls[0].messages[0].content).toBe("helloworld");
+  });
+
+  test("strips null bytes from system prompt before sending to provider", async () => {
+    const provider = new MockProvider([
+      { content: "response", model: "mock", usage: { inputTokens: 5, outputTokens: 10 } },
+    ]);
+
+    const runner = new FrameworkRunner("test", { input: "test" });
+    await runner.runAgent("agent", provider, "mock", "prompt", 0.7, 2048, "system\x00prompt");
+
+    expect(provider.calls[0].systemPrompt).toBe("systemprompt");
   });
 });
 
