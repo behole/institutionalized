@@ -1,8 +1,10 @@
 // Validation patterns for agent outputs
+// DEPRECATED: Use Zod schemas from core/schemas.ts instead.
 
 /**
- * Validate that a quote exists in the source text
- * Prevents hallucinated evidence
+ * Validate that a quote exists in the source text.
+ * Prevents hallucinated evidence.
+ * @deprecated Use Zod schemas from core/schemas.ts with custom refinements instead.
  */
 export function validateQuote(quote: string, source: string): void {
   if (!source.includes(quote)) {
@@ -11,8 +13,9 @@ export function validateQuote(quote: string, source: string): void {
 }
 
 /**
- * Validate that a response meets minimum word count
- * Ensures substantive responses
+ * Validate that a response meets minimum word count.
+ * Ensures substantive responses.
+ * @deprecated Use Zod schemas from core/schemas.ts with z.string().refine() instead.
  */
 export function validateSubstantive(
   text: string,
@@ -27,7 +30,8 @@ export function validateSubstantive(
 }
 
 /**
- * Validate that required fields are present in an object
+ * Validate that required fields are present in an object.
+ * @deprecated Use Zod schemas from core/schemas.ts with z.object().required() instead.
  */
 export function validateRequired<T extends Record<string, any>>(
   obj: T,
@@ -40,7 +44,8 @@ export function validateRequired<T extends Record<string, any>>(
 }
 
 /**
- * Validate JSON structure matches expected shape
+ * Validate JSON structure matches expected shape.
+ * @deprecated Use Zod schemas from core/schemas.ts with schema.parse() instead.
  */
 export function validateStructure<T>(
   data: unknown,
@@ -53,7 +58,8 @@ export function validateStructure<T>(
 }
 
 /**
- * Validate that a string is not empty after trimming
+ * Validate that a string is not empty after trimming.
+ * @deprecated Use Zod schemas from core/schemas.ts with z.string().min(1) instead.
  */
 export function validateNonEmpty(text: string, fieldName: string = "Field"): void {
   if (!text || text.trim().length === 0) {
@@ -62,7 +68,8 @@ export function validateNonEmpty(text: string, fieldName: string = "Field"): voi
 }
 
 /**
- * Validate that a number is within a range
+ * Validate that a number is within a range.
+ * @deprecated Use Zod schemas from core/schemas.ts with z.number().min().max() instead.
  */
 export function validateRange(
   value: number,
