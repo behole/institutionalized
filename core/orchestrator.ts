@@ -1,6 +1,7 @@
 // Agent orchestration primitives for institutional frameworks
 import type { LLMProvider, LLMCallParams, LLMResponse } from "./types";
 import { AuditTrail } from "./observability";
+import type { ZodType } from "zod";
 
 /**
  * A lightweight counting semaphore that limits concurrent async operations.
@@ -266,29 +267,37 @@ export class FrameworkRunner<TInput, TResult> {
 }
 
 /**
- * Parse JSON from LLM response, handling markdown code blocks
+ * Parse JSON from LLM response, handling markdown code blocks.
+ * When a Zod schema is provided, the parsed data is validated against it.
  */
-export function parseJSON<T>(text: string): T {
+export function parseJSON<T>(text: string, schema?: ZodType<T>): T {
   const trimmed = text.trim();
 
   // Try to extract JSON from markdown code block
   const codeBlockMatch = trimmed.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+  let raw: unknown;
   if (codeBlockMatch) {
-    return JSON.parse(codeBlockMatch[1]);
+    raw = JSON.parse(codeBlockMatch[1]);
+  } else {
+    // Try to extract raw JSON object
+    const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      raw = JSON.parse(jsonMatch[0]);
+    } else {
+      throw new Error("No valid JSON found in response");
+    }
   }
 
-  // Try to extract raw JSON object
-  const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    return JSON.parse(jsonMatch[0]);
+  if (schema) {
+    return schema.parse(raw);
   }
 
-  throw new Error("No valid JSON found in response");
+  return raw as T;
 }
 
 /**
- * Generate a typed object from LLM
- * Convenience wrapper for structured output
+ * Generate a typed object from LLM.
+ * When a Zod schema is provided, the parsed response is validated against it.
  */
 export async function generateObject<T>({
   model,
@@ -297,6 +306,7 @@ export async function generateObject<T>({
   temperature = 0.7,
   maxTokens = 4096,
   provider,
+  schema,
 }: {
   model: string;
   system?: string;
@@ -304,6 +314,7 @@ export async function generateObject<T>({
   temperature?: number;
   maxTokens?: number;
   provider?: LLMProvider;
+  schema?: ZodType<T>;
 }): Promise<T> {
   // Get provider if not passed
   const llmProvider = provider || (await import("./providers/index")).getProvider();
@@ -320,5 +331,5 @@ export async function generateObject<T>({
     systemPrompt: system,
   });
 
-  return parseJSON<T>(response.content);
+  return parseJSON<T>(response.content, schema);
 }

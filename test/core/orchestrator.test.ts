@@ -1,6 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { executeParallel, executeSequential, parseJSON, Semaphore, FrameworkRunner } from "@core/orchestrator";
 import { ProviderError } from "../../core/errors";
+import { z } from "zod";
 
 describe("executeParallel", () => {
   test("should execute tasks in parallel", async () => {
@@ -328,5 +329,30 @@ Some trailing text`;
     const input = '{"items": [1, 2, 3]}';
     const result = parseJSON<{ items: number[] }>(input);
     expect(result).toEqual({ items: [1, 2, 3] });
+  });
+
+  test("should validate against Zod schema when provided", () => {
+    const schema = z.object({
+      name: z.string(),
+      value: z.number(),
+    });
+    const input = '{"name": "test", "value": 42}';
+    const result = parseJSON(input, schema);
+    expect(result).toEqual({ name: "test", value: 42 });
+  });
+
+  test("should throw validation error when data does not match schema", () => {
+    const schema = z.object({
+      name: z.string(),
+      value: z.number(),
+    });
+    const input = '{"name": "test", "value": "not a number"}';
+    expect(() => parseJSON(input, schema)).toThrow();
+  });
+
+  test("should work without schema (backwards compatible)", () => {
+    const input = '{"anything": "goes"}';
+    const result = parseJSON<{ anything: string }>(input);
+    expect(result).toEqual({ anything: "goes" });
   });
 });
