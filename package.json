@@ -20,6 +20,8 @@
     "test:e2e": "bun test test/frameworks",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
+    "test:integration": "bun test test/integration",
+    "test:property": "bun test test/core/property.test.ts",
     "typecheck": "bun tsc --noEmit"
   },
   "dependencies": {
@@ -29,6 +31,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "bun-types": "latest",
+    "fast-check": "^4.6.0",
     "typescript": "^5.9.3"
   },
   "keywords": [
