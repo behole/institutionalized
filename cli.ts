@@ -643,7 +643,7 @@ async function main() {
 
   // Handle help
   if (flags.help || (args.length === 0 && !flags.list && !flags.interactive && !flags.version)) {
-    showHelp();
+    await showHelp();
     process.exit(0);
   }
 
@@ -680,7 +680,7 @@ async function main() {
   const positionalArgs = args.filter((a) => !a.startsWith('-'));
 
   if (positionalArgs.length === 0) {
-    showHelp();
+    await showHelp();
     process.exit(1);
   }
 
@@ -1203,10 +1203,10 @@ async function recommendFramework() {
   );
 }
 
-function showHelp() {
+async function showHelp() {
   const pkg = Bun.file('package.json');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const version = pkg.exists() ? require('./package.json').version : 'unknown';
+  const exists = await pkg.exists();
+  const version = exists ? (await pkg.json()).version : 'unknown';
 
   console.log(`
 🏛️  Institutional Reasoning v${version}
