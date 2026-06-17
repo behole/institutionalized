@@ -37,6 +37,16 @@ bun.lockb
 # Test outputs
 coverage/
 
+# TypeScript build info
+*.tsbuildinfo
+
+# Release tarballs
+*.tgz
+
+# Tooling state (OMC, Superset)
+.omc/
+.superset/
+
 # Temporary files
 tmp/
 temp/

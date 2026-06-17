@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# TypeScript declaration files
+*.d.ts
+
+# Lock files
+bun.lock
+
+# IDE
+.idea/
+.vscode/
+
+# Git
+.git/
+
+# Test coverage
+coverage/
