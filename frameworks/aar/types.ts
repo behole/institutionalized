@@ -3,7 +3,7 @@
  * Learning from execution
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface ActionReview {
   situation: string;

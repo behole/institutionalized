@@ -3,7 +3,7 @@
  * Anonymous expert consensus building through iterative rounds
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Question {
   question: string;
@@ -37,7 +37,7 @@ export interface DelphiResult {
   rounds: RoundSummary[];
   finalConsensus: {
     estimate: number;
-    confidence: "low" | "medium" | "high";
+    confidence: 'low' | 'medium' | 'high';
     range: { min: number; max: number };
     reasoning: string;
     outliers: Array<{

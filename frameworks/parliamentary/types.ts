@@ -3,7 +3,7 @@
  * Adversarial policy discussion with formal structure
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Motion {
   motion: string;
@@ -13,8 +13,8 @@ export interface Motion {
 
 export interface Speech {
   speaker: string;
-  role: "government" | "opposition" | "backbench";
-  position: "for" | "against" | "neutral";
+  role: 'government' | 'opposition' | 'backbench';
+  position: 'for' | 'against' | 'neutral';
   speech: string;
   keyPoints: string[];
 }
@@ -28,14 +28,14 @@ export interface DebateRecord {
 }
 
 export interface Vote {
-  decision: "ayes" | "noes" | "abstain";
+  decision: 'ayes' | 'noes' | 'abstain';
   voteCounts: {
     ayes: number;
     noes: number;
     abstentions: number;
   };
   majority: string;
-  outcome: "motion_passed" | "motion_defeated";
+  outcome: 'motion_passed' | 'motion_defeated';
 }
 
 export interface ParliamentaryResult {

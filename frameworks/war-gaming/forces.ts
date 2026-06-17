@@ -1,6 +1,6 @@
-import type { Scenario, WarGamingConfig, ForceDeployment } from "./types";
-import { parseJSON } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { Scenario, WarGamingConfig, ForceDeployment } from './types';
+import { parseJSON } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
 
 export function buildForceDeploymentPrompt(
   scenario: Scenario,
@@ -27,13 +27,13 @@ Respond with valid JSON matching this structure:
   const user = `SCENARIO: ${scenario.description}
 
 CONTEXT:
-${scenario.context?.join("\n") || "No additional context provided"}
+${scenario.context?.join('\n') || 'No additional context provided'}
 
 CONSTRAINTS:
-${scenario.constraints?.join("\n") || "No specific constraints"}
+${scenario.constraints?.join('\n') || 'No specific constraints'}
 
 OBJECTIVES:
-${scenario.objectives?.join("\n") || "Achieve strategic advantage"}
+${scenario.objectives?.join('\n') || 'Achieve strategic advantage'}
 
 Define the ${forceName} deployment:
 1. What is their overall strategy?
@@ -52,12 +52,12 @@ export function parseForceDeploymentResponse(text: string, forceName: string): F
     return {
       force: {
         name: forceName,
-        strategy: "Adaptive defense with opportunistic offense",
-        resources: ["Standard equipment", "Personnel", "Intelligence"],
-        constraints: ["Limited resources", "Time pressure"],
+        strategy: 'Adaptive defense with opportunistic offense',
+        resources: ['Standard equipment', 'Personnel', 'Intelligence'],
+        constraints: ['Limited resources', 'Time pressure'],
       },
-      initialPosition: "Defensive stance",
-      openingMoves: ["Assess situation", "Secure position"],
+      initialPosition: 'Defensive stance',
+      openingMoves: ['Assess situation', 'Secure position'],
     };
   }
 }
@@ -67,7 +67,7 @@ export async function deployForces(
   config: WarGamingConfig,
   provider: LLMProvider
 ): Promise<ForceDeployment[]> {
-  const forceNames = Object.keys(config.models).filter(k => k !== "control" && k !== "observer");
+  const forceNames = Object.keys(config.models).filter((k) => k !== 'control' && k !== 'observer');
   const deployments: ForceDeployment[] = [];
 
   for (const forceName of forceNames) {
@@ -76,7 +76,7 @@ export async function deployForces(
     try {
       const response = await provider.call({
         model: config.models[forceName],
-        messages: [{ role: "user", content: user }],
+        messages: [{ role: 'user', content: user }],
         temperature: config.parameters.temperature,
         systemPrompt: system,
         maxTokens: 4096,
@@ -89,12 +89,12 @@ export async function deployForces(
       deployments.push({
         force: {
           name: forceName,
-          strategy: "Adaptive defense with opportunistic offense",
-          resources: ["Standard equipment", "Personnel", "Intelligence"],
-          constraints: ["Limited resources", "Time pressure"],
+          strategy: 'Adaptive defense with opportunistic offense',
+          resources: ['Standard equipment', 'Personnel', 'Intelligence'],
+          constraints: ['Limited resources', 'Time pressure'],
         },
-        initialPosition: "Defensive stance",
-        openingMoves: ["Assess situation", "Secure position"],
+        initialPosition: 'Defensive stance',
+        openingMoves: ['Assess situation', 'Secure position'],
       });
     }
   }

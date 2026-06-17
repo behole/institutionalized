@@ -1,9 +1,16 @@
-import { FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
-import type { Manuscript, WritersWorkshopResult, WritersWorkshopConfig, PeerReview, DiscussionPoint, WorkshopSummary } from "./types";
-import { DEFAULT_CONFIG } from "./types";
-import { buildPeerReviewPrompt, parsePeerReviewResponse } from "./peer";
-import { buildFacilitatorPrompt, parseFacilitatorResponse } from "./facilitator";
+import { FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
+import type {
+  Manuscript,
+  WritersWorkshopResult,
+  WritersWorkshopConfig,
+  PeerReview,
+  DiscussionPoint,
+  WorkshopSummary,
+} from './types';
+import { DEFAULT_CONFIG } from './types';
+import { buildPeerReviewPrompt, parsePeerReviewResponse } from './peer';
+import { buildFacilitatorPrompt, parseFacilitatorResponse } from './facilitator';
 
 export async function runWorkshop(
   manuscript: Manuscript,
@@ -12,20 +19,27 @@ export async function runWorkshop(
 ): Promise<WritersWorkshopResult> {
   const startTime = Date.now();
 
-  console.log("\n" + "=".repeat(80));
+  console.log('\n' + '='.repeat(80));
   console.log("✍️  WRITERS' WORKSHOP");
-  console.log("=".repeat(80));
+  console.log('='.repeat(80));
   console.log(`\n📖 Manuscript: ${manuscript.title}`);
-  if (manuscript.genre) console.log(`   Genre: ${manuscript.genre}`);
-  if (manuscript.wordCount) console.log(`   Word Count: ${manuscript.wordCount}`);
+  if (manuscript.genre) {
+    console.log(`   Genre: ${manuscript.genre}`);
+  }
+  if (manuscript.wordCount) {
+    console.log(`   Word Count: ${manuscript.wordCount}`);
+  }
   console.log();
 
-  const runner = new FrameworkRunner<Manuscript, WritersWorkshopResult>("writers-workshop", manuscript);
+  const runner = new FrameworkRunner<Manuscript, WritersWorkshopResult>(
+    'writers-workshop',
+    manuscript
+  );
 
   // Step 1: Peer reviews (sequential -- the structure IS the value)
-  console.log("✍️  Phase 1: Peer Reviews");
+  console.log('✍️  Phase 1: Peer Reviews');
   const peerReviews: PeerReview[] = [];
-  const peerNames = Object.keys(config.models).filter(k => k.startsWith("peer"));
+  const peerNames = Object.keys(config.models).filter((k) => k.startsWith('peer'));
 
   for (let i = 0; i < config.parameters.peerCount && i < peerNames.length; i++) {
     const peerName = peerNames[i];
@@ -48,10 +62,10 @@ export async function runWorkshop(
   // Step 2: Facilitated discussion
   let discussion: DiscussionPoint[] = [];
   if (config.parameters.enableDiscussion && peerReviews.length > 1) {
-    console.log("\n✍️  Phase 2: Facilitated Discussion");
+    console.log('\n✍️  Phase 2: Facilitated Discussion');
     const { system, user } = buildFacilitatorPrompt(manuscript, peerReviews, config);
     const facilitatorResponse = await runner.runAgent(
-      "facilitator",
+      'facilitator',
       provider,
       config.models.facilitator,
       user,
@@ -64,31 +78,31 @@ export async function runWorkshop(
   }
 
   // Step 3: Generate summary
-  console.log("\n✍️  Phase 3: Workshop Summary");
+  console.log('\n✍️  Phase 3: Workshop Summary');
   const summary = generateSummary(peerReviews, discussion);
   console.log(`   ✅ Summary generated`);
 
   const duration = Date.now() - startTime;
 
-  console.log("\n" + "=".repeat(80));
+  console.log('\n' + '='.repeat(80));
   console.log(`🎯 WORKSHOP COMPLETE`);
   console.log(`   Reviews: ${peerReviews.length}`);
   console.log(`   Discussion Points: ${discussion.length}`);
   console.log(`   Key Strengths: ${summary.overallStrengths.length}`);
   console.log(`   Areas for Focus: ${summary.recommendedFocus.length}`);
   console.log(`\n⏱️  Duration: ${(duration / 1000).toFixed(1)}s`);
-  console.log("=".repeat(80) + "\n");
+  console.log('='.repeat(80) + '\n');
 
   // Display summary
-  console.log("📊 WORKSHOP SUMMARY\n");
-  console.log("Overall Strengths:");
-  summary.overallStrengths.forEach(s => console.log(`  ✓ ${s}`));
-  console.log("\nCommon Concerns:");
-  summary.commonConcerns.forEach(c => console.log(`  ⚠ ${c}`));
-  console.log("\nRecommended Focus Areas:");
-  summary.recommendedFocus.forEach(f => console.log(`  → ${f}`));
-  console.log("\nNext Steps:");
-  summary.nextSteps.forEach(s => console.log(`  • ${s}`));
+  console.log('📊 WORKSHOP SUMMARY\n');
+  console.log('Overall Strengths:');
+  summary.overallStrengths.forEach((s) => console.log(`  ✓ ${s}`));
+  console.log('\nCommon Concerns:');
+  summary.commonConcerns.forEach((c) => console.log(`  ⚠ ${c}`));
+  console.log('\nRecommended Focus Areas:');
+  summary.recommendedFocus.forEach((f) => console.log(`  → ${f}`));
+  console.log('\nNext Steps:');
+  summary.nextSteps.forEach((s) => console.log(`  • ${s}`));
   console.log();
 
   const result: WritersWorkshopResult = {
@@ -105,7 +119,7 @@ export async function runWorkshop(
     },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
   result.metadata.costUSD = auditLog.metadata.totalCost;
 
   return result;
@@ -116,7 +130,7 @@ function generateSummary(
   discussion: DiscussionPoint[]
 ): WorkshopSummary {
   // Extract all strengths
-  const allStrengths = peerReviews.flatMap(r => r.positive.strengths);
+  const allStrengths = peerReviews.flatMap((r) => r.positive.strengths);
   const strengthCounts = countOccurrences(allStrengths);
   const overallStrengths = Object.entries(strengthCounts)
     .filter(([_, count]) => count > 1)
@@ -125,7 +139,7 @@ function generateSummary(
     .map(([strength]) => strength);
 
   // Extract common concerns
-  const allConcerns = peerReviews.flatMap(r => r.constructive.craftConcerns);
+  const allConcerns = peerReviews.flatMap((r) => r.constructive.craftConcerns);
   const concernCounts = countOccurrences(allConcerns);
   const commonConcerns = Object.entries(concernCounts)
     .filter(([_, count]) => count > 1)
@@ -134,15 +148,15 @@ function generateSummary(
     .map(([concern]) => concern);
 
   // Generate focus areas from suggestions
-  const allSuggestions = peerReviews.flatMap(r => r.constructive.suggestions);
+  const allSuggestions = peerReviews.flatMap((r) => r.constructive.suggestions);
   const recommendedFocus = [...new Set(allSuggestions)].slice(0, 5);
 
   // Generate next steps
   const nextSteps = [
-    "Address common concerns raised by multiple reviewers",
-    "Leverage identified strengths in revision",
-    "Consider discussion points for deeper revision",
-    "Review specific suggestions from peer feedback",
+    'Address common concerns raised by multiple reviewers',
+    'Leverage identified strengths in revision',
+    'Consider discussion points for deeper revision',
+    'Review specific suggestions from peer feedback',
   ];
 
   return {

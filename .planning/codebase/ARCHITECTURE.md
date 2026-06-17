@@ -7,6 +7,7 @@
 **Overall:** Plugin-based multi-agent orchestration library
 
 **Key Characteristics:**
+
 - A shared `core/` layer provides LLM provider abstraction, orchestration primitives, validation utilities, and observability
 - Each of 26 "frameworks" is an isolated plugin in `frameworks/<name>/` that models a real-world institutional decision process (courtroom, peer review, etc.)
 - Every framework exposes a single `run(input, flags)` function as its contract, consumed by both the CLI and the MCP server
@@ -16,6 +17,7 @@
 ## Layers
 
 **Core Infrastructure:**
+
 - Purpose: Shared abstractions used by every framework
 - Location: `core/`
 - Contains: Provider implementations, orchestration primitives, validators, observability, config helpers
@@ -23,6 +25,7 @@
 - Used by: All frameworks, CLI, MCP server
 
 **LLM Providers:**
+
 - Purpose: Normalize calls to Anthropic, OpenAI, and OpenRouter behind a single `LLMProvider` interface
 - Location: `core/providers/` (`anthropic.ts`, `openai.ts`, `openrouter.ts`, `index.ts`)
 - Contains: Provider classes implementing `LLMProvider`, factory `createProvider()`, env-based auto-detect `getProviderFromEnv()`
@@ -30,6 +33,7 @@
 - Used by: Frameworks that create a provider at startup
 
 **Frameworks:**
+
 - Purpose: Encode a specific human decision-making institution as a multi-agent pipeline
 - Location: `frameworks/<framework-name>/`
 - Contains: `index.ts` (entry point), `orchestrator.ts` (pipeline logic), `types.ts` (domain types + DEFAULT_CONFIG), one file per agent role
@@ -37,12 +41,14 @@
 - Used by: CLI (`cli.ts`), MCP server (`mcp-server/index.ts`), programmatic callers
 
 **CLI Entry Point:**
+
 - Purpose: Parse `bun cli.ts <framework> <input-file> [flags]`, dynamically import the framework, run it, map verdict to exit code
 - Location: `cli.ts`
 - Depends on: Framework `index.ts` files (dynamic import), `package.json` for version
 - Used by: Developers and automation
 
 **MCP Server:**
+
 - Purpose: Expose all frameworks as Model Context Protocol tools consumable by Claude Code and other MCP clients
 - Location: `mcp-server/index.ts`
 - Contains: Tool definitions with JSON schemas, `CallToolRequestSchema` handler that dynamically imports and calls `run()`
@@ -50,6 +56,7 @@
 - Used by: Claude Code, MCP-compatible AI assistants
 
 **Tests:**
+
 - Purpose: Unit tests for core primitives and e2e tests for each framework against real LLM calls
 - Location: `test/core/` (unit), `test/frameworks/` (e2e)
 - Depends on: `bun:test`, framework `index.ts` exports
@@ -84,6 +91,7 @@
 - Core primitives for these patterns: `executeParallel<T>()`, `executeSequential<T>()`, `executeIterative<T>()` in `core/orchestrator.ts`
 
 **State Management:**
+
 - No persistent state. Each invocation is stateless.
 - `AuditTrail` class in `core/observability.ts` accumulates steps in memory during a run, finalized to `AuditLog` at end
 - Results are returned from `run()` to caller; optionally written to disk by CLI via `--output`
@@ -91,27 +99,32 @@
 ## Key Abstractions
 
 **`LLMProvider` interface:**
+
 - Purpose: Uniform contract for calling any LLM and calculating cost
 - Definition: `core/types.ts`
 - Implementations: `core/providers/anthropic.ts`, `core/providers/openai.ts`, `core/providers/openrouter.ts`
 - Pattern: Strategy pattern — frameworks receive a provider instance, never reference a specific SDK directly
 
 **`FrameworkRunner` class:**
+
 - Purpose: Convenience wrapper that bundles a provider, runs agents, and records each step in an `AuditTrail`
 - Location: `core/orchestrator.ts`
 - Pattern: Stateful context object passed through a framework run; not universally adopted across all frameworks (some use provider directly)
 
 **Framework `run()` export:**
+
 - Purpose: Standardized entry-point contract every framework must satisfy
 - Signature: `export async function run(input: TInput | { content: string }, flags: Record<string, any>): Promise<TResult>`
 - Pattern: CLI and MCP server depend only on this interface, never on framework internals
 
 **`AuditLog` / `AuditTrail`:**
+
 - Purpose: Full structured record of every LLM call — prompt, response, tokens, cost, duration
 - Location: `core/observability.ts`
 - Pattern: Append-only log built during run, finalized and returned with result
 
 **Per-framework `types.ts`:**
+
 - Purpose: Domain types for input, intermediate agent outputs, final result, and `DEFAULT_CONFIG`
 - Pattern: Each framework defines its own closed type hierarchy; no shared domain types across frameworks
 - Examples: `frameworks/courtroom/types.ts`, `frameworks/peer-review/types.ts`
@@ -119,16 +132,19 @@
 ## Entry Points
 
 **CLI:**
+
 - Location: `cli.ts`
 - Triggers: `bun cli.ts <framework> <input-file> [options]` or package scripts (`bun run courtroom`, etc.)
 - Responsibilities: Argument parsing, input loading, dynamic framework dispatch, output writing, exit code mapping
 
 **MCP Server:**
+
 - Location: `mcp-server/index.ts`
 - Triggers: MCP client connection over stdio (e.g., Claude Code configured to use this server)
 - Responsibilities: List tools, accept tool call requests, dispatch to framework `run()`, return JSON response
 
 **Programmatic API:**
+
 - Location: Any `frameworks/<name>/index.ts`
 - Triggers: Direct TypeScript import by external code
 - Responsibilities: Accept typed input, run framework pipeline, return typed result
@@ -138,6 +154,7 @@
 **Strategy:** Exceptions propagate up; CLI catches at top level and exits with code 2 + error message. Framework internals throw on validation failure or missing API keys.
 
 **Patterns:**
+
 - `core/config.ts` `getAPIKey()` throws immediately if env var is missing
 - `core/validators.ts` functions throw `Error` with descriptive messages on invalid LLM output
 - `core/orchestrator.ts` `parseJSON<T>()` throws if no valid JSON is found in LLM response
@@ -158,4 +175,4 @@
 
 ---
 
-*Architecture analysis: 2026-03-16*
+_Architecture analysis: 2026-03-16_

@@ -1,7 +1,7 @@
 // Core types for Writers' Workshop Framework
 // Manuscript feedback in Clarion/Clarion West style
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Manuscript {
   title: string;

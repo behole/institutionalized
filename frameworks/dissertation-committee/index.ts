@@ -3,11 +3,15 @@
  * Multi-stage work validation with advisor and committee
  */
 
-import type { DissertationWork, DissertationCommitteeConfig, DissertationCommitteeResult } from "./types";
-import type { RunFlags } from "@core/types";
-import { DEFAULT_CONFIG } from "./types";
-import { createProvider } from "@core/providers";
-import { getAPIKey } from "@core/config";
+import type {
+  DissertationWork,
+  DissertationCommitteeConfig,
+  DissertationCommitteeResult,
+} from './types';
+import type { RunFlags } from '@core/types';
+import { DEFAULT_CONFIG } from './types';
+import { createProvider } from '@core/providers';
+import { getAPIKey } from '@core/config';
 
 /**
  * Main entry point for CLI
@@ -18,14 +22,14 @@ export async function run(
 ): Promise<DissertationCommitteeResult> {
   // If input is plain text, wrap it as a dissertation work
   const workInput: DissertationWork =
-    "title" in input && "abstract" in input
-      ? input as DissertationWork
+    'title' in input && 'abstract' in input
+      ? input
       : {
-          title: "Untitled Work",
-          abstract: input.content || "",
-          field: "General",
-          stage: "draft",
-          content: input.content || "",
+          title: 'Untitled Work',
+          abstract: input.content || '',
+          field: 'General',
+          stage: 'draft',
+          content: input.content || '',
         };
 
   // Merge config with flags
@@ -35,13 +39,13 @@ export async function run(
   };
 
   // Create provider from flags
-  const providerName = (flags as Record<string, unknown>).provider as string || "anthropic";
+  const providerName = ((flags as Record<string, unknown>).provider as string) || 'anthropic';
   const provider = createProvider({ name: providerName, apiKey: getAPIKey(providerName) });
 
   // Import and run the orchestrator
-  const { runCommitteeReview } = await import("./orchestrator");
+  const { runCommitteeReview } = await import('./orchestrator');
   return runCommitteeReview(workInput, config, provider);
 }
 
 // Re-export types for programmatic use
-export * from "./types";
+export * from './types';

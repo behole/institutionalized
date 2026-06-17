@@ -3,32 +3,40 @@
  * Strategic situational assessment
  */
 
-import { createProvider } from "@core/providers";
-import { getAPIKey } from "@core/config";
-import { parseJSON, FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider, RunFlags } from "@core/types";
-import type { Situation, InternalAnalysis, ExternalAnalysis, StrategicRecommendations, SWOTConfig, SWOTResult } from "./types";
-import { DEFAULT_CONFIG } from "./types";
+import { createProvider } from '@core/providers';
+import { getAPIKey } from '@core/config';
+import { parseJSON, FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider, RunFlags } from '@core/types';
+import type {
+  Situation,
+  InternalAnalysis,
+  ExternalAnalysis,
+  StrategicRecommendations,
+  SWOTConfig,
+  SWOTResult,
+} from './types';
+import { DEFAULT_CONFIG } from './types';
 
 export async function run(
   input: Situation | { content: string },
   flags: RunFlags = {}
 ): Promise<SWOTResult> {
-  const situation: Situation = "entity" in input
-    ? input
-    : { entity: "Unnamed Entity", description: input.content || "" };
+  const situation: Situation =
+    'entity' in input ? input : { entity: 'Unnamed Entity', description: input.content || '' };
 
   const config: SWOTConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
 
-  const providerName = flags.provider || "anthropic";
+  const providerName = flags.provider || 'anthropic';
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
   const verbose = flags.debug ?? false;
 
-  if (verbose) console.log("\n📊 SWOT ANALYSIS\n");
+  if (verbose) {
+    console.log('\n📊 SWOT ANALYSIS\n');
+  }
 
-  const runner = new FrameworkRunner<Situation, SWOTResult>("swot", situation);
+  const runner = new FrameworkRunner<Situation, SWOTResult>('swot', situation);
 
   // Phase 1: Internal analysis (Strengths & Weaknesses)
   const internal = await analyzeInternal(situation, config, provider, runner, verbose);
@@ -37,7 +45,15 @@ export async function run(
   const external = await analyzeExternal(situation, config, provider, runner, verbose);
 
   // Phase 3: Strategic synthesis
-  const strategies = await synthesizeStrategies(situation, internal, external, config, provider, runner, verbose);
+  const strategies = await synthesizeStrategies(
+    situation,
+    internal,
+    external,
+    config,
+    provider,
+    runner,
+    verbose
+  );
 
   if (verbose) {
     console.log(`\nStrengths: ${internal.strengths.length}`);
@@ -55,7 +71,7 @@ export async function run(
     metadata: { timestamp: new Date().toISOString(), config },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
 
   return {
     ...result,
@@ -70,10 +86,12 @@ async function analyzeInternal(
   runner: FrameworkRunner<Situation, SWOTResult>,
   verbose: boolean
 ): Promise<InternalAnalysis> {
-  if (verbose) console.log("Phase 1: Internal analysis (Strengths & Weaknesses)...\n");
+  if (verbose) {
+    console.log('Phase 1: Internal analysis (Strengths & Weaknesses)...\n');
+  }
 
   const response = await runner.runAgent(
-    "internal-analyst",
+    'internal-analyst',
     provider,
     config.models.internalAnalyst,
     `You are an internal analyst conducting a SWOT analysis.
@@ -83,8 +101,8 @@ ENTITY: ${situation.entity}
 DESCRIPTION:
 ${situation.description}
 
-${situation.currentState ? `CURRENT STATE:\n${situation.currentState}\n` : ""}
-${situation.goals ? `GOALS:\n${situation.goals.map((g) => `- ${g}`).join("\n")}\n` : ""}
+${situation.currentState ? `CURRENT STATE:\n${situation.currentState}\n` : ''}
+${situation.goals ? `GOALS:\n${situation.goals.map((g) => `- ${g}`).join('\n')}\n` : ''}
 
 Analyze internal factors in JSON:
 {
@@ -110,10 +128,12 @@ async function analyzeExternal(
   runner: FrameworkRunner<Situation, SWOTResult>,
   verbose: boolean
 ): Promise<ExternalAnalysis> {
-  if (verbose) console.log("\nPhase 2: External analysis (Opportunities & Threats)...\n");
+  if (verbose) {
+    console.log('\nPhase 2: External analysis (Opportunities & Threats)...\n');
+  }
 
   const response = await runner.runAgent(
-    "external-analyst",
+    'external-analyst',
     provider,
     config.models.externalAnalyst,
     `You are an external analyst conducting a SWOT analysis.
@@ -123,8 +143,8 @@ ENTITY: ${situation.entity}
 DESCRIPTION:
 ${situation.description}
 
-${situation.currentState ? `CURRENT STATE:\n${situation.currentState}\n` : ""}
-${situation.goals ? `GOALS:\n${situation.goals.map((g) => `- ${g}`).join("\n")}\n` : ""}
+${situation.currentState ? `CURRENT STATE:\n${situation.currentState}\n` : ''}
+${situation.goals ? `GOALS:\n${situation.goals.map((g) => `- ${g}`).join('\n')}\n` : ''}
 
 Analyze external factors in JSON:
 {
@@ -152,10 +172,12 @@ async function synthesizeStrategies(
   runner: FrameworkRunner<Situation, SWOTResult>,
   verbose: boolean
 ): Promise<StrategicRecommendations> {
-  if (verbose) console.log("\nPhase 3: Strategic synthesis...\n");
+  if (verbose) {
+    console.log('\nPhase 3: Strategic synthesis...\n');
+  }
 
   const response = await runner.runAgent(
-    "strategist",
+    'strategist',
     provider,
     config.models.strategist,
     `You are a strategist synthesizing SWOT analysis.
@@ -163,16 +185,16 @@ async function synthesizeStrategies(
 ENTITY: ${situation.entity}
 
 STRENGTHS:
-${internal.strengths.map((s) => `- ${s}`).join("\n")}
+${internal.strengths.map((s) => `- ${s}`).join('\n')}
 
 WEAKNESSES:
-${internal.weaknesses.map((w) => `- ${w}`).join("\n")}
+${internal.weaknesses.map((w) => `- ${w}`).join('\n')}
 
 OPPORTUNITIES:
-${external.opportunities.map((o) => `- ${o}`).join("\n")}
+${external.opportunities.map((o) => `- ${o}`).join('\n')}
 
 THREATS:
-${external.threats.map((t) => `- ${t}`).join("\n")}
+${external.threats.map((t) => `- ${t}`).join('\n')}
 
 Develop strategies in JSON:
 {
@@ -199,4 +221,4 @@ Use the SWOT matrix to develop comprehensive strategies.`,
   return parseJSON<StrategicRecommendations>(response.content);
 }
 
-export * from "./types";
+export * from './types';

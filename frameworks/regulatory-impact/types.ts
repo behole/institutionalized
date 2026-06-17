@@ -1,7 +1,7 @@
 // Core types for Regulatory Impact Assessment Framework
 // Government policy analysis for comprehensive impact prediction
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Policy {
   title: string;
@@ -50,8 +50,8 @@ export interface StakeholderFeedback {
 export interface RiskAssessment {
   risks: {
     description: string;
-    likelihood: "low" | "medium" | "high";
-    impact: "low" | "medium" | "high";
+    likelihood: 'low' | 'medium' | 'high';
+    impact: 'low' | 'medium' | 'high';
     mitigation: string;
   }[];
 }
@@ -64,7 +64,7 @@ export interface RegulatoryImpactResult {
   stakeholderFeedback: StakeholderFeedback[];
   risks: RiskAssessment;
   recommendation: {
-    decision: "proceed" | "revise" | "reject";
+    decision: 'proceed' | 'revise' | 'reject';
     rationale: string;
     conditions?: string[];
   };

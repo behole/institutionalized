@@ -2,14 +2,9 @@
  * Red Team - attacks the proposed system
  */
 
-import type { LLMProvider } from "@core/types";
-import { parseJSON } from "@core/orchestrator";
-import type {
-  Target,
-  BlueTeamProposal,
-  RedTeamAttack,
-  RedBlueConfig,
-} from "./types";
+import type { LLMProvider } from '@core/types';
+import { parseJSON } from '@core/orchestrator';
+import type { Target, BlueTeamProposal, RedTeamAttack, RedBlueConfig } from './types';
 
 export async function attackSystem(
   target: Target,
@@ -23,7 +18,7 @@ export async function attackSystem(
   const response = await provider.call({
     model: config.models.redTeam,
     temperature: config.parameters.redTemperature,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
     maxTokens: 4096,
   });
 
@@ -33,11 +28,7 @@ export async function attackSystem(
   return attack;
 }
 
-function buildPrompt(
-  target: Target,
-  blueProposal: BlueTeamProposal,
-  round: number
-): string {
+function buildPrompt(target: Target, blueProposal: BlueTeamProposal, round: number): string {
   return `You are the RED TEAM - your role is to attack the proposed system and find vulnerabilities.
 
 ## TARGET SYSTEM
@@ -52,10 +43,10 @@ ${blueProposal.summary}
 ${blueProposal.architecture}
 
 **Security Measures:**
-${blueProposal.securityMeasures.map((m, i) => `${i + 1}. ${m}`).join("\n")}
+${blueProposal.securityMeasures.map((m, i) => `${i + 1}. ${m}`).join('\n')}
 
 **Assumptions:**
-${blueProposal.assumptions.map((a, i) => `${i + 1}. ${a}`).join("\n")}
+${blueProposal.assumptions.map((a, i) => `${i + 1}. ${a}`).join('\n')}
 
 ## YOUR TASK (Round ${round})
 
@@ -117,24 +108,24 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting.`;
 
 function validateAttack(attack: RedTeamAttack): void {
   if (!attack.vulnerabilities || attack.vulnerabilities.length === 0) {
-    throw new Error("Red Team must identify at least one vulnerability");
+    throw new Error('Red Team must identify at least one vulnerability');
   }
 
   if (!attack.attackScenarios || attack.attackScenarios.length === 0) {
-    throw new Error("Red Team must provide at least one attack scenario");
+    throw new Error('Red Team must provide at least one attack scenario');
   }
 
   if (!attack.recommendations || attack.recommendations.length === 0) {
-    throw new Error("Red Team must provide recommendations");
+    throw new Error('Red Team must provide recommendations');
   }
 
   // Validate each vulnerability
   for (const vuln of attack.vulnerabilities) {
     if (!vuln.category || !vuln.severity || !vuln.description) {
-      throw new Error("Vulnerability missing required fields");
+      throw new Error('Vulnerability missing required fields');
     }
 
-    if (!["critical", "high", "medium", "low"].includes(vuln.severity)) {
+    if (!['critical', 'high', 'medium', 'low'].includes(vuln.severity)) {
       throw new Error(`Invalid severity: ${vuln.severity}`);
     }
   }
@@ -142,10 +133,10 @@ function validateAttack(attack: RedTeamAttack): void {
   // Validate each scenario
   for (const scenario of attack.attackScenarios) {
     if (!scenario.name || !scenario.steps || scenario.steps.length === 0) {
-      throw new Error("Attack scenario missing required fields");
+      throw new Error('Attack scenario missing required fields');
     }
 
-    if (!["high", "medium", "low"].includes(scenario.likelihood)) {
+    if (!['high', 'medium', 'low'].includes(scenario.likelihood)) {
       throw new Error(`Invalid likelihood: ${scenario.likelihood}`);
     }
   }

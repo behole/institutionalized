@@ -3,7 +3,7 @@
  * Comparative prioritization under resource constraints
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface GrantProposal {
   id: string;
@@ -33,7 +33,7 @@ export interface PanelRanking {
     proposalId: string;
     title: string;
     consensusScore: number;
-    fundingRecommendation: "fund" | "fund_if_available" | "do_not_fund";
+    fundingRecommendation: 'fund' | 'fund_if_available' | 'do_not_fund';
     rationale: string;
   }>;
   fundingLine: number;

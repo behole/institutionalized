@@ -1,11 +1,11 @@
-import { describe, test, expect } from "bun:test";
-import fc from "fast-check";
-import { parseJSON, Semaphore } from "../../core/orchestrator";
-import { sanitizeInput } from "../../core/sanitize";
-import { validateQuote } from "../../core/validators";
+import { describe, test, expect } from 'bun:test';
+import fc from 'fast-check';
+import { parseJSON, Semaphore } from '../../core/orchestrator';
+import { sanitizeInput } from '../../core/sanitize';
+import { validateQuote } from '../../core/validators';
 
-describe("parseJSON properties", () => {
-  test("never crashes on arbitrary strings", () => {
+describe('parseJSON properties', () => {
+  test('never crashes on arbitrary strings', () => {
     fc.assert(
       fc.property(fc.string(), (s) => {
         try {
@@ -19,7 +19,7 @@ describe("parseJSON properties", () => {
     );
   });
 
-  test("roundtrip: parseJSON(JSON.stringify(obj)) equals obj", () => {
+  test('roundtrip: parseJSON(JSON.stringify(obj)) equals obj', () => {
     fc.assert(
       fc.property(
         fc.dictionary(fc.string(), fc.oneof(fc.string(), fc.integer(), fc.boolean())),
@@ -34,8 +34,8 @@ describe("parseJSON properties", () => {
   });
 });
 
-describe("sanitizeInput properties", () => {
-  test("output byte length is always <= input byte length", () => {
+describe('sanitizeInput properties', () => {
+  test('output byte length is always <= input byte length', () => {
     fc.assert(
       fc.property(fc.string(), (s) => {
         try {
@@ -51,12 +51,12 @@ describe("sanitizeInput properties", () => {
     );
   });
 
-  test("output never contains null bytes", () => {
+  test('output never contains null bytes', () => {
     fc.assert(
       fc.property(fc.string(), (s) => {
         try {
           const result = sanitizeInput(s);
-          return !result.includes("\0");
+          return !result.includes('\0');
         } catch {
           return true;
         }
@@ -65,7 +65,7 @@ describe("sanitizeInput properties", () => {
     );
   });
 
-  test("idempotent: sanitize(sanitize(x)) === sanitize(x)", () => {
+  test('idempotent: sanitize(sanitize(x)) === sanitize(x)', () => {
     fc.assert(
       fc.property(fc.string(), (s) => {
         try {
@@ -81,15 +81,17 @@ describe("sanitizeInput properties", () => {
   });
 });
 
-describe("validateQuote properties", () => {
-  test("never throws when quote is substring of source", () => {
+describe('validateQuote properties', () => {
+  test('never throws when quote is substring of source', () => {
     fc.assert(
       fc.property(
         fc.string({ minLength: 1 }),
         fc.string(),
         fc.string(),
         (prefix, quote, suffix) => {
-          if (quote.length === 0) return true;
+          if (quote.length === 0) {
+            return true;
+          }
           const source = prefix + quote + suffix;
           try {
             validateQuote(quote, source);
@@ -103,28 +105,26 @@ describe("validateQuote properties", () => {
     );
   });
 
-  test("always throws when quote is NOT in source", () => {
+  test('always throws when quote is NOT in source', () => {
     fc.assert(
-      fc.property(
-        fc.string({ minLength: 1 }),
-        fc.string({ minLength: 1 }),
-        (quote, source) => {
-          if (source.includes(quote)) return true;
-          try {
-            validateQuote(quote, source);
-            return false;
-          } catch {
-            return true;
-          }
+      fc.property(fc.string({ minLength: 1 }), fc.string({ minLength: 1 }), (quote, source) => {
+        if (source.includes(quote)) {
+          return true;
         }
-      ),
+        try {
+          validateQuote(quote, source);
+          return false;
+        } catch {
+          return true;
+        }
+      }),
       { numRuns: 200 }
     );
   });
 });
 
-describe("Semaphore properties", () => {
-  test("concurrent count never exceeds permits", async () => {
+describe('Semaphore properties', () => {
+  test('concurrent count never exceeds permits', async () => {
     await fc.assert(
       fc.asyncProperty(
         fc.integer({ min: 1, max: 10 }),

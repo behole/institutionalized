@@ -1,28 +1,36 @@
-import type { DissertationWork, DissertationCommitteeConfig, CommitteeMember, StageReview } from "./types";
-import { parseJSON } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type {
+  DissertationWork,
+  DissertationCommitteeConfig,
+  CommitteeMember,
+  StageReview,
+} from './types';
+import { parseJSON } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
 
-export function formCommittee(work: DissertationWork, config: DissertationCommitteeConfig): CommitteeMember[] {
+export function formCommittee(
+  work: DissertationWork,
+  config: DissertationCommitteeConfig
+): CommitteeMember[] {
   const committee: CommitteeMember[] = [
     {
-      name: "Primary Advisor",
+      name: 'Primary Advisor',
       specialty: work.field,
-      role: "advisor",
+      role: 'advisor',
     },
     {
-      name: "Specialist 1",
+      name: 'Specialist 1',
       specialty: `${work.field} - Theoretical Foundations`,
-      role: "specialist",
+      role: 'specialist',
     },
     {
-      name: "Specialist 2",
+      name: 'Specialist 2',
       specialty: `${work.field} - Applied Research`,
-      role: "specialist",
+      role: 'specialist',
     },
     {
-      name: "Methodologist",
-      specialty: "Research Methodology",
-      role: "methodologist",
+      name: 'Methodologist',
+      specialty: 'Research Methodology',
+      role: 'methodologist',
     },
   ];
 
@@ -69,11 +77,11 @@ Stage: ${work.stage}
 ABSTRACT:
 ${work.abstract}
 
-${work.methodology ? `METHODOLOGY:\n${work.methodology}\n` : ""}
-${work.contributions ? `CONTRIBUTIONS:\n${work.contributions.join("\n")}\n` : ""}
+${work.methodology ? `METHODOLOGY:\n${work.methodology}\n` : ''}
+${work.contributions ? `CONTRIBUTIONS:\n${work.contributions.join('\n')}\n` : ''}
 
 CONTENT (excerpt):
-${work.content.substring(0, 8000)}${work.content.length > 8000 ? "\n... [truncated]" : ""}
+${work.content.substring(0, 8000)}${work.content.length > 8000 ? '\n... [truncated]' : ''}
 
 As the ${member.name} (${member.role}), provide your stage review including:
 1. Strengths of the work
@@ -86,7 +94,11 @@ As the ${member.name} (${member.role}), provide your stage review including:
   return { system, user };
 }
 
-export function parseReviewResponse(text: string, work: DissertationWork, member: CommitteeMember): StageReview {
+export function parseReviewResponse(
+  text: string,
+  work: DissertationWork,
+  member: CommitteeMember
+): StageReview {
   try {
     return parseJSON<StageReview>(text);
   } catch {
@@ -94,13 +106,13 @@ export function parseReviewResponse(text: string, work: DissertationWork, member
       stage: work.stage,
       reviewer: member.name,
       assessment: {
-        strengths: ["Work received for review"],
-        weaknesses: ["Complete review pending"],
-        questions: ["Please resubmit for full review"],
+        strengths: ['Work received for review'],
+        weaknesses: ['Complete review pending'],
+        questions: ['Please resubmit for full review'],
       },
-      verdict: "revise",
-      requiredChanges: ["Address all committee feedback"],
-      suggestions: ["Provide more complete work sample"],
+      verdict: 'revise',
+      requiredChanges: ['Address all committee feedback'],
+      suggestions: ['Provide more complete work sample'],
     };
   }
 }
@@ -111,17 +123,21 @@ export async function conductReview(
   config: DissertationCommitteeConfig,
   provider: LLMProvider
 ): Promise<StageReview> {
-  const modelKey = member.role === "advisor" ? "advisor" :
-                   member.role === "methodologist" ? "methodologist" :
-                   member.role === "specialist" ? `specialist${Math.floor(Math.random() * 2) + 1}` :
-                   "advisor";
+  const modelKey =
+    member.role === 'advisor'
+      ? 'advisor'
+      : member.role === 'methodologist'
+        ? 'methodologist'
+        : member.role === 'specialist'
+          ? `specialist${Math.floor(Math.random() * 2) + 1}`
+          : 'advisor';
   const model = config.models[modelKey as keyof typeof config.models];
   const { system, user } = buildReviewPrompt(work, member, config);
 
   try {
     const response = await provider.call({
       model,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: config.parameters.temperature,
       systemPrompt: system,
       maxTokens: 4096,
@@ -133,13 +149,13 @@ export async function conductReview(
       stage: work.stage,
       reviewer: member.name,
       assessment: {
-        strengths: ["Work received for review"],
-        weaknesses: ["Complete review pending"],
-        questions: ["Please resubmit for full review"],
+        strengths: ['Work received for review'],
+        weaknesses: ['Complete review pending'],
+        questions: ['Please resubmit for full review'],
       },
-      verdict: "revise",
-      requiredChanges: ["Address all committee feedback"],
-      suggestions: ["Provide more complete work sample"],
+      verdict: 'revise',
+      requiredChanges: ['Address all committee feedback'],
+      suggestions: ['Provide more complete work sample'],
     };
   }
 }

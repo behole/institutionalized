@@ -2,8 +2,8 @@
  * Reviewer agent - conducts independent review with specific focus
  */
 
-import type { LLMProvider } from "@core/types";
-import type { Submission, Review, PeerReviewConfig } from "./types";
+import type { LLMProvider } from '@core/types';
+import type { Submission, Review, PeerReviewConfig } from './types';
 
 export async function conductReview(
   reviewerNumber: number,
@@ -11,7 +11,7 @@ export async function conductReview(
   config: PeerReviewConfig,
   provider: LLMProvider
 ): Promise<Review> {
-  const reviewType = submission.reviewType || "general";
+  const reviewType = submission.reviewType || 'general';
   const focus = getReviewerFocus(reviewerNumber, reviewType);
 
   const systemPrompt = buildSystemPrompt(focus, reviewType);
@@ -21,8 +21,8 @@ export async function conductReview(
     model: config.models.reviewers,
     temperature: config.parameters.reviewerTemperature,
     messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
     ],
   });
 
@@ -35,29 +35,24 @@ export async function conductReview(
 function getReviewerFocus(reviewerNumber: number, reviewType: string): string {
   const focuses: Record<string, string[]> = {
     academic: [
-      "Methodology and rigor",
-      "Theoretical contribution",
-      "Literature review and citations",
-      "Clarity and writing quality",
+      'Methodology and rigor',
+      'Theoretical contribution',
+      'Literature review and citations',
+      'Clarity and writing quality',
     ],
     technical: [
-      "Technical accuracy",
-      "Clarity and completeness",
-      "Code quality and examples",
-      "API design and usability",
+      'Technical accuracy',
+      'Clarity and completeness',
+      'Code quality and examples',
+      'API design and usability',
     ],
     creative: [
-      "Originality and concept",
-      "Execution and craft",
-      "Audience and impact",
-      "Coherence and structure",
+      'Originality and concept',
+      'Execution and craft',
+      'Audience and impact',
+      'Coherence and structure',
     ],
-    general: [
-      "Overall quality",
-      "Clarity and organization",
-      "Completeness",
-      "Impact and value",
-    ],
+    general: ['Overall quality', 'Clarity and organization', 'Completeness', 'Impact and value'],
   };
 
   const focusAreas = focuses[reviewType] || focuses.general;
@@ -134,9 +129,7 @@ function parseReview(content: string, reviewerNumber: number): Review {
       confidence: parsed.confidence,
     };
   } catch (error) {
-    throw new Error(
-      `Reviewer ${reviewerNumber}: Failed to parse JSON - ${error}`
-    );
+    throw new Error(`Reviewer ${reviewerNumber}: Failed to parse JSON - ${error}`);
   }
 }
 
@@ -146,48 +139,30 @@ function validateReview(review: Review): void {
     throw new Error(`${review.reviewer}: Summary is required`);
   }
 
-  if (!["accept", "revise", "reject"].includes(review.recommendation)) {
-    throw new Error(
-      `${review.reviewer}: Invalid recommendation "${review.recommendation}"`
-    );
+  if (!['accept', 'revise', 'reject'].includes(review.recommendation)) {
+    throw new Error(`${review.reviewer}: Invalid recommendation "${review.recommendation}"`);
   }
 
   if (review.confidence < 1 || review.confidence > 5) {
-    throw new Error(
-      `${review.reviewer}: Confidence must be 1-5, got ${review.confidence}`
-    );
+    throw new Error(`${review.reviewer}: Confidence must be 1-5, got ${review.confidence}`);
   }
 
   // Check for substance
   if (review.strengths.length === 0 && review.weaknesses.length === 0) {
-    throw new Error(
-      `${review.reviewer}: Must identify at least one strength or weakness`
-    );
+    throw new Error(`${review.reviewer}: Must identify at least one strength or weakness`);
   }
 
   // Check for specificity
-  const genericPhrases = [
-    "good work",
-    "needs improvement",
-    "well done",
-    "could be better",
-  ];
+  const genericPhrases = ['good work', 'needs improvement', 'well done', 'could be better'];
 
   const allText =
-    review.summary +
-    " " +
-    review.strengths.join(" ") +
-    " " +
-    review.weaknesses.join(" ");
+    review.summary + ' ' + review.strengths.join(' ') + ' ' + review.weaknesses.join(' ');
 
   const hasOnlyGeneric = genericPhrases.some(
-    (phrase) =>
-      allText.toLowerCase().includes(phrase) && allText.length < 200
+    (phrase) => allText.toLowerCase().includes(phrase) && allText.length < 200
   );
 
   if (hasOnlyGeneric) {
-    throw new Error(
-      `${review.reviewer}: Review appears too generic - be more specific`
-    );
+    throw new Error(`${review.reviewer}: Review appears too generic - be more specific`);
   }
 }

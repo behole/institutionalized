@@ -1,6 +1,6 @@
-import type { Scenario, WarGamingConfig, ForceDeployment, Turn, ForceAction } from "./types";
-import { parseJSON } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { Scenario, WarGamingConfig, ForceDeployment, Turn, ForceAction } from './types';
+import { parseJSON } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
 
 export function buildForceActionPrompt(
   scenario: Scenario,
@@ -11,8 +11,8 @@ export function buildForceActionPrompt(
 ): { system: string; user: string } {
   const system = `You are ${force.force.name} in a war gaming simulation.
 Your strategy: ${force.force.strategy}
-Your resources: ${force.force.resources.join(", ")}
-Your constraints: ${force.force.constraints.join(", ")}
+Your resources: ${force.force.resources.join(', ')}
+Your constraints: ${force.force.constraints.join(', ')}
 
 Make strategic decisions that align with your capabilities and objectives.
 
@@ -24,17 +24,21 @@ Respond with valid JSON matching this structure:
   "expectedOutcome": "string"
 }`;
 
-  const turnHistory = previousTurns.length > 0
-    ? `PREVIOUS ACTIONS:\n${previousTurns.map(t =>
-        `Turn ${t.turnNumber}: ${t.forceActions.map(a => `${a.forceName}: ${a.action}`).join("; ")}`
-      ).join("\n")}`
-    : "No previous actions.";
+  const turnHistory =
+    previousTurns.length > 0
+      ? `PREVIOUS ACTIONS:\n${previousTurns
+          .map(
+            (t) =>
+              `Turn ${t.turnNumber}: ${t.forceActions.map((a) => `${a.forceName}: ${a.action}`).join('; ')}`
+          )
+          .join('\n')}`
+      : 'No previous actions.';
 
   const user = `SCENARIO: ${scenario.description}
 
 YOUR FORCE: ${force.force.name}
 INITIAL POSITION: ${force.initialPosition}
-OPENING MOVES: ${force.openingMoves.join(", ")}
+OPENING MOVES: ${force.openingMoves.join(', ')}
 
 ${turnHistory}
 
@@ -54,9 +58,9 @@ export function parseForceActionResponse(text: string, force: ForceDeployment): 
   } catch {
     return {
       forceName: force.force.name,
-      action: "Maintain current position",
-      rationale: "Conservative approach due to uncertainty",
-      expectedOutcome: "Preserve current state",
+      action: 'Maintain current position',
+      rationale: 'Conservative approach due to uncertainty',
+      expectedOutcome: 'Preserve current state',
     };
   }
 }
@@ -82,16 +86,17 @@ Respond with valid JSON matching this structure:
   "emergingThreats": ["string"]
 }`;
 
-  const previousContext = previousTurns.length > 0
-    ? `PREVIOUS TURNS:\n${previousTurns.map(t => `Turn ${t.turnNumber}: ${t.controlAssessment}`).join("\n")}`
-    : "This is the first turn.";
+  const previousContext =
+    previousTurns.length > 0
+      ? `PREVIOUS TURNS:\n${previousTurns.map((t) => `Turn ${t.turnNumber}: ${t.controlAssessment}`).join('\n')}`
+      : 'This is the first turn.';
 
   const user = `SCENARIO: ${scenario.description}
 
 ${previousContext}
 
 CURRENT TURN ${turnNumber}:
-${forceActions.map(a => `${a.forceName}: ${a.action} (${a.rationale})`).join("\n")}
+${forceActions.map((a) => `${a.forceName}: ${a.action} (${a.rationale})`).join('\n')}
 
 Assess the current state:
 1. What is the overall situation?
@@ -118,7 +123,7 @@ export function parseControlAssessmentResponse(
     return {
       turnNumber,
       forceActions,
-      controlAssessment: "Assessment unavailable",
+      controlAssessment: 'Assessment unavailable',
       emergingThreats: [],
     };
   }
@@ -136,13 +141,19 @@ export async function simulateTurn(
   const forceActions: ForceAction[] = [];
 
   for (const force of forces) {
-    const { system, user } = buildForceActionPrompt(scenario, force, previousTurns, turnNumber, config);
+    const { system, user } = buildForceActionPrompt(
+      scenario,
+      force,
+      previousTurns,
+      turnNumber,
+      config
+    );
     const model = config.models[force.force.name] || config.models.control;
 
     try {
       const response = await provider.call({
         model,
-        messages: [{ role: "user", content: user }],
+        messages: [{ role: 'user', content: user }],
         temperature: config.parameters.temperature,
         systemPrompt: system,
         maxTokens: 4096,
@@ -152,20 +163,26 @@ export async function simulateTurn(
       console.warn(`Failed to get action for ${force.force.name}:`, error);
       forceActions.push({
         forceName: force.force.name,
-        action: "Maintain current position",
-        rationale: "Conservative approach due to uncertainty",
-        expectedOutcome: "Preserve current state",
+        action: 'Maintain current position',
+        rationale: 'Conservative approach due to uncertainty',
+        expectedOutcome: 'Preserve current state',
       });
     }
   }
 
   // Then, have control assess the turn
-  const { system, user } = buildControlAssessmentPrompt(scenario, forceActions, previousTurns, turnNumber, config);
+  const { system, user } = buildControlAssessmentPrompt(
+    scenario,
+    forceActions,
+    previousTurns,
+    turnNumber,
+    config
+  );
 
   try {
     const response = await provider.call({
       model: config.models.control,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: 0.5,
       systemPrompt: system,
       maxTokens: 4096,
@@ -176,7 +193,7 @@ export async function simulateTurn(
     return {
       turnNumber,
       forceActions,
-      controlAssessment: "Assessment unavailable",
+      controlAssessment: 'Assessment unavailable',
       emergingThreats: [],
     };
   }

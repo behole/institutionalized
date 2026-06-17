@@ -1,6 +1,13 @@
-import type { TextualProblem, TalmudicConfig, Interpretation, CounterInterpretation, Resolution, TalmudicInsight } from "./types";
-import { parseJSON } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type {
+  TextualProblem,
+  TalmudicConfig,
+  Interpretation,
+  CounterInterpretation,
+  Resolution,
+  TalmudicInsight,
+} from './types';
+import { parseJSON } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
 
 export function buildInterpretationPrompt(
   problem: TextualProblem,
@@ -30,9 +37,9 @@ Respond with valid JSON matching this structure:
   const user = `TEXT TO INTERPRET:
 ${problem.text}
 
-${problem.context ? `CONTEXT:\n${problem.context}\n` : ""}
-${problem.specificQuestion ? `SPECIFIC QUESTION:\n${problem.specificQuestion}\n` : ""}
-${problem.constraints ? `CONSTRAINTS:\n${problem.constraints.join("\n")}\n` : ""}
+${problem.context ? `CONTEXT:\n${problem.context}\n` : ''}
+${problem.specificQuestion ? `SPECIFIC QUESTION:\n${problem.specificQuestion}\n` : ''}
+${problem.constraints ? `CONSTRAINTS:\n${problem.constraints.join('\n')}\n` : ''}
 
 As ${interpreterName}, provide:
 1. Your interpretation of the text
@@ -49,10 +56,10 @@ export function parseInterpretationResponse(text: string, interpreterName: strin
   } catch {
     return {
       interpreter: interpreterName,
-      interpretation: "Unable to generate complete interpretation",
-      textualSupport: ["Text analysis incomplete"],
-      reasoning: "Interpretation process encountered an error",
-      implications: ["Further analysis needed"],
+      interpretation: 'Unable to generate complete interpretation',
+      textualSupport: ['Text analysis incomplete'],
+      reasoning: 'Interpretation process encountered an error',
+      implications: ['Further analysis needed'],
     };
   }
 }
@@ -68,7 +75,7 @@ export async function generateInterpretation(
   try {
     const response = await provider.call({
       model: config.models[interpreterName],
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: config.parameters.temperature,
       systemPrompt: system,
       maxTokens: 4096,
@@ -78,10 +85,10 @@ export async function generateInterpretation(
     console.warn(`Interpretation failed for ${interpreterName}:`, error);
     return {
       interpreter: interpreterName,
-      interpretation: "Unable to generate complete interpretation",
-      textualSupport: ["Text analysis incomplete"],
-      reasoning: "Interpretation process encountered an error",
-      implications: ["Further analysis needed"],
+      interpretation: 'Unable to generate complete interpretation',
+      textualSupport: ['Text analysis incomplete'],
+      reasoning: 'Interpretation process encountered an error',
+      implications: ['Further analysis needed'],
     };
   }
 }
@@ -114,11 +121,11 @@ ${problem.text}
 
 INTERPRETATION A (${interpretation.interpreter}):
 ${interpretation.interpretation}
-Textual Support: ${interpretation.textualSupport.join("; ")}
+Textual Support: ${interpretation.textualSupport.join('; ')}
 
 INTERPRETATION B (${opposingInterpretation.interpreter}):
 ${opposingInterpretation.interpretation}
-Textual Support: ${opposingInterpretation.textualSupport.join("; ")}
+Textual Support: ${opposingInterpretation.textualSupport.join('; ')}
 
 Analyze the counterpoint:
 1. How does B respond to or differ from A?
@@ -128,7 +135,11 @@ Analyze the counterpoint:
   return { system, user };
 }
 
-export function parseCounterpointResponse(text: string, interpretation: Interpretation, opposingInterpretation: Interpretation): CounterInterpretation {
+export function parseCounterpointResponse(
+  text: string,
+  interpretation: Interpretation,
+  opposingInterpretation: Interpretation
+): CounterInterpretation {
   try {
     return parseJSON<CounterInterpretation>(text);
   } catch {
@@ -136,7 +147,7 @@ export function parseCounterpointResponse(text: string, interpretation: Interpre
       respondsTo: interpretation.interpreter,
       counterPoint: `Alternative view from ${opposingInterpretation.interpreter}`,
       textualEvidence: opposingInterpretation.textualSupport,
-      whyDifferent: "Interpretations offer different perspectives on the text",
+      whyDifferent: 'Interpretations offer different perspectives on the text',
     };
   }
 }
@@ -148,24 +159,29 @@ export async function generateCounterpoint(
   config: TalmudicConfig,
   provider: LLMProvider
 ): Promise<CounterInterpretation> {
-  const { system, user } = buildCounterpointPrompt(problem, interpretation, opposingInterpretation, config);
+  const { system, user } = buildCounterpointPrompt(
+    problem,
+    interpretation,
+    opposingInterpretation,
+    config
+  );
 
   try {
     const response = await provider.call({
       model: config.models.resolver,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: 0.6,
       systemPrompt: system,
       maxTokens: 4096,
     });
     return parseCounterpointResponse(response.content, interpretation, opposingInterpretation);
   } catch (error) {
-    console.warn("Counterpoint generation failed:", error);
+    console.warn('Counterpoint generation failed:', error);
     return {
       respondsTo: interpretation.interpreter,
       counterPoint: `Alternative view from ${opposingInterpretation.interpreter}`,
       textualEvidence: opposingInterpretation.textualSupport,
-      whyDifferent: "Interpretations offer different perspectives on the text",
+      whyDifferent: 'Interpretations offer different perspectives on the text',
     };
   }
 }
@@ -198,14 +214,14 @@ Respond with valid JSON matching this structure:
   ]
 }`;
 
-  const interpretationsSummary = interpretations.map(i =>
-    `${i.interpreter}: ${i.interpretation}`
-  ).join("\n\n");
+  const interpretationsSummary = interpretations
+    .map((i) => `${i.interpreter}: ${i.interpretation}`)
+    .join('\n\n');
 
   const user = `TEXT:
 ${problem.text}
 
-${problem.specificQuestion ? `QUESTION:\n${problem.specificQuestion}\n` : ""}
+${problem.specificQuestion ? `QUESTION:\n${problem.specificQuestion}\n` : ''}
 
 INTERPRETATIONS:
 ${interpretationsSummary}
@@ -220,18 +236,24 @@ Based on these multiple valid interpretations, provide practical resolutions:
   return { system, user };
 }
 
-export function parseResolutionResponse(text: string, problem: TextualProblem, interpretations: Interpretation[]): Resolution[] {
+export function parseResolutionResponse(
+  text: string,
+  problem: TextualProblem,
+  interpretations: Interpretation[]
+): Resolution[] {
   try {
     const result = parseJSON<{ resolutions: Resolution[] }>(text);
     return result.resolutions;
   } catch {
-    return [{
-      question: problem.specificQuestion || "What is the meaning of this text?",
-      practicalRuling: "Multiple valid interpretations exist",
-      reasoning: "The text supports multiple reasonable readings",
-      minorityOpinion: interpretations.length > 1 ? interpretations[1].interpretation : undefined,
-      whenToApply: "Context determines which interpretation applies",
-    }];
+    return [
+      {
+        question: problem.specificQuestion || 'What is the meaning of this text?',
+        practicalRuling: 'Multiple valid interpretations exist',
+        reasoning: 'The text supports multiple reasonable readings',
+        minorityOpinion: interpretations.length > 1 ? interpretations[1].interpretation : undefined,
+        whenToApply: 'Context determines which interpretation applies',
+      },
+    ];
   }
 }
 
@@ -247,21 +269,23 @@ export async function generateResolution(
   try {
     const response = await provider.call({
       model: config.models.resolver,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: 0.5,
       systemPrompt: system,
       maxTokens: 4096,
     });
     return parseResolutionResponse(response.content, problem, interpretations);
   } catch (error) {
-    console.warn("Resolution generation failed:", error);
-    return [{
-      question: problem.specificQuestion || "What is the meaning of this text?",
-      practicalRuling: "Multiple valid interpretations exist",
-      reasoning: "The text supports multiple reasonable readings",
-      minorityOpinion: interpretations.length > 1 ? interpretations[1].interpretation : undefined,
-      whenToApply: "Context determines which interpretation applies",
-    }];
+    console.warn('Resolution generation failed:', error);
+    return [
+      {
+        question: problem.specificQuestion || 'What is the meaning of this text?',
+        practicalRuling: 'Multiple valid interpretations exist',
+        reasoning: 'The text supports multiple reasonable readings',
+        minorityOpinion: interpretations.length > 1 ? interpretations[1].interpretation : undefined,
+        whenToApply: 'Context determines which interpretation applies',
+      },
+    ];
   }
 }
 
@@ -273,22 +297,22 @@ export function extractInsights(
   const insights: TalmudicInsight[] = [];
 
   // Extract insights from interpretations
-  interpretations.forEach(interp => {
-    interp.implications.forEach(imp => {
+  interpretations.forEach((interp) => {
+    interp.implications.forEach((imp) => {
       insights.push({
         insight: imp,
         derivedFrom: [interp.interpreter],
-        broaderApplication: "Textual interpretation methodology",
+        broaderApplication: 'Textual interpretation methodology',
       });
     });
   });
 
   // Extract insights from resolutions
-  resolutions.forEach(res => {
+  resolutions.forEach((res) => {
     insights.push({
       insight: res.reasoning,
-      derivedFrom: ["Practical resolution"],
-      broaderApplication: "Decision-making under interpretive uncertainty",
+      derivedFrom: ['Practical resolution'],
+      broaderApplication: 'Decision-making under interpretive uncertainty',
     });
   });
 

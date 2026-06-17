@@ -1,8 +1,11 @@
-import type { DialecticalProblem, HegelianConfig, Thesis, Antithesis, Synthesis } from "./types";
-import { parseJSON } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { DialecticalProblem, HegelianConfig, Thesis, Antithesis, Synthesis } from './types';
+import { parseJSON } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
 
-export function buildThesisPrompt(problem: DialecticalProblem, config: HegelianConfig): { system: string; user: string } {
+export function buildThesisPrompt(
+  problem: DialecticalProblem,
+  config: HegelianConfig
+): { system: string; user: string } {
   const system = `You are developing a THESIS in a Hegelian dialectic.
 Your role is to articulate a coherent, well-reasoned position on the given problem.
 
@@ -20,9 +23,9 @@ ${problem.context}
 INITIAL THESIS:
 ${problem.thesis}
 
-${problem.constraints ? `CONSTRAINTS:\n${problem.constraints.join("\n")}` : ""}
+${problem.constraints ? `CONSTRAINTS:\n${problem.constraints.join('\n')}` : ''}
 
-${problem.objectives ? `OBJECTIVES:\n${problem.objectives.join("\n")}` : ""}
+${problem.objectives ? `OBJECTIVES:\n${problem.objectives.join('\n')}` : ''}
 
 Develop a comprehensive thesis position including:
 1. Clear statement of position
@@ -55,24 +58,28 @@ export async function generateThesis(
   try {
     const response = await provider.call({
       model: config.models.thesis,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: config.parameters.temperature,
       systemPrompt: system,
       maxTokens: 4096,
     });
     return parseThesisResponse(response.content);
   } catch (error) {
-    console.warn("Thesis generation failed:", error);
+    console.warn('Thesis generation failed:', error);
     return {
       position: problem.thesis,
-      rationale: "Unable to fully develop thesis",
-      supportingArguments: ["Initial position stated"],
-      underlyingAssumptions: ["Assumptions not fully explored"],
+      rationale: 'Unable to fully develop thesis',
+      supportingArguments: ['Initial position stated'],
+      underlyingAssumptions: ['Assumptions not fully explored'],
     };
   }
 }
 
-export function buildAntithesisPrompt(problem: DialecticalProblem, thesis: Thesis, config: HegelianConfig): { system: string; user: string } {
+export function buildAntithesisPrompt(
+  problem: DialecticalProblem,
+  thesis: Thesis,
+  config: HegelianConfig
+): { system: string; user: string } {
   const system = `You are developing an ANTITHESIS in a Hegelian dialectic.
 Your role is to provide genuine, substantive opposition to the thesis.
 
@@ -91,10 +98,10 @@ THESIS TO OPPOSE:
 Position: ${thesis.position}
 Rationale: ${thesis.rationale}
 Supporting Arguments:
-${thesis.supportingArguments.map((a, i) => `${i + 1}. ${a}`).join("\n")}
+${thesis.supportingArguments.map((a, i) => `${i + 1}. ${a}`).join('\n')}
 
 Underlying Assumptions:
-${thesis.underlyingAssumptions.map((a, i) => `${i + 1}. ${a}`).join("\n")}
+${thesis.underlyingAssumptions.map((a, i) => `${i + 1}. ${a}`).join('\n')}
 
 Develop a substantive antithesis including:
 1. Clear opposing position
@@ -128,19 +135,19 @@ export async function generateAntithesis(
   try {
     const response = await provider.call({
       model: config.models.antithesis,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: config.parameters.temperature,
       systemPrompt: system,
       maxTokens: 4096,
     });
     return parseAntithesisResponse(response.content);
   } catch (error) {
-    console.warn("Antithesis generation failed:", error);
+    console.warn('Antithesis generation failed:', error);
     return {
       position: `Alternative to: ${thesis.position}`,
-      rationale: "Opposition could not be fully developed",
-      counterArguments: ["Thesis has limitations"],
-      contradictionsIdentified: ["Some assumptions may be questionable"],
+      rationale: 'Opposition could not be fully developed',
+      counterArguments: ['Thesis has limitations'],
+      contradictionsIdentified: ['Some assumptions may be questionable'],
     };
   }
 }
@@ -168,13 +175,13 @@ ${problem.context}
 THESIS:
 Position: ${thesis.position}
 Rationale: ${thesis.rationale}
-Supporting Arguments: ${thesis.supportingArguments.join("; ")}
+Supporting Arguments: ${thesis.supportingArguments.join('; ')}
 
 ANTITHESIS:
 Position: ${antithesis.position}
 Rationale: ${antithesis.rationale}
-Counter-Arguments: ${antithesis.counterArguments.join("; ")}
-Contradictions Identified: ${antithesis.contradictionsIdentified.join("; ")}
+Counter-Arguments: ${antithesis.counterArguments.join('; ')}
+Contradictions Identified: ${antithesis.contradictionsIdentified.join('; ')}
 
 Develop a synthesis that:
 1. States the integrated, higher-order position
@@ -211,20 +218,20 @@ export async function generateSynthesis(
   try {
     const response = await provider.call({
       model: config.models.synthesis,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: config.parameters.temperature,
       systemPrompt: system,
       maxTokens: 4096,
     });
     return parseSynthesisResponse(response.content);
   } catch (error) {
-    console.warn("Synthesis generation failed:", error);
+    console.warn('Synthesis generation failed:', error);
     return {
-      integratedPosition: "Integration requires further development",
-      howItResolves: "Thesis and antithesis both have valid points that need reconciliation",
+      integratedPosition: 'Integration requires further development',
+      howItResolves: 'Thesis and antithesis both have valid points that need reconciliation',
       preservesFromThesis: thesis.supportingArguments.slice(0, 2),
       preservesFromAntithesis: antithesis.counterArguments.slice(0, 2),
-      transcendsBoth: ["Both perspectives contain partial truths"],
+      transcendsBoth: ['Both perspectives contain partial truths'],
     };
   }
 }

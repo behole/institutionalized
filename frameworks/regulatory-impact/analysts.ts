@@ -1,8 +1,19 @@
-import type { Policy, RegulatoryImpactConfig, EconomicImpact, SocialImpact, EnvironmentalImpact, StakeholderFeedback, RiskAssessment } from "./types";
-import { parseJSON } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type {
+  Policy,
+  RegulatoryImpactConfig,
+  EconomicImpact,
+  SocialImpact,
+  EnvironmentalImpact,
+  StakeholderFeedback,
+  RiskAssessment,
+} from './types';
+import { parseJSON } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
 
-export function buildEconomicPrompt(policy: Policy, config: RegulatoryImpactConfig): { system: string; user: string } {
+export function buildEconomicPrompt(
+  policy: Policy,
+  config: RegulatoryImpactConfig
+): { system: string; user: string } {
   const system = `You are an economic analyst conducting a regulatory impact assessment.
 Analyze the economic implications of the proposed policy comprehensively.
 
@@ -38,7 +49,7 @@ DESCRIPTION:
 ${policy.description}
 
 OBJECTIVES:
-${policy.objectives.join("\n") || "Not specified"}
+${policy.objectives.join('\n') || 'Not specified'}
 
 SCOPE: ${policy.scope}
 
@@ -65,24 +76,24 @@ export async function analyzeEconomic(
   try {
     const response = await provider.call({
       model: config.models.economic,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: config.parameters.temperature,
       systemPrompt: system,
       maxTokens: 4096,
     });
     return parseEconomicResponse(response.content);
   } catch (error) {
-    console.warn("Economic analysis failed:", error);
+    console.warn('Economic analysis failed:', error);
     return {
       costs: {
-        implementation: "Unable to assess",
-        ongoing: "Unable to assess",
-        compliance: "Unable to assess",
+        implementation: 'Unable to assess',
+        ongoing: 'Unable to assess',
+        compliance: 'Unable to assess',
       },
       benefits: {
-        direct: "Unable to assess",
-        indirect: "Unable to assess",
-        longTerm: "Unable to assess",
+        direct: 'Unable to assess',
+        indirect: 'Unable to assess',
+        longTerm: 'Unable to assess',
       },
       marketEffects: [],
       distributionalEffects: [],
@@ -90,7 +101,10 @@ export async function analyzeEconomic(
   }
 }
 
-export function buildSocialPrompt(policy: Policy, config: RegulatoryImpactConfig): { system: string; user: string } {
+export function buildSocialPrompt(
+  policy: Policy,
+  config: RegulatoryImpactConfig
+): { system: string; user: string } {
   const system = `You are a social policy analyst conducting a regulatory impact assessment.
 Analyze the social implications and equity effects of the proposed policy.
 
@@ -115,7 +129,7 @@ DESCRIPTION:
 ${policy.description}
 
 STAKEHOLDERS:
-${policy.stakeholders.join("\n") || "Not specified"}
+${policy.stakeholders.join('\n') || 'Not specified'}
 
 Provide a comprehensive social impact analysis including:
 1. Affected groups and populations
@@ -140,14 +154,14 @@ export async function analyzeSocial(
   try {
     const response = await provider.call({
       model: config.models.social,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: config.parameters.temperature,
       systemPrompt: system,
       maxTokens: 4096,
     });
     return parseSocialResponse(response.content);
   } catch (error) {
-    console.warn("Social analysis failed:", error);
+    console.warn('Social analysis failed:', error);
     return {
       affectedGroups: [],
       equityConcerns: [],
@@ -157,7 +171,10 @@ export async function analyzeSocial(
   }
 }
 
-export function buildEnvironmentalPrompt(policy: Policy, config: RegulatoryImpactConfig): { system: string; user: string } {
+export function buildEnvironmentalPrompt(
+  policy: Policy,
+  config: RegulatoryImpactConfig
+): { system: string; user: string } {
   const system = `You are an environmental analyst conducting a regulatory impact assessment.
 Analyze the environmental implications of the proposed policy.
 
@@ -204,19 +221,19 @@ export async function analyzeEnvironmental(
   try {
     const response = await provider.call({
       model: config.models.environmental,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: config.parameters.temperature,
       systemPrompt: system,
       maxTokens: 4096,
     });
     return parseEnvironmentalResponse(response.content);
   } catch (error) {
-    console.warn("Environmental analysis failed:", error);
+    console.warn('Environmental analysis failed:', error);
     return {
       directEffects: [],
       indirectEffects: [],
       sustainabilityConsiderations: [],
-      carbonFootprint: "Unable to assess",
+      carbonFootprint: 'Unable to assess',
     };
   }
 }
@@ -245,7 +262,7 @@ DESCRIPTION:
 ${policy.description}
 
 OBJECTIVES:
-${policy.objectives.join("\n") || "Not specified"}
+${policy.objectives.join('\n') || 'Not specified'}
 
 As ${stakeholder}, provide:
 1. Your concerns about this policy
@@ -262,9 +279,9 @@ export function parseStakeholderResponse(text: string, stakeholder: string): Sta
   } catch {
     return {
       stakeholder,
-      concerns: ["Unable to provide detailed feedback"],
+      concerns: ['Unable to provide detailed feedback'],
       support: [],
-      suggestions: ["Please provide more policy details"],
+      suggestions: ['Please provide more policy details'],
     };
   }
 }
@@ -275,14 +292,14 @@ export async function gatherStakeholderFeedback(
   provider: LLMProvider
 ): Promise<StakeholderFeedback[]> {
   const stakeholderTypes = [
-    "Industry/Business Representatives",
-    "Consumer Advocates",
-    "Civil Liberties Groups",
-    "Environmental Organizations",
-    "Labor Unions",
-    "Small Business Owners",
-    "Technology Companies",
-    "Public Interest Groups",
+    'Industry/Business Representatives',
+    'Consumer Advocates',
+    'Civil Liberties Groups',
+    'Environmental Organizations',
+    'Labor Unions',
+    'Small Business Owners',
+    'Technology Companies',
+    'Public Interest Groups',
   ];
 
   const selectedStakeholders = stakeholderTypes.slice(0, config.parameters.stakeholderCount);
@@ -294,7 +311,7 @@ export async function gatherStakeholderFeedback(
     try {
       const response = await provider.call({
         model: config.models.stakeholder,
-        messages: [{ role: "user", content: user }],
+        messages: [{ role: 'user', content: user }],
         temperature: config.parameters.temperature,
         systemPrompt: system,
         maxTokens: 4096,
@@ -305,9 +322,9 @@ export async function gatherStakeholderFeedback(
       console.warn(`Failed to get feedback from ${stakeholder}:`, error);
       feedback.push({
         stakeholder,
-        concerns: ["Unable to provide detailed feedback"],
+        concerns: ['Unable to provide detailed feedback'],
         support: [],
-        suggestions: ["Please provide more policy details"],
+        suggestions: ['Please provide more policy details'],
       });
     }
   }
@@ -352,15 +369,15 @@ ${policy.description}
 ECONOMIC IMPACT:
 Costs: ${JSON.stringify(economic.costs)}
 Benefits: ${JSON.stringify(economic.benefits)}
-Market Effects: ${economic.marketEffects.join("; ")}
+Market Effects: ${economic.marketEffects.join('; ')}
 
 SOCIAL IMPACT:
-Affected Groups: ${social.affectedGroups.join("; ")}
-Equity Concerns: ${social.equityConcerns.join("; ")}
+Affected Groups: ${social.affectedGroups.join('; ')}
+Equity Concerns: ${social.equityConcerns.join('; ')}
 
 ENVIRONMENTAL IMPACT:
-Direct Effects: ${environmental.directEffects.join("; ")}
-Sustainability: ${environmental.sustainabilityConsiderations.join("; ")}
+Direct Effects: ${environmental.directEffects.join('; ')}
+Sustainability: ${environmental.sustainabilityConsiderations.join('; ')}
 
 Identify 5-8 key risks associated with this policy, including:
 1. Implementation risks
@@ -391,21 +408,23 @@ export async function assessRisks(
   try {
     const response = await provider.call({
       model: config.models.risk,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: config.parameters.temperature,
       systemPrompt: system,
       maxTokens: 4096,
     });
     return parseRiskResponse(response.content);
   } catch (error) {
-    console.warn("Risk assessment failed:", error);
+    console.warn('Risk assessment failed:', error);
     return {
-      risks: [{
-        description: "Assessment incomplete - unable to fully evaluate risks",
-        likelihood: "medium",
-        impact: "medium",
-        mitigation: "Conduct detailed risk assessment before implementation",
-      }],
+      risks: [
+        {
+          description: 'Assessment incomplete - unable to fully evaluate risks',
+          likelihood: 'medium',
+          impact: 'medium',
+          mitigation: 'Conduct detailed risk assessment before implementation',
+        },
+      ],
     };
   }
 }

@@ -2,12 +2,12 @@
  * Orchestrator for Studio Critique framework
  */
 
-import { FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
-import type { CreativeWork, StudioConfig, StudioResult } from "./types";
-import { observeWork, critiqueWork } from "./peer";
-import { respondToFeedback } from "./creator";
-import { synthesizeCritique } from "./instructor";
+import { FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
+import type { CreativeWork, StudioConfig, StudioResult } from './types';
+import { observeWork, critiqueWork } from './peer';
+import { respondToFeedback } from './creator';
+import { synthesizeCritique } from './instructor';
 
 export async function runStudio(
   work: CreativeWork,
@@ -15,25 +15,24 @@ export async function runStudio(
   provider: LLMProvider,
   verbose: boolean = false
 ): Promise<StudioResult> {
-  const runner = new FrameworkRunner<CreativeWork, StudioResult>("studio", work);
+  const runner = new FrameworkRunner<CreativeWork, StudioResult>('studio', work);
 
   if (verbose) {
-    console.log("\n" + "=".repeat(80));
-    console.log("🎨 STUDIO CRITIQUE SESSION");
-    console.log("=".repeat(80));
-    console.log(`\nWork type: ${work.workType || "general"}`);
+    console.log('\n' + '='.repeat(80));
+    console.log('🎨 STUDIO CRITIQUE SESSION');
+    console.log('='.repeat(80));
+    console.log(`\nWork type: ${work.workType || 'general'}`);
     console.log(`Peers: ${config.parameters.numPeers}\n`);
   }
 
   // Phase 1: Silent observation (parallel)
   if (verbose) {
-    console.log("👀 PHASE 1: SILENT OBSERVATION");
-    console.log("Peers observing the work in silence...\n");
+    console.log('👀 PHASE 1: SILENT OBSERVATION');
+    console.log('Peers observing the work in silence...\n');
   }
 
-  const observationPromises = Array.from(
-    { length: config.parameters.numPeers },
-    (_, i) => observeWork(i + 1, work, config, provider)
+  const observationPromises = Array.from({ length: config.parameters.numPeers }, (_, i) =>
+    observeWork(i + 1, work, config, provider)
   );
 
   const observations = await Promise.all(observationPromises);
@@ -50,13 +49,12 @@ export async function runStudio(
 
   // Phase 2: Structured critique (parallel)
   if (verbose) {
-    console.log("💬 PHASE 2: STRUCTURED CRITIQUE");
-    console.log("Peers providing feedback...\n");
+    console.log('💬 PHASE 2: STRUCTURED CRITIQUE');
+    console.log('Peers providing feedback...\n');
   }
 
-  const critiquePromises = Array.from(
-    { length: config.parameters.numPeers },
-    (_, i) => critiqueWork(i + 1, work, config, provider)
+  const critiquePromises = Array.from({ length: config.parameters.numPeers }, (_, i) =>
+    critiqueWork(i + 1, work, config, provider)
   );
 
   const critiques = await Promise.all(critiquePromises);
@@ -76,17 +74,11 @@ export async function runStudio(
 
   if (config.parameters.enableCreatorResponse) {
     if (verbose) {
-      console.log("✍️  PHASE 3: CREATOR RESPONSE");
-      console.log("Creator responding to feedback...\n");
+      console.log('✍️  PHASE 3: CREATOR RESPONSE');
+      console.log('Creator responding to feedback...\n');
     }
 
-    creatorResponse = await respondToFeedback(
-      work,
-      observations,
-      critiques,
-      config,
-      provider
-    );
+    creatorResponse = await respondToFeedback(work, observations, critiques, config, provider);
 
     if (verbose) {
       console.log(`Clarifications: ${creatorResponse.clarifications.length}`);
@@ -97,8 +89,8 @@ export async function runStudio(
 
   // Phase 4: Instructor synthesis
   if (verbose) {
-    console.log("👨‍🏫 PHASE 4: INSTRUCTOR SYNTHESIS");
-    console.log("Instructor synthesizing feedback...\n");
+    console.log('👨‍🏫 PHASE 4: INSTRUCTOR SYNTHESIS');
+    console.log('Instructor synthesizing feedback...\n');
   }
 
   const synthesis = await synthesizeCritique(
@@ -111,12 +103,12 @@ export async function runStudio(
   );
 
   if (verbose) {
-    console.log("=".repeat(80));
-    console.log("INSTRUCTOR SYNTHESIS");
-    console.log("=".repeat(80));
+    console.log('='.repeat(80));
+    console.log('INSTRUCTOR SYNTHESIS');
+    console.log('='.repeat(80));
     console.log(`\nOverall: ${synthesis.overallAssessment}\n`);
 
-    console.log("Core Feedback:");
+    console.log('Core Feedback:');
     synthesis.coreFeedback.forEach((fb, i) => {
       console.log(`  ${i + 1}. ${fb}`);
     });
@@ -129,12 +121,12 @@ export async function runStudio(
     console.log(`\nEncouragement:`);
     console.log(`  ${synthesis.encouragement}\n`);
 
-    console.log("Next Steps:");
+    console.log('Next Steps:');
     synthesis.nextSteps.forEach((step, i) => {
       console.log(`  ${i + 1}. ${step}`);
     });
 
-    console.log("\n" + "=".repeat(80) + "\n");
+    console.log('\n' + '='.repeat(80) + '\n');
   }
 
   const result: StudioResult = {
@@ -150,7 +142,7 @@ export async function runStudio(
     },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
 
   return {
     ...result,

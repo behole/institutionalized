@@ -1,12 +1,9 @@
-import type { LLMProvider } from "@core/types";
-import { parseJSON } from "@core/orchestrator";
-import type { Case, Prosecution, Exhibit, CourtroomConfig } from "./types";
+import type { LLMProvider } from '@core/types';
+import { parseJSON } from '@core/orchestrator';
+import type { Case, Prosecution, Exhibit, CourtroomConfig } from './types';
 
-export function buildProsecutionPrompt(
-  caseInput: Case,
-  _config: CourtroomConfig
-): string {
-  const contextContent = caseInput.context.join("\n\n---\n\n");
+export function buildProsecutionPrompt(caseInput: Case, _config: CourtroomConfig): string {
+  const contextContent = caseInput.context.join('\n\n---\n\n');
 
   return `You are a prosecutor in a courtroom evaluation system. Your role is to build a case for why the answer to this question should be "GUILTY" (meaning: take action, proceed, accept).
 
@@ -70,24 +67,20 @@ export async function prosecute(
   config: CourtroomConfig,
   provider: LLMProvider
 ): Promise<Prosecution> {
-  const contextContent = caseInput.context.join("\n\n---\n\n");
+  const contextContent = caseInput.context.join('\n\n---\n\n');
   const prompt = buildProsecutionPrompt(caseInput, config);
 
   const response = await provider.call({
     model: config.models.prosecutor,
     maxTokens: 4096,
     temperature: 0.7,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
   });
 
   return parseProsecutionResponse(response.content, contextContent, config);
 }
 
-function validateExhibits(
-  exhibits: Exhibit[],
-  context: string,
-  config: CourtroomConfig
-): void {
+function validateExhibits(exhibits: Exhibit[], context: string, config: CourtroomConfig): void {
   for (let i = 0; i < exhibits.length; i++) {
     const exhibit = exhibits[i];
 

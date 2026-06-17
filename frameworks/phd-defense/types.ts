@@ -3,7 +3,7 @@
  * Deep proposal validation through doctoral examination
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Proposal {
   title: string;
@@ -21,7 +21,7 @@ export interface CommitteeMember {
 }
 
 export interface DefenseResult {
-  decision: "pass" | "pass_with_revisions" | "major_revisions" | "fail";
+  decision: 'pass' | 'pass_with_revisions' | 'major_revisions' | 'fail';
   summary: string;
   strengths: string[];
   weaknesses: string[];
@@ -62,10 +62,10 @@ export const DEFAULT_CONFIG: PhDDefenseConfig = {
     committeeSize: 5,
   },
   specialties: [
-    "Methodology and Research Design",
-    "Technical Implementation",
-    "Theoretical Foundations",
-    "Related Work and Literature",
-    "Broader Impact and Ethics",
+    'Methodology and Research Design',
+    'Technical Implementation',
+    'Theoretical Foundations',
+    'Related Work and Literature',
+    'Broader Impact and Ethics',
   ],
 };

@@ -19,32 +19,27 @@ const DEFAULT_MAX_SIZE_BYTES = 100 * 1024; // 100KB
  * - Strips null bytes
  * - Strips control characters (preserves \n and \t)
  */
-export function sanitizeInput(
-  text: string,
-  options: SanitizeOptions = {}
-): string {
+export function sanitizeInput(text: string, options: SanitizeOptions = {}): string {
   const maxSize = options.maxSizeBytes ?? DEFAULT_MAX_SIZE_BYTES;
 
   // Size limit check (byte length for accuracy with unicode)
   const byteLength = new TextEncoder().encode(text).byteLength;
   if (byteLength > maxSize) {
-    throw new Error(
-      `Input exceeds maximum size: ${byteLength} bytes (limit: ${maxSize} bytes)`
-    );
+    throw new Error(`Input exceeds maximum size: ${byteLength} bytes (limit: ${maxSize} bytes)`);
   }
 
   // Strip null bytes
-  let cleaned = text.replace(/\0/g, "");
+  let cleaned = text.replace(/\0/g, '');
 
   // Strip control characters except newline (\n=0x0A) and tab (\t=0x09)
   // eslint-disable-next-line no-control-regex
-  cleaned = cleaned.replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+  cleaned = cleaned.replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 
   return cleaned;
 }
 
 /** Signal types returned by prompt injection detection */
-type InjectionSignal = "instruction_override" | "role_switch" | "prompt_leak";
+type InjectionSignal = 'instruction_override' | 'role_switch' | 'prompt_leak';
 
 export interface InjectionDetectionResult {
   detected: boolean;
@@ -58,7 +53,9 @@ export interface InjectionDetectionResult {
  * This is defense-in-depth, not a guarantee.
  */
 export function detectPromptInjection(text: string): InjectionDetectionResult {
-  if (!text) return { detected: false, signals: [] };
+  if (!text) {
+    return { detected: false, signals: [] };
+  }
 
   const lower = text.toLowerCase();
   const signals: InjectionSignal[] = [];
@@ -72,7 +69,7 @@ export function detectPromptInjection(text: string): InjectionDetectionResult {
     /new\s+instructions?\s*:/,
   ];
   if (overridePatterns.some((p) => p.test(lower))) {
-    signals.push("instruction_override");
+    signals.push('instruction_override');
   }
 
   // Role-switching patterns
@@ -84,7 +81,7 @@ export function detectPromptInjection(text: string): InjectionDetectionResult {
     /\[system\]/i,
   ];
   if (roleSwitchPatterns.some((p) => p.test(lower))) {
-    signals.push("role_switch");
+    signals.push('role_switch');
   }
 
   // Prompt leak patterns
@@ -96,7 +93,7 @@ export function detectPromptInjection(text: string): InjectionDetectionResult {
     /output\s+(your\s+)?initial\s+instructions/,
   ];
   if (promptLeakPatterns.some((p) => p.test(lower))) {
-    signals.push("prompt_leak");
+    signals.push('prompt_leak');
   }
 
   return {
@@ -111,18 +108,20 @@ export function detectPromptInjection(text: string): InjectionDetectionResult {
  * - Normalizes excessive whitespace
  */
 export function sanitizeOutput(text: string): string {
-  if (!text) return "";
+  if (!text) {
+    return '';
+  }
 
   let cleaned = text;
 
   // Strip lines that look like role-switching injections in output
-  cleaned = cleaned.replace(/^(System|Assistant|Human)\s*:.*$/gm, "").trim();
+  cleaned = cleaned.replace(/^(System|Assistant|Human)\s*:.*$/gm, '').trim();
 
   // Normalize runs of spaces (not newlines) to single space
-  cleaned = cleaned.replace(/[ \t]{2,}/g, " ");
+  cleaned = cleaned.replace(/[ \t]{2,}/g, ' ');
 
   // Collapse runs of 3+ newlines to 2 newlines (one blank line)
-  cleaned = cleaned.replace(/\n{4,}/g, "\n\n\n");
+  cleaned = cleaned.replace(/\n{4,}/g, '\n\n\n');
 
   return cleaned;
 }

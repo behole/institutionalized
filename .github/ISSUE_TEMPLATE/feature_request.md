@@ -9,6 +9,7 @@ assignees: ''
 ## Type
 
 <!-- Mark one with "x" -->
+
 - [ ] New institutional framework
 - [ ] Enhancement to existing framework
 - [ ] New core feature
@@ -40,7 +41,7 @@ assignees: ''
 
 ```typescript
 // Example of how you envision using this feature
-import { newFramework } from "@institutional-reasoning/frameworks/new-framework";
+import { newFramework } from '@institutional-reasoning/frameworks/new-framework';
 
 const result = await newFramework.run({
   // ...

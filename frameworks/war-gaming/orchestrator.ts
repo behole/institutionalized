@@ -1,10 +1,23 @@
-import { FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
-import type { Scenario, WarGamingResult, WarGamingConfig, ForceDeployment, Turn, GameOutcome, StrategicInsight } from "./types";
-import { DEFAULT_CONFIG } from "./types";
-import { buildForceDeploymentPrompt, parseForceDeploymentResponse } from "./forces";
-import { buildForceActionPrompt, parseForceActionResponse, buildControlAssessmentPrompt, parseControlAssessmentResponse } from "./control";
-import { buildObserverPrompt, parseObserverResponse } from "./observer";
+import { FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
+import type {
+  Scenario,
+  WarGamingResult,
+  WarGamingConfig,
+  ForceDeployment,
+  Turn,
+  GameOutcome,
+  StrategicInsight,
+} from './types';
+import { DEFAULT_CONFIG } from './types';
+import { buildForceDeploymentPrompt, parseForceDeploymentResponse } from './forces';
+import {
+  buildForceActionPrompt,
+  parseForceActionResponse,
+  buildControlAssessmentPrompt,
+  parseControlAssessmentResponse,
+} from './control';
+import { buildObserverPrompt, parseObserverResponse } from './observer';
 
 export async function runWarGaming(
   scenario: Scenario,
@@ -13,16 +26,16 @@ export async function runWarGaming(
 ): Promise<WarGamingResult> {
   const startTime = Date.now();
 
-  console.log("\n" + "=".repeat(80));
-  console.log("🎖️  WAR GAMING SIMULATION");
-  console.log("=".repeat(80));
+  console.log('\n' + '='.repeat(80));
+  console.log('🎖️  WAR GAMING SIMULATION');
+  console.log('='.repeat(80));
   console.log(`\n📋 Scenario: ${scenario.description}\n`);
 
-  const runner = new FrameworkRunner<Scenario, WarGamingResult>("war-gaming", scenario);
+  const runner = new FrameworkRunner<Scenario, WarGamingResult>('war-gaming', scenario);
 
   // Step 1: Deploy forces
-  console.log("🎖️  Phase 1: Force Deployment");
-  const forceNames = Object.keys(config.models).filter(k => k !== "control" && k !== "observer");
+  console.log('🎖️  Phase 1: Force Deployment');
+  const forceNames = Object.keys(config.models).filter((k) => k !== 'control' && k !== 'observer');
   const forces: ForceDeployment[] = [];
 
   for (const forceName of forceNames) {
@@ -43,17 +56,17 @@ export async function runWarGaming(
       forces.push({
         force: {
           name: forceName,
-          strategy: "Adaptive defense with opportunistic offense",
-          resources: ["Standard equipment", "Personnel", "Intelligence"],
-          constraints: ["Limited resources", "Time pressure"],
+          strategy: 'Adaptive defense with opportunistic offense',
+          resources: ['Standard equipment', 'Personnel', 'Intelligence'],
+          constraints: ['Limited resources', 'Time pressure'],
         },
-        initialPosition: "Defensive stance",
-        openingMoves: ["Assess situation", "Secure position"],
+        initialPosition: 'Defensive stance',
+        openingMoves: ['Assess situation', 'Secure position'],
       });
     }
   }
   console.log(`   ✅ ${forces.length} forces deployed`);
-  forces.forEach(f => console.log(`      • ${f.force.name}`));
+  forces.forEach((f) => console.log(`      • ${f.force.name}`));
 
   // Step 2: Simulate turns
   console.log(`\n🎖️  Phase 2: Simulation (${config.parameters.maxTurns} turns max)`);
@@ -83,15 +96,21 @@ export async function runWarGaming(
         console.warn(`Failed to get action for ${force.force.name}:`, error);
         forceActions.push({
           forceName: force.force.name,
-          action: "Maintain current position",
-          rationale: "Conservative approach due to uncertainty",
-          expectedOutcome: "Preserve current state",
+          action: 'Maintain current position',
+          rationale: 'Conservative approach due to uncertainty',
+          expectedOutcome: 'Preserve current state',
         });
       }
     }
 
     // Control assessment
-    const { system: controlSystem, user: controlUser } = buildControlAssessmentPrompt(scenario, forceActions, turns, turnNum, config);
+    const { system: controlSystem, user: controlUser } = buildControlAssessmentPrompt(
+      scenario,
+      forceActions,
+      turns,
+      turnNum,
+      config
+    );
     try {
       const controlResponse = await runner.runAgent(
         `turn-${turnNum}-control`,
@@ -106,7 +125,7 @@ export async function runWarGaming(
       turns.push(turn);
 
       // Check for game end conditions
-      if (turn.emergingThreats.includes("GAME_OVER") || turnNum === config.parameters.maxTurns) {
+      if (turn.emergingThreats.includes('GAME_OVER') || turnNum === config.parameters.maxTurns) {
         gameComplete = true;
       }
     } catch (error) {
@@ -114,25 +133,25 @@ export async function runWarGaming(
       turns.push({
         turnNumber: turnNum,
         forceActions,
-        controlAssessment: "Assessment unavailable",
+        controlAssessment: 'Assessment unavailable',
         emergingThreats: [],
       });
     }
   }
 
   // Step 3: Determine outcome
-  console.log("\n🎖️  Phase 3: Outcome Analysis");
+  console.log('\n🎖️  Phase 3: Outcome Analysis');
   const outcome = determineOutcome(forces, turns);
-  console.log(`   ✅ Outcome: ${outcome.draw ? "Draw" : outcome.winner + " wins"}`);
+  console.log(`   ✅ Outcome: ${outcome.draw ? 'Draw' : outcome.winner + ' wins'}`);
 
   // Step 4: Generate strategic insights
-  console.log("\n🎖️  Phase 4: Strategic Insights");
+  console.log('\n🎖️  Phase 4: Strategic Insights');
   let insights: StrategicInsight[] = [];
   if (config.parameters.enableObserver) {
     const { system, user } = buildObserverPrompt(scenario, forces, turns, outcome, config);
     try {
       const observerResponse = await runner.runAgent(
-        "observer",
+        'observer',
         provider,
         config.models.observer,
         user,
@@ -142,25 +161,27 @@ export async function runWarGaming(
       );
       insights = parseObserverResponse(observerResponse.content);
     } catch (error) {
-      console.warn("Failed to generate insights:", error);
-      insights = [{
-        insight: "Simulation completed successfully",
-        evidence: ["All turns executed without errors"],
-        applicability: "Framework is operational for strategic testing",
-      }];
+      console.warn('Failed to generate insights:', error);
+      insights = [
+        {
+          insight: 'Simulation completed successfully',
+          evidence: ['All turns executed without errors'],
+          applicability: 'Framework is operational for strategic testing',
+        },
+      ];
     }
   }
   console.log(`   ✅ ${insights.length} strategic insights generated`);
 
   const duration = Date.now() - startTime;
 
-  console.log("\n" + "=".repeat(80));
+  console.log('\n' + '='.repeat(80));
   console.log(`🎯 SIMULATION COMPLETE`);
-  console.log(`   Outcome: ${outcome.draw ? "DRAW" : outcome.winner?.toUpperCase() + " VICTORY"}`);
+  console.log(`   Outcome: ${outcome.draw ? 'DRAW' : outcome.winner?.toUpperCase() + ' VICTORY'}`);
   console.log(`   Turns: ${turns.length}`);
   console.log(`   Insights: ${insights.length}`);
   console.log(`\n⏱️  Duration: ${(duration / 1000).toFixed(1)}s`);
-  console.log("=".repeat(80) + "\n");
+  console.log('='.repeat(80) + '\n');
 
   const result: WarGamingResult = {
     scenario,
@@ -168,7 +189,7 @@ export async function runWarGaming(
     turns,
     outcome,
     insights,
-    recommendations: insights.map(i => i.applicability),
+    recommendations: insights.map((i) => i.applicability),
     metadata: {
       timestamp: new Date().toISOString(),
       duration,
@@ -178,46 +199,45 @@ export async function runWarGaming(
     },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
   result.metadata.costUSD = auditLog.metadata.totalCost;
 
   return result;
 }
 
-function determineOutcome(
-  forces: ForceDeployment[],
-  turns: Turn[]
-): GameOutcome {
+function determineOutcome(forces: ForceDeployment[], turns: Turn[]): GameOutcome {
   // Simple outcome determination based on final turn
   const lastTurn = turns[turns.length - 1];
 
   // Check for decisive victory
-  if (lastTurn.emergingThreats.includes("DECISIVE_VICTORY")) {
-    const winner = lastTurn.forceActions[0]?.forceName || "unknown";
+  if (lastTurn.emergingThreats.includes('DECISIVE_VICTORY')) {
+    const winner = lastTurn.forceActions[0]?.forceName || 'unknown';
     return {
       winner,
       draw: false,
-      finalState: "Decisive victory achieved",
-      keyDecisions: turns.flatMap(t => t.forceActions.map(a => a.action)),
-      turningPoints: lastTurn.emergingThreats.filter(t => t !== "GAME_OVER" && t !== "DECISIVE_VICTORY"),
+      finalState: 'Decisive victory achieved',
+      keyDecisions: turns.flatMap((t) => t.forceActions.map((a) => a.action)),
+      turningPoints: lastTurn.emergingThreats.filter(
+        (t) => t !== 'GAME_OVER' && t !== 'DECISIVE_VICTORY'
+      ),
     };
   }
 
   // Check for draw/stalemate
-  if (lastTurn.emergingThreats.includes("STALEMATE") || turns.length >= 5) {
+  if (lastTurn.emergingThreats.includes('STALEMATE') || turns.length >= 5) {
     return {
       draw: true,
-      finalState: "Stalemate reached or maximum turns exceeded",
-      keyDecisions: turns.flatMap(t => t.forceActions.map(a => a.action)),
-      turningPoints: lastTurn.emergingThreats.filter(t => t !== "GAME_OVER" && t !== "STALEMATE"),
+      finalState: 'Stalemate reached or maximum turns exceeded',
+      keyDecisions: turns.flatMap((t) => t.forceActions.map((a) => a.action)),
+      turningPoints: lastTurn.emergingThreats.filter((t) => t !== 'GAME_OVER' && t !== 'STALEMATE'),
     };
   }
 
   // Default: assess based on last actions
   return {
     draw: true,
-    finalState: "Simulation ended without clear resolution",
-    keyDecisions: turns.flatMap(t => t.forceActions.map(a => a.action)),
+    finalState: 'Simulation ended without clear resolution',
+    keyDecisions: turns.flatMap((t) => t.forceActions.map((a) => a.action)),
     turningPoints: [],
   };
 }

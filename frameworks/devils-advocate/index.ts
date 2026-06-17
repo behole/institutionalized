@@ -3,42 +3,58 @@
  * Formal challenge to test proposals
  */
 
-import { createProvider } from "@core/providers";
-import { getAPIKey } from "@core/config";
-import { parseJSON, FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider, RunFlags } from "@core/types";
-import type { Proposal, DevilsAdvocateConfig, DevilsAdvocateResult, Opposition, Rebuttal, Verdict } from "./types";
-import { DEFAULT_CONFIG } from "./types";
+import { createProvider } from '@core/providers';
+import { getAPIKey } from '@core/config';
+import { parseJSON, FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider, RunFlags } from '@core/types';
+import type {
+  Proposal,
+  DevilsAdvocateConfig,
+  DevilsAdvocateResult,
+  Opposition,
+  Rebuttal,
+  Verdict,
+} from './types';
+import { DEFAULT_CONFIG } from './types';
 
 export async function run(
   input: Proposal | { content: string },
   flags: RunFlags = {}
 ): Promise<DevilsAdvocateResult> {
-  const proposal: Proposal = "description" in input
-    ? input
-    : { description: input.content || "", rationale: [], benefits: [] };
+  const proposal: Proposal =
+    'description' in input
+      ? input
+      : { description: input.content || '', rationale: [], benefits: [] };
 
   const config: DevilsAdvocateConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  const providerName = flags.provider || "anthropic";
+  const providerName = flags.provider || 'anthropic';
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
   const verbose = flags.debug ?? false;
 
-  if (verbose) console.log("\n😈 DEVIL'S ADVOCATE\n");
+  if (verbose) {
+    console.log("\n😈 DEVIL'S ADVOCATE\n");
+  }
 
-  const runner = new FrameworkRunner<Proposal, DevilsAdvocateResult>("devils-advocate", proposal);
+  const runner = new FrameworkRunner<Proposal, DevilsAdvocateResult>('devils-advocate', proposal);
 
   // Phase 1: Opposition
-  if (verbose) console.log("Phase 1: Challenging the proposal...");
+  if (verbose) {
+    console.log('Phase 1: Challenging the proposal...');
+  }
   const opposition = await challengeProposal(proposal, config, provider, runner);
 
   // Phase 2: Rebuttal
-  if (verbose) console.log("Phase 2: Proposer responds...");
+  if (verbose) {
+    console.log('Phase 2: Proposer responds...');
+  }
   const rebuttal = await rebut(proposal, opposition, config, provider, runner);
 
   // Phase 3: Verdict
-  if (verbose) console.log("Phase 3: Arbiter decides...\n");
+  if (verbose) {
+    console.log('Phase 3: Arbiter decides...\n');
+  }
   const verdict = await decide(proposal, opposition, rebuttal, config, provider, runner);
 
   if (verbose) {
@@ -54,7 +70,7 @@ export async function run(
     metadata: { timestamp: new Date().toISOString(), config },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
 
   return {
     ...result,
@@ -69,15 +85,15 @@ async function challengeProposal(
   runner: FrameworkRunner<Proposal, DevilsAdvocateResult>
 ): Promise<Opposition> {
   const response = await runner.runAgent(
-    "advocate",
+    'advocate',
     provider,
     config.models.advocate,
     `You are the Devil's Advocate. Challenge this proposal:
 
 ${proposal.description}
 
-Rationale: ${proposal.rationale.join("; ")}
-Benefits: ${proposal.benefits.join("; ")}
+Rationale: ${proposal.rationale.join('; ')}
+Benefits: ${proposal.benefits.join('; ')}
 
 Provide JSON:
 {
@@ -101,7 +117,7 @@ async function rebut(
   runner: FrameworkRunner<Proposal, DevilsAdvocateResult>
 ): Promise<Rebuttal> {
   const response = await runner.runAgent(
-    "proposer",
+    'proposer',
     provider,
     config.models.proposer,
     `Respond to these objections to your proposal:
@@ -109,7 +125,7 @@ async function rebut(
 PROPOSAL: ${proposal.description}
 
 OBJECTIONS:
-${opposition.objections.map((o, i) => `${i + 1}. ${o}`).join("\n")}
+${opposition.objections.map((o, i) => `${i + 1}. ${o}`).join('\n')}
 
 Provide JSON:
 {
@@ -133,7 +149,7 @@ async function decide(
   runner: FrameworkRunner<Proposal, DevilsAdvocateResult>
 ): Promise<Verdict> {
   const response = await runner.runAgent(
-    "arbiter",
+    'arbiter',
     provider,
     config.models.arbiter,
     `As arbiter, decide on this proposal after seeing opposition and rebuttal.
@@ -156,4 +172,4 @@ Provide JSON:
   return parseJSON<Verdict>(response.content);
 }
 
-export * from "./types";
+export * from './types';

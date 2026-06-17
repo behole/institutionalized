@@ -3,7 +3,7 @@
  * Structured situational assessment for strategic planning
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Situation {
   entity: string; // Company, product, project, etc.
@@ -35,7 +35,7 @@ export interface StrategicRecommendations {
   wtStrategies: string[]; // Weaknesses + Threats
   priorities: Array<{
     strategy: string;
-    priority: "critical" | "high" | "medium" | "low";
+    priority: 'critical' | 'high' | 'medium' | 'low';
     rationale: string;
   }>;
   actionPlan: string[];

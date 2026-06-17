@@ -5,11 +5,11 @@
  * plus assertion helpers for audit trails.
  */
 
-import { MockProvider } from "../core/providers/mock";
-import { FrameworkRunner } from "../core/orchestrator";
-import type { LLMResponse } from "../core/types";
-import type { AuditLog } from "../core/observability";
-import { expect } from "bun:test";
+import { MockProvider } from '../core/providers/mock';
+import { FrameworkRunner } from '../core/orchestrator';
+import type { LLMResponse } from '../core/types';
+import type { AuditLog } from '../core/observability';
+import { expect } from 'bun:test';
 
 /**
  * Create a MockProvider with scripted responses.
@@ -38,7 +38,7 @@ export function createMockRunner<TInput, TResult>(
  * Create a standard mock LLM response.
  * Reduces boilerplate in tests that need many responses.
  */
-export function mockResponse(content: string, model = "mock"): LLMResponse {
+export function mockResponse(content: string, model = 'mock'): LLMResponse {
   return {
     content,
     model,
@@ -51,13 +51,13 @@ export function mockResponse(content: string, model = "mock"): LLMResponse {
  */
 export function expectValidAuditTrail(auditLog: AuditLog): void {
   expect(auditLog.framework).toBeDefined();
-  expect(typeof auditLog.framework).toBe("string");
+  expect(typeof auditLog.framework).toBe('string');
   expect(auditLog.timestamp).toBeDefined();
   expect(auditLog.steps).toBeDefined();
   expect(Array.isArray(auditLog.steps)).toBe(true);
   expect(auditLog.metadata).toBeDefined();
-  expect(typeof auditLog.metadata.totalDuration).toBe("number");
-  expect(typeof auditLog.metadata.totalCost).toBe("number");
+  expect(typeof auditLog.metadata.totalDuration).toBe('number');
+  expect(typeof auditLog.metadata.totalCost).toBe('number');
   expect(auditLog.metadata.totalDuration).toBeGreaterThanOrEqual(0);
   expect(auditLog.metadata.totalCost).toBeGreaterThanOrEqual(0);
 
@@ -66,8 +66,8 @@ export function expectValidAuditTrail(auditLog: AuditLog): void {
     expect(step.model).toBeDefined();
     expect(step.prompt).toBeDefined();
     expect(step.response).toBeDefined();
-    expect(typeof step.duration).toBe("number");
-    expect(typeof step.cost).toBe("number");
+    expect(typeof step.duration).toBe('number');
+    expect(typeof step.cost).toBe('number');
     expect(step.timestamp).toBeDefined();
   }
 }

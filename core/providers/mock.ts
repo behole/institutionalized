@@ -1,4 +1,4 @@
-import type { LLMProvider, LLMCallParams, LLMResponse } from "../types";
+import type { LLMProvider, LLMCallParams, LLMResponse } from '../types';
 
 /**
  * Mock LLM provider for testing. Two modes:
@@ -7,7 +7,7 @@ import type { LLMProvider, LLMCallParams, LLMResponse } from "../types";
  * - Echo: pass nothing. Each call() returns a JSON object echoing the prompt.
  */
 export class MockProvider implements LLMProvider {
-  name = "mock";
+  name = 'mock';
 
   /** Every call() invocation is recorded here for test assertions. */
   calls: LLMCallParams[] = [];
@@ -38,19 +38,16 @@ export class MockProvider implements LLMProvider {
     const lastMessage = params.messages[params.messages.length - 1];
     return {
       content: JSON.stringify({
-        echo: lastMessage?.content ?? "",
+        echo: lastMessage?.content ?? '',
         model: params.model,
         systemPrompt: params.systemPrompt,
       }),
-      model: params.model || "mock",
+      model: params.model || 'mock',
       usage: { inputTokens: 10, outputTokens: 20 },
     };
   }
 
-  calculateCost(
-    _usage: { inputTokens: number; outputTokens: number },
-    _model: string
-  ): number {
+  calculateCost(_usage: { inputTokens: number; outputTokens: number }, _model: string): number {
     return 0;
   }
 

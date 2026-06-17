@@ -5,8 +5,8 @@
  * composable, type-safe schemas that produce proper error messages.
  */
 
-import { z } from "zod";
-import { sanitizeInput } from "./sanitize";
+import { z } from 'zod';
+import { sanitizeInput } from './sanitize';
 
 // --- Primitive helpers ---
 
@@ -17,7 +17,7 @@ import { sanitizeInput } from "./sanitize";
 export function sanitizedString(maxLength: number) {
   return z
     .string()
-    .min(1, "String cannot be empty")
+    .min(1, 'String cannot be empty')
     .max(maxLength, `String exceeds maximum length of ${maxLength}`)
     .transform((val) => sanitizeInput(val));
 }
@@ -25,7 +25,7 @@ export function sanitizedString(maxLength: number) {
 // --- Core types ---
 
 export const MessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system"]),
+  role: z.enum(['user', 'assistant', 'system']),
   content: z.string().min(1),
 });
 
@@ -53,7 +53,7 @@ export const RunFlagsSchema = z
     timeoutMs: z.number().positive().optional(),
     model: z.string().optional(),
     temperature: z.number().min(0).max(2).optional(),
-    provider: z.enum(["anthropic", "openai", "openrouter"]).optional(),
+    provider: z.enum(['anthropic', 'openai', 'openrouter']).optional(),
     config: z.record(z.string(), z.unknown()).optional(),
     debug: z.boolean().optional(),
   })
@@ -61,7 +61,7 @@ export const RunFlagsSchema = z
 
 export const ProviderConfigSchema = z.object({
   name: z.string().min(1),
-  apiKey: z.string().min(1, "API key cannot be empty"),
+  apiKey: z.string().min(1, 'API key cannot be empty'),
   baseURL: z.string().url().optional(),
   defaultModel: z.string().optional(),
 });

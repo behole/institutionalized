@@ -3,7 +3,7 @@
  * Multi-specialist consensus for complex decisions
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Case {
   caseId: string;
@@ -72,10 +72,10 @@ export const DEFAULT_CONFIG: TumorBoardConfig = {
     temperature: 0.4,
   },
   specialties: [
-    "Clinical Lead",
-    "Technical Expert",
-    "Operations/Implementation",
-    "Risk & Compliance",
-    "User/Patient Advocate",
+    'Clinical Lead',
+    'Technical Expert',
+    'Operations/Implementation',
+    'Risk & Compliance',
+    'User/Patient Advocate',
   ],
 };

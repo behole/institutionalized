@@ -9,7 +9,7 @@
  * - Concurrent execution performance
  */
 
-import { performance } from "perf_hooks";
+import { performance } from 'perf_hooks';
 
 interface BenchmarkResult {
   framework: string;
@@ -31,123 +31,120 @@ interface BenchmarkSuite {
 // Simple test inputs for each framework
 const testInputs: Record<string, any> = {
   courtroom: {
-    question: "Should we use TypeScript?",
-    context: ["Team knows JavaScript", "Adds type safety"],
+    question: 'Should we use TypeScript?',
+    context: ['Team knows JavaScript', 'Adds type safety'],
   },
-  "six-hats": {
-    topic: "Should we pivot to B2B?",
-    context: ["Current B2C revenue: $50K/month"],
+  'six-hats': {
+    topic: 'Should we pivot to B2B?',
+    context: ['Current B2C revenue: $50K/month'],
   },
-  "pre-mortem": {
-    project: "Launch mobile app",
-    timeline: "3 months",
+  'pre-mortem': {
+    project: 'Launch mobile app',
+    timeline: '3 months',
     team_size: 5,
   },
-  "peer-review": {
-    title: "Sample Paper",
-    content: "This is a test paper for benchmarking purposes.",
+  'peer-review': {
+    title: 'Sample Paper',
+    content: 'This is a test paper for benchmarking purposes.',
   },
-  "red-blue": {
-    system: "Test API",
-    description: "A simple REST API for testing.",
+  'red-blue': {
+    system: 'Test API',
+    description: 'A simple REST API for testing.',
   },
-  "devils-advocate": {
-    proposal: "Rewrite in Rust",
-    context: ["Current: Python", "No Rust experience"],
+  'devils-advocate': {
+    proposal: 'Rewrite in Rust',
+    context: ['Current: Python', 'No Rust experience'],
   },
   aar: {
-    event: "Test outage",
-    whatHappened: "System went down for 5 minutes.",
-    whatWasExpected: "99.9% uptime",
+    event: 'Test outage',
+    whatHappened: 'System went down for 5 minutes.',
+    whatWasExpected: '99.9% uptime',
   },
-  "phd-defense": {
-    title: "Test Proposal",
-    abstract: "This is a test proposal.",
-    methodology: "Standard methods.",
+  'phd-defense': {
+    title: 'Test Proposal',
+    abstract: 'This is a test proposal.',
+    methodology: 'Standard methods.',
   },
-  "architecture-review": {
-    system: "Test System",
-    description: "A test system for benchmarking.",
+  'architecture-review': {
+    system: 'Test System',
+    description: 'A test system for benchmarking.',
   },
-  "differential-diagnosis": {
-    symptoms: ["Slow response", "High CPU"],
-    context: "Test system",
+  'differential-diagnosis': {
+    symptoms: ['Slow response', 'High CPU'],
+    context: 'Test system',
   },
   socratic: {
-    claim: "We should switch to microservices",
-    context: ["Current: Monolith"],
+    claim: 'We should switch to microservices',
+    context: ['Current: Monolith'],
   },
   swot: {
-    subject: "Test strategy",
-    context: ["Growing market"],
+    subject: 'Test strategy',
+    context: ['Growing market'],
   },
-  "war-gaming": {
-    description: "Test scenario",
-    context: ["Competitor A", "Competitor B"],
+  'war-gaming': {
+    description: 'Test scenario',
+    context: ['Competitor A', 'Competitor B'],
   },
-  "writers-workshop": {
-    title: "Test Story",
-    content: "Once upon a time...",
+  'writers-workshop': {
+    title: 'Test Story',
+    content: 'Once upon a time...',
   },
-  "regulatory-impact": {
-    title: "Test Policy",
-    description: "A test policy for benchmarking.",
-    objectives: ["Test objective"],
+  'regulatory-impact': {
+    title: 'Test Policy',
+    description: 'A test policy for benchmarking.',
+    objectives: ['Test objective'],
   },
   hegelian: {
-    context: "Test problem",
-    thesis: "Build in-house",
+    context: 'Test problem',
+    thesis: 'Build in-house',
   },
   talmudic: {
-    text: "Test text for interpretation.",
+    text: 'Test text for interpretation.',
   },
-  "dissertation-committee": {
-    title: "Test Dissertation",
-    abstract: "Test abstract.",
-    field: "Computer Science",
-    stage: "proposal",
+  'dissertation-committee': {
+    title: 'Test Dissertation',
+    abstract: 'Test abstract.',
+    field: 'Computer Science',
+    stage: 'proposal',
   },
-  "grant-panel": {
+  'grant-panel': {
     proposals: [
-      { id: "P1", title: "Test 1", budget: 100000 },
-      { id: "P2", title: "Test 2", budget: 150000 },
+      { id: 'P1', title: 'Test 1', budget: 100000 },
+      { id: 'P2', title: 'Test 2', budget: 150000 },
     ],
     totalBudget: 200000,
   },
-  "intelligence-analysis": {
-    question: "Why is it slow?",
-    evidence: ["High CPU", "Low memory"],
+  'intelligence-analysis': {
+    question: 'Why is it slow?',
+    evidence: ['High CPU', 'Low memory'],
   },
   delphi: {
-    question: "How many engineers?",
-    context: ["Current: 10"],
+    question: 'How many engineers?',
+    context: ['Current: 10'],
   },
-  "design-critique": {
-    design: "Test Design",
-    description: "A test design.",
+  'design-critique': {
+    design: 'Test Design',
+    description: 'A test design.',
   },
-  "consensus-circle": {
-    topic: "Test decision",
-    context: ["Option A", "Option B"],
+  'consensus-circle': {
+    topic: 'Test decision',
+    context: ['Option A', 'Option B'],
   },
-  "tumor-board": {
-    case: "Test case",
-    description: "A test case description.",
+  'tumor-board': {
+    case: 'Test case',
+    description: 'A test case description.',
   },
   parliamentary: {
-    motion: "Test motion",
-    context: ["Context 1"],
+    motion: 'Test motion',
+    context: ['Context 1'],
   },
   studio: {
-    work: "Test work",
-    description: "A test creative work.",
+    work: 'Test work',
+    description: 'A test creative work.',
   },
 };
 
-async function runBenchmark(
-  framework: string,
-  iterations: number = 1
-): Promise<BenchmarkResult> {
+async function runBenchmark(framework: string, iterations: number = 1): Promise<BenchmarkResult> {
   const input = testInputs[framework];
   if (!input) {
     throw new Error(`No test input for framework: ${framework}`);
@@ -206,7 +203,7 @@ async function runSuite(
       results.push(result);
       console.log(`✓ ${result.avgTime.toFixed(2)}ms avg`);
     } catch (error) {
-      console.log(`✗ ${error instanceof Error ? error.message : "Error"}`);
+      console.log(`✗ ${error instanceof Error ? error.message : 'Error'}`);
     }
   }
 
@@ -215,16 +212,16 @@ async function runSuite(
 
 function printResults(suite: BenchmarkSuite) {
   console.log(`\n📊 ${suite.name} Results`);
-  console.log("=".repeat(80));
+  console.log('='.repeat(80));
 
   const sorted = [...suite.results].sort((a, b) => a.avgTime - b.avgTime);
 
-  console.log("\nFramework Performance (sorted by avg time):");
-  console.log("-".repeat(80));
+  console.log('\nFramework Performance (sorted by avg time):');
+  console.log('-'.repeat(80));
   console.log(
-    `${"Framework".padEnd(25)} ${"Avg (ms)".padStart(10)} ${"Min (ms)".padStart(10)} ${"Max (ms)".padStart(10)} ${"Memory (MB)".padStart(12)}`
+    `${'Framework'.padEnd(25)} ${'Avg (ms)'.padStart(10)} ${'Min (ms)'.padStart(10)} ${'Max (ms)'.padStart(10)} ${'Memory (MB)'.padStart(12)}`
   );
-  console.log("-".repeat(80));
+  console.log('-'.repeat(80));
 
   for (const r of sorted) {
     console.log(
@@ -232,38 +229,38 @@ function printResults(suite: BenchmarkSuite) {
     );
   }
 
-  console.log("-".repeat(80));
+  console.log('-'.repeat(80));
   const totalAvg = sorted.reduce((sum, r) => sum + r.avgTime, 0) / sorted.length;
-  console.log(`${"AVERAGE".padEnd(25)} ${totalAvg.toFixed(2).padStart(10)}`);
-  console.log("=".repeat(80));
+  console.log(`${'AVERAGE'.padEnd(25)} ${totalAvg.toFixed(2).padStart(10)}`);
+  console.log('='.repeat(80));
 }
 
 async function main() {
-  console.log("🚀 Institutional Reasoning Framework Benchmarks");
-  console.log("=".repeat(80));
+  console.log('🚀 Institutional Reasoning Framework Benchmarks');
+  console.log('='.repeat(80));
   console.log(`\nDate: ${new Date().toISOString()}`);
   console.log(`Node: ${process.version}`);
   console.log(`Platform: ${process.platform}`);
-  console.log(`CPUs: ${navigator.hardwareConcurrency || "unknown"}`);
+  console.log(`CPUs: ${navigator.hardwareConcurrency || 'unknown'}`);
 
   // Framework overhead benchmark (no LLM calls)
   const allFrameworks = Object.keys(testInputs);
-  const overheadSuite = await runSuite(
-    "Framework Overhead",
-    allFrameworks,
-    100
-  );
+  const overheadSuite = await runSuite('Framework Overhead', allFrameworks, 100);
   printResults(overheadSuite);
 
   // Summary
-  console.log("\n📈 Summary");
-  console.log("=".repeat(80));
+  console.log('\n📈 Summary');
+  console.log('='.repeat(80));
   console.log(`Total frameworks tested: ${overheadSuite.results.length}`);
-  console.log(`Fastest framework: ${overheadSuite.results.sort((a, b) => a.avgTime - b.avgTime)[0]?.framework}`);
-  console.log(`Average overhead: ${(overheadSuite.results.reduce((sum, r) => sum + r.avgTime, 0) / overheadSuite.results.length).toFixed(2)}ms`);
-  console.log("\nNote: These benchmarks measure framework initialization and");
-  console.log("structure overhead only. Actual LLM calls would add 2-30s per call.");
-  console.log("=".repeat(80));
+  console.log(
+    `Fastest framework: ${overheadSuite.results.sort((a, b) => a.avgTime - b.avgTime)[0]?.framework}`
+  );
+  console.log(
+    `Average overhead: ${(overheadSuite.results.reduce((sum, r) => sum + r.avgTime, 0) / overheadSuite.results.length).toFixed(2)}ms`
+  );
+  console.log('\nNote: These benchmarks measure framework initialization and');
+  console.log('structure overhead only. Actual LLM calls would add 2-30s per call.');
+  console.log('='.repeat(80));
 }
 
 main().catch(console.error);

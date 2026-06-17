@@ -1,5 +1,5 @@
-import type { LLMProvider, LLMCallParams, LLMResponse } from "./types";
-import { detectPromptInjection, sanitizeOutput } from "./sanitize";
+import type { LLMProvider, LLMCallParams, LLMResponse } from './types';
+import { detectPromptInjection, sanitizeOutput } from './sanitize';
 
 /**
  * Middleware function signature.
@@ -15,11 +15,10 @@ export type Middleware = (
  * Middleware executes in array order (first middleware is outermost).
  * Returns a new LLMProvider with the same name and calculateCost.
  */
-export function applyMiddleware(
-  provider: LLMProvider,
-  middlewares: Middleware[]
-): LLMProvider {
-  if (middlewares.length === 0) return provider;
+export function applyMiddleware(provider: LLMProvider, middlewares: Middleware[]): LLMProvider {
+  if (middlewares.length === 0) {
+    return provider;
+  }
 
   const chain = middlewares.reduceRight<(params: LLMCallParams) => Promise<LLMResponse>>(
     (next, mw) => (params) => mw(params, next),
@@ -38,17 +37,15 @@ export function applyMiddleware(
  * - "warn" mode: allows the call but adds injectionWarning to response metadata
  * - "block" mode: throws an error, preventing the LLM call
  */
-export function injectionDetection(mode: "warn" | "block" = "warn"): Middleware {
+export function injectionDetection(mode: 'warn' | 'block' = 'warn'): Middleware {
   return async (params, next) => {
-    const userMessages = params.messages.filter((m) => m.role === "user");
-    const allContent = userMessages.map((m) => m.content).join("\n");
+    const userMessages = params.messages.filter((m) => m.role === 'user');
+    const allContent = userMessages.map((m) => m.content).join('\n');
     const detection = detectPromptInjection(allContent);
 
     if (detection.detected) {
-      if (mode === "block") {
-        throw new Error(
-          `Prompt injection detected: ${detection.signals.join(", ")}`
-        );
+      if (mode === 'block') {
+        throw new Error(`Prompt injection detected: ${detection.signals.join(', ')}`);
       }
 
       const response = await next(params);
@@ -84,10 +81,7 @@ export function outputSanitization(): Middleware {
  * Cost budget middleware.
  * Tracks cumulative cost across calls and throws when budget is exceeded.
  */
-export function costBudget(
-  maxCost: number,
-  costFn: (response: LLMResponse) => number
-): Middleware {
+export function costBudget(maxCost: number, costFn: (response: LLMResponse) => number): Middleware {
   let totalCost = 0;
 
   return async (params, next) => {

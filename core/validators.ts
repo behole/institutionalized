@@ -17,15 +17,10 @@ export function validateQuote(quote: string, source: string): void {
  * Ensures substantive responses.
  * @deprecated Use Zod schemas from core/schemas.ts with z.string().refine() instead.
  */
-export function validateSubstantive(
-  text: string,
-  minWords: number = 10
-): void {
+export function validateSubstantive(text: string, minWords: number = 10): void {
   const wordCount = text.split(/\s+/).filter(Boolean).length;
   if (wordCount < minWords) {
-    throw new Error(
-      `Response too brief: ${wordCount}/${minWords} words required`
-    );
+    throw new Error(`Response too brief: ${wordCount}/${minWords} words required`);
   }
 }
 
@@ -33,13 +28,10 @@ export function validateSubstantive(
  * Validate that required fields are present in an object.
  * @deprecated Use Zod schemas from core/schemas.ts with z.object().required() instead.
  */
-export function validateRequired<T extends Record<string, any>>(
-  obj: T,
-  fields: (keyof T)[]
-): void {
+export function validateRequired<T extends Record<string, any>>(obj: T, fields: (keyof T)[]): void {
   const missing = fields.filter((field) => !obj[field]);
   if (missing.length > 0) {
-    throw new Error(`Missing required fields: ${missing.join(", ")}`);
+    throw new Error(`Missing required fields: ${missing.join(', ')}`);
   }
 }
 
@@ -47,12 +39,9 @@ export function validateRequired<T extends Record<string, any>>(
  * Validate JSON structure matches expected shape.
  * @deprecated Use Zod schemas from core/schemas.ts with schema.parse() instead.
  */
-export function validateStructure<T>(
-  data: unknown,
-  validator: (data: unknown) => data is T
-): T {
+export function validateStructure<T>(data: unknown, validator: (data: unknown) => data is T): T {
   if (!validator(data)) {
-    throw new Error("Data does not match expected structure");
+    throw new Error('Data does not match expected structure');
   }
   return data;
 }
@@ -61,7 +50,7 @@ export function validateStructure<T>(
  * Validate that a string is not empty after trimming.
  * @deprecated Use Zod schemas from core/schemas.ts with z.string().min(1) instead.
  */
-export function validateNonEmpty(text: string, fieldName: string = "Field"): void {
+export function validateNonEmpty(text: string, fieldName: string = 'Field'): void {
   if (!text || text.trim().length === 0) {
     throw new Error(`${fieldName} cannot be empty`);
   }
@@ -75,7 +64,7 @@ export function validateRange(
   value: number,
   min: number,
   max: number,
-  fieldName: string = "Value"
+  fieldName: string = 'Value'
 ): void {
   if (value < min || value > max) {
     throw new Error(`${fieldName} must be between ${min} and ${max}, got ${value}`);

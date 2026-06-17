@@ -3,7 +3,7 @@
  * Diagnostic reasoning under uncertainty - CIA analytical method
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Problem {
   question: string;
@@ -34,7 +34,7 @@ export interface Analysis {
     hypothesisId: string;
     hypothesis: string;
     likelihood: number;
-    confidence: "low" | "medium" | "high";
+    confidence: 'low' | 'medium' | 'high';
     rationale: string;
   }>;
   mostLikely: string;

@@ -3,20 +3,18 @@
  * Iterative anonymous expert consensus building
  */
 
-import { createProvider } from "@core/providers";
-import { getAPIKey } from "@core/config";
-import { parseJSON, FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider, RunFlags } from "@core/types";
-import type { Question, ExpertEstimate, RoundSummary, DelphiResult, DelphiConfig } from "./types";
-import { DEFAULT_CONFIG } from "./types";
+import { createProvider } from '@core/providers';
+import { getAPIKey } from '@core/config';
+import { parseJSON, FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider, RunFlags } from '@core/types';
+import type { Question, ExpertEstimate, RoundSummary, DelphiResult, DelphiConfig } from './types';
+import { DEFAULT_CONFIG } from './types';
 
 export async function run(
   input: Question | { content: string },
   flags: RunFlags = {}
 ): Promise<DelphiResult> {
-  const question: Question = "question" in input
-    ? input
-    : { question: input.content || "" };
+  const question: Question = 'question' in input ? input : { question: input.content || '' };
 
   const config: DelphiConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
   const cliFlags = flags as Record<string, unknown>;
@@ -27,24 +25,36 @@ export async function run(
     config.parameters.maxRounds = parseInt(String(cliFlags.rounds), 10);
   }
 
-  const providerName = flags.provider || "anthropic";
+  const providerName = flags.provider || 'anthropic';
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
   const verbose = flags.debug ?? false;
 
-  if (verbose) console.log("\n🔮 DELPHI METHOD - EXPERT CONSENSUS\n");
+  if (verbose) {
+    console.log('\n🔮 DELPHI METHOD - EXPERT CONSENSUS\n');
+  }
 
-  const runner = new FrameworkRunner<Question, DelphiResult>("delphi", question);
+  const runner = new FrameworkRunner<Question, DelphiResult>('delphi', question);
 
   const rounds: RoundSummary[] = [];
   let converged = false;
 
   for (let round = 1; round <= config.parameters.maxRounds && !converged; round++) {
-    if (verbose) console.log(`\nRound ${round}...`);
+    if (verbose) {
+      console.log(`\nRound ${round}...`);
+    }
 
     const previousRound = rounds[rounds.length - 1];
-    const estimates = await conductRound(question, round, previousRound, config, provider, runner, verbose);
+    const estimates = await conductRound(
+      question,
+      round,
+      previousRound,
+      config,
+      provider,
+      runner,
+      verbose
+    );
     const summary = calculateRoundStatistics(round, estimates);
     rounds.push(summary);
 
@@ -54,7 +64,14 @@ export async function run(
     }
   }
 
-  const finalConsensus = await synthesizeConsensus(question, rounds, config, provider, runner, verbose);
+  const finalConsensus = await synthesizeConsensus(
+    question,
+    rounds,
+    config,
+    provider,
+    runner,
+    verbose
+  );
 
   if (verbose) {
     console.log(`\nFinal Consensus: ${finalConsensus.estimate}`);
@@ -68,7 +85,7 @@ export async function run(
     metadata: { timestamp: new Date().toISOString(), config },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
 
   return {
     ...result,
@@ -94,8 +111,8 @@ async function conductRound(
 QUESTION:
 ${question.question}
 
-${question.context ? `CONTEXT:\n${question.context}\n` : ""}
-${question.targetMetric ? `TARGET METRIC: ${question.targetMetric}\n` : ""}`;
+${question.context ? `CONTEXT:\n${question.context}\n` : ''}
+${question.targetMetric ? `TARGET METRIC: ${question.targetMetric}\n` : ''}`;
 
       if (previousRound) {
         prompt += `\nPREVIOUS ROUND STATISTICS (anonymous):
@@ -127,7 +144,7 @@ You may revise your estimate based on group feedback.`;
 
   return responses.map((response, i) => {
     const expertId = `expert-${i + 1}`;
-    const parsed = parseJSON<Omit<ExpertEstimate, "expertId" | "round">>(response.content);
+    const parsed = parseJSON<Omit<ExpertEstimate, 'expertId' | 'round'>>(response.content);
     return {
       expertId,
       round,
@@ -137,7 +154,9 @@ You may revise your estimate based on group feedback.`;
 }
 
 function calculateRoundStatistics(round: number, estimates: ExpertEstimate[]): RoundSummary {
-  const values = estimates.map((e) => typeof e.estimate === "number" ? e.estimate : parseFloat(e.estimate as string));
+  const values = estimates.map((e) =>
+    typeof e.estimate === 'number' ? e.estimate : parseFloat(e.estimate)
+  );
   const sorted = [...values].sort((a, b) => a - b);
 
   const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
@@ -145,7 +164,9 @@ function calculateRoundStatistics(round: number, estimates: ExpertEstimate[]): R
   const q1 = sorted[Math.floor(sorted.length * 0.25)];
   const q3 = sorted[Math.floor(sorted.length * 0.75)];
 
-  const stdDev = Math.sqrt(values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length);
+  const stdDev = Math.sqrt(
+    values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length
+  );
   const convergence = stdDev / mean; // Coefficient of variation
 
   return {
@@ -172,16 +193,21 @@ async function synthesizeConsensus(
   provider: LLMProvider,
   runner: FrameworkRunner<Question, DelphiResult>,
   verbose: boolean
-): Promise<DelphiResult["finalConsensus"]> {
-  if (verbose) console.log("\nSynthesizing final consensus...\n");
+): Promise<DelphiResult['finalConsensus']> {
+  if (verbose) {
+    console.log('\nSynthesizing final consensus...\n');
+  }
 
   const finalRound = rounds[rounds.length - 1];
-  const roundsText = rounds.map((r) =>
-    `Round ${r.round}: Median=${r.statistics.median}, Mean=${r.statistics.mean}, Range=${r.statistics.range.min}-${r.statistics.range.max}, Convergence=${r.convergence.toFixed(3)}`
-  ).join("\n");
+  const roundsText = rounds
+    .map(
+      (r) =>
+        `Round ${r.round}: Median=${r.statistics.median}, Mean=${r.statistics.mean}, Range=${r.statistics.range.min}-${r.statistics.range.max}, Convergence=${r.convergence.toFixed(3)}`
+    )
+    .join('\n');
 
   const response = await runner.runAgent(
-    "facilitator",
+    'facilitator',
     provider,
     config.models.facilitator,
     `Synthesize the Delphi study results.
@@ -192,7 +218,7 @@ ROUNDS:
 ${roundsText}
 
 FINAL ROUND ESTIMATES:
-${finalRound.estimates.map((e) => `${e.estimate} (confidence: ${e.confidence}) - ${e.reasoning}`).join("\n")}
+${finalRound.estimates.map((e) => `${e.estimate} (confidence: ${e.confidence}) - ${e.reasoning}`).join('\n')}
 
 Provide consensus in JSON:
 {
@@ -207,7 +233,7 @@ Provide consensus in JSON:
     1536
   );
 
-  return parseJSON<DelphiResult["finalConsensus"]>(response.content);
+  return parseJSON<DelphiResult['finalConsensus']>(response.content);
 }
 
-export * from "./types";
+export * from './types';

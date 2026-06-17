@@ -2,9 +2,9 @@
  * Peer - provides observations and critique
  */
 
-import type { LLMProvider } from "@core/types";
-import { parseJSON } from "@core/orchestrator";
-import type { CreativeWork, PeerObservation, CritiqueRound, StudioConfig } from "./types";
+import type { LLMProvider } from '@core/types';
+import { parseJSON } from '@core/orchestrator';
+import type { CreativeWork, PeerObservation, CritiqueRound, StudioConfig } from './types';
 
 export async function observeWork(
   peerNumber: number,
@@ -17,11 +17,11 @@ export async function observeWork(
   const response = await provider.call({
     model: config.models.peers,
     temperature: config.parameters.peerTemperature,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
     maxTokens: 2048,
   });
 
-  const parsed = parseJSON<Omit<PeerObservation, "peer">>(response.content);
+  const parsed = parseJSON<Omit<PeerObservation, 'peer'>>(response.content);
 
   return {
     peer: `Peer ${peerNumber}`,
@@ -40,11 +40,11 @@ export async function critiqueWork(
   const response = await provider.call({
     model: config.models.peers,
     temperature: config.parameters.peerTemperature,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
     maxTokens: 2048,
   });
 
-  const parsed = parseJSON<Omit<CritiqueRound, "peer">>(response.content);
+  const parsed = parseJSON<Omit<CritiqueRound, 'peer'>>(response.content);
 
   return {
     peer: `Peer ${peerNumber}`,
@@ -55,7 +55,7 @@ export async function critiqueWork(
 function buildObservationPrompt(peerNumber: number, work: CreativeWork): string {
   let prompt = `You are Peer ${peerNumber} in a STUDIO CRITIQUE session.
 
-## CREATIVE WORK (${work.workType || "general"})
+## CREATIVE WORK (${work.workType || 'general'})
 
 ${work.work}
 `;
@@ -101,7 +101,7 @@ IMPORTANT: Return ONLY valid JSON.`;
 function buildCritiquePrompt(peerNumber: number, work: CreativeWork): string {
   let prompt = `You are Peer ${peerNumber} in a STUDIO CRITIQUE session.
 
-## CREATIVE WORK (${work.workType || "general"})
+## CREATIVE WORK (${work.workType || 'general'})
 
 ${work.work}
 `;

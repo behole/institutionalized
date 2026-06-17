@@ -2,8 +2,8 @@
 // All providers (Anthropic, OpenAI, OpenRouter) use withRetry to get consistent
 // retry-on-429/500, exponential-backoff-with-jitter, and AbortController timeout.
 
-import { ProviderError, ErrorCode } from "./errors";
-import type { ErrorContext } from "./errors";
+import { ProviderError, ErrorCode } from './errors';
+import type { ErrorContext } from './errors';
 
 /**
  * Parse a Retry-After header value into milliseconds.
@@ -15,7 +15,9 @@ import type { ErrorContext } from "./errors";
  * Returns null for null/undefined/empty/unparseable values.
  */
 export function parseRetryAfterMs(header: string | null | undefined): number | null {
-  if (header == null || header === "") return null;
+  if (header == null || header === '') {
+    return null;
+  }
 
   // Integer seconds
   const seconds = Number(header);
@@ -39,11 +41,15 @@ function isRetryableStatus(status: number): boolean {
 
 /** Extract HTTP status code from various error shapes. */
 function getErrorStatus(err: unknown): number | null {
-  if (err == null || typeof err !== "object") return null;
+  if (err == null || typeof err !== 'object') {
+    return null;
+  }
   const e = err as Record<string, unknown>;
-  if (typeof e.status === "number") return e.status;
+  if (typeof e.status === 'number') {
+    return e.status;
+  }
   // Fetch Response-like error
-  if (e.response && typeof (e.response as Record<string, unknown>).status === "number") {
+  if (e.response && typeof (e.response as Record<string, unknown>).status === 'number') {
     return (e.response as Record<string, unknown>).status as number;
   }
   return null;
@@ -51,21 +57,27 @@ function getErrorStatus(err: unknown): number | null {
 
 /** Extract Retry-After header from various error shapes. */
 function getRetryAfterHeader(err: unknown): string | null {
-  if (err == null || typeof err !== "object") return null;
+  if (err == null || typeof err !== 'object') {
+    return null;
+  }
   const e = err as Record<string, unknown>;
 
   // Anthropic SDK errors expose headers as a plain object
-  if (e.headers && typeof e.headers === "object") {
+  if (e.headers && typeof e.headers === 'object') {
     const h = e.headers as Record<string, string>;
-    if (typeof h["retry-after"] === "string") return h["retry-after"];
+    if (typeof h['retry-after'] === 'string') {
+      return h['retry-after'];
+    }
   }
 
   // Fetch errors may expose headers via response.headers (Headers API)
-  if (e.response && typeof e.response === "object") {
+  if (e.response && typeof e.response === 'object') {
     const resp = e.response as { headers?: { get?: (name: string) => string | null } };
     if (resp.headers?.get) {
-      const val = resp.headers.get("retry-after");
-      if (val) return val;
+      const val = resp.headers.get('retry-after');
+      if (val) {
+        return val;
+      }
     }
   }
 
@@ -115,7 +127,7 @@ export async function withRetry<T>(
     const ac = new AbortController();
 
     // Per-attempt timeout
-    const timer = setTimeout(() => ac.abort(new DOMException("Timeout", "AbortError")), timeoutMs);
+    const timer = setTimeout(() => ac.abort(new DOMException('Timeout', 'AbortError')), timeoutMs);
 
     try {
       const result = await fn(ac.signal);
@@ -127,9 +139,9 @@ export async function withRetry<T>(
       // Check if this was a timeout abort
       if (
         ac.signal.aborted &&
-        (err instanceof DOMException || (err as { name?: string }).name === "AbortError")
+        (err instanceof DOMException || (err as { name?: string }).name === 'AbortError')
       ) {
-        throw new ProviderError("Request timed out", {
+        throw new ProviderError('Request timed out', {
           code: ErrorCode.PROVIDER_TIMEOUT,
           context,
           cause: err,
@@ -140,13 +152,13 @@ export async function withRetry<T>(
 
       // Determine if we should retry
       const status = getErrorStatus(err);
-      const shouldRetry = retryOn
-        ? retryOn(err)
-        : status != null && isRetryableStatus(status);
+      const shouldRetry = retryOn ? retryOn(err) : status != null && isRetryableStatus(status);
 
       if (!shouldRetry || attempt === maxAttempts) {
         // Non-retryable error or final attempt — rethrow as-is (not wrapped)
-        if (!shouldRetry) throw err;
+        if (!shouldRetry) {
+          throw err;
+        }
         break; // will throw ProviderError below
       }
 
@@ -165,7 +177,7 @@ export async function withRetry<T>(
   }
 
   // All attempts exhausted — throw ProviderError
-  throw new ProviderError("Max retries exceeded", {
+  throw new ProviderError('Max retries exceeded', {
     code: ErrorCode.PROVIDER_RATE_LIMITED,
     context,
     cause: lastError,

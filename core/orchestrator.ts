@@ -1,8 +1,8 @@
 // Agent orchestration primitives for institutional frameworks
-import type { LLMProvider, LLMCallParams, LLMResponse } from "./types";
-import { AuditTrail } from "./observability";
-import { sanitizeInput } from "./sanitize";
-import type { ZodType } from "zod";
+import type { LLMProvider, LLMCallParams, LLMResponse } from './types';
+import { AuditTrail } from './observability';
+import { sanitizeInput } from './sanitize';
+import type { ZodType } from 'zod';
 
 /**
  * A lightweight counting semaphore that limits concurrent async operations.
@@ -53,7 +53,9 @@ export async function executeParallel<T>(
   agents: (() => Promise<T>)[],
   concurrency = 5
 ): Promise<T[]> {
-  if (agents.length === 0) return [];
+  if (agents.length === 0) {
+    return [];
+  }
 
   const sem = new Semaphore(concurrency);
 
@@ -72,7 +74,7 @@ export async function executeParallel<T>(
   const results: T[] = [];
 
   for (const settlement of settlements) {
-    if (settlement.status === "fulfilled") {
+    if (settlement.status === 'fulfilled') {
       results.push(settlement.value);
     } else {
       errors.push(settlement.reason);
@@ -90,15 +92,13 @@ export async function executeParallel<T>(
  * Execute agents sequentially in a pipeline
  * Used for: Prosecutor → Defense → Judge; Paper → Reviews → Rebuttal → Editor
  */
-export async function executeSequential<T>(
-  agents: ((prev?: T) => Promise<T>)[]
-): Promise<T> {
+export async function executeSequential<T>(agents: ((prev?: T) => Promise<T>)[]): Promise<T> {
   let result: T | undefined;
   for (const agent of agents) {
     result = await agent(result);
   }
   if (!result) {
-    throw new Error("Sequential execution produced no result");
+    throw new Error('Sequential execution produced no result');
   }
   return result;
 }
@@ -117,11 +117,13 @@ export async function executeIterative<T>(
   for (let round = 0; round < maxRounds; round++) {
     result = await agent(result);
     const converged = await evaluator(result);
-    if (converged) break;
+    if (converged) {
+      break;
+    }
   }
 
   if (!result) {
-    throw new Error("Iterative execution produced no result");
+    throw new Error('Iterative execution produced no result');
   }
   return result;
 }
@@ -177,7 +179,7 @@ export class FrameworkRunner<TInput, TResult> {
 
     const params: LLMCallParams = {
       model,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: 'user', content: prompt }],
       temperature,
       maxTokens,
     };
@@ -191,14 +193,7 @@ export class FrameworkRunner<TInput, TResult> {
     const duration = Date.now() - startTime;
     const cost = provider.calculateCost(response.usage, model);
 
-    this.auditTrail.recordStep(
-      agentName,
-      model,
-      prompt,
-      response,
-      duration,
-      cost
-    );
+    this.auditTrail.recordStep(agentName, model, prompt, response, duration, cost);
 
     return response;
   }
@@ -240,7 +235,7 @@ export class FrameworkRunner<TInput, TResult> {
     const results: LLMResponse[] = [];
 
     for (const settlement of settlements) {
-      if (settlement.status === "fulfilled") {
+      if (settlement.status === 'fulfilled') {
         results.push(settlement.value);
       } else {
         errors.push(settlement.reason);
@@ -291,7 +286,7 @@ export function parseJSON<T>(text: string, schema?: ZodType<T>): T {
     if (jsonMatch) {
       raw = JSON.parse(jsonMatch[0]);
     } else {
-      throw new Error("No valid JSON found in response");
+      throw new Error('No valid JSON found in response');
     }
   }
 
@@ -324,10 +319,10 @@ export async function generateObject<T>({
   schema?: ZodType<T>;
 }): Promise<T> {
   // Get provider if not passed
-  const llmProvider = provider || (await import("./providers/index")).getProvider();
+  const llmProvider = provider || (await import('./providers/index')).getProvider();
 
-  const messages: Array<{ role: "user" | "assistant" | "system"; content: string }> = [
-    { role: "user", content: prompt },
+  const messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
+    { role: 'user', content: prompt },
   ];
 
   const response = await llmProvider.call({

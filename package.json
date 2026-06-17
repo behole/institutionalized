@@ -3,12 +3,26 @@
   "version": "0.1.0",
   "description": "LLM decision-making frameworks based on centuries-old human systems",
   "type": "module",
+  "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
+  "bin": {
+    "institutional-reasoning": "./dist/cli.js",
+    "institutional-reasoning-cli": "./dist/cli.js"
+  },
   "workspaces": [
     "frameworks/*",
     "core",
     "mcp-server"
   ],
+  "files": [
+    "dist",
+    "frameworks",
+    "core",
+    "tsconfig.json"
+  ],
   "scripts": {
+    "build": "bun build cli.ts --outdir dist",
+    "build:all": "bun run build && tsc -p tsconfig.json --outDir dist",
     "dev": "bun run cli.ts",
     "courtroom": "bun run cli.ts courtroom",
     "peer-review": "bun run cli.ts peer-review",
@@ -22,7 +36,14 @@
     "test:coverage": "bun test --coverage",
     "test:integration": "bun test test/integration",
     "test:property": "bun test test/core/property.test.ts",
-    "typecheck": "bun tsc --noEmit"
+    "typecheck": "bun tsc --noEmit",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "lint:check": "eslint . --ext .ts",
+    "format": "prettier --write \"**/*.{ts,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,json,md}\"",
+    "lint-staged": "lint-staged",
+    "prepare": "husky"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.79.0",
@@ -30,8 +51,17 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^7.1.0",
+    "@typescript-eslint/parser": "^7.1.0",
     "bun-types": "latest",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
     "fast-check": "^4.6.0",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.5",
     "typescript": "^5.9.3"
   },
   "keywords": [
@@ -47,11 +77,18 @@
   ],
   "author": "",
   "license": "MIT",
+  "homepage": "https://github.com/behole/institutionalized#readme",
+  "bugs": {
+    "url": "https://github.com/behole/institutionalized/issues"
+  },
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "git+https://github.com/behole/institutionalized.git"
   },
   "engines": {
-    "node": ">=18.0.0"
-  }
+    "bun": ">=1.0.0"
+  },
+  "prepublishOnly": [
+    "bun run build"
+  ]
 }

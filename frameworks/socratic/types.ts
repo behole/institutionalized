@@ -3,7 +3,7 @@
  * Assumption testing through systematic questioning
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Statement {
   claim: string;
@@ -27,7 +27,7 @@ export interface SocraticResult {
     exposedAssumptions: string[];
     contradictions: string[];
     remainingQuestions: string[];
-    epistemicStatus: "clarified" | "refined" | "refuted" | "acknowledged_ignorance";
+    epistemicStatus: 'clarified' | 'refined' | 'refuted' | 'acknowledged_ignorance';
     synthesis: string;
   };
   metadata: {

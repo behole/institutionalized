@@ -3,7 +3,7 @@
  * Multi-perspective analysis (Edward de Bono)
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Analysis {
   question: string;
@@ -11,7 +11,7 @@ export interface Analysis {
 }
 
 export interface HatPerspective {
-  hat: "white" | "red" | "black" | "yellow" | "green" | "blue";
+  hat: 'white' | 'red' | 'black' | 'yellow' | 'green' | 'blue';
   name: string;
   analysis: string;
 }

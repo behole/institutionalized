@@ -3,11 +3,11 @@
  * Structured work-in-progress feedback for design work
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface DesignWork {
   title: string;
-  stage: "concept" | "wireframe" | "prototype" | "final";
+  stage: 'concept' | 'wireframe' | 'prototype' | 'final';
   description: string;
   goals: string[];
   constraints?: string[];
@@ -44,7 +44,7 @@ export interface CritiqueSynthesis {
   areasForImprovement: string[];
   prioritizedFeedback: Array<{
     issue: string;
-    priority: "critical" | "high" | "medium" | "low";
+    priority: 'critical' | 'high' | 'medium' | 'low';
     category: string;
     suggestions: string[];
   }>;
@@ -87,5 +87,5 @@ export const DEFAULT_CONFIG: DesignCritiqueConfig = {
     temperature: 0.6,
     peerCount: 3,
   },
-  stakeholderTypes: ["User", "Product Manager", "Engineering"],
+  stakeholderTypes: ['User', 'Product Manager', 'Engineering'],
 };

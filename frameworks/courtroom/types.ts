@@ -1,6 +1,6 @@
 // Core types for Courtroom POC
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Case {
   question: string;
@@ -30,7 +30,7 @@ export interface Defense {
   alternative: string;
 }
 
-export type Vote = "guilty" | "not_guilty" | "abstain";
+export type Vote = 'guilty' | 'not_guilty' | 'abstain';
 
 export interface JurorDeliberation {
   reasoning: string;
@@ -45,7 +45,7 @@ export interface JuryVerdict {
   proceedsToJudge: boolean;
 }
 
-export type Decision = "guilty" | "not_guilty" | "dismissed";
+export type Decision = 'guilty' | 'not_guilty' | 'dismissed';
 
 export interface Verdict {
   decision: Decision;

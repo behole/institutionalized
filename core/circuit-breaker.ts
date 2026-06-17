@@ -1,4 +1,4 @@
-import type { LLMProvider, LLMCallParams, LLMResponse } from "./types";
+import type { LLMProvider, LLMCallParams, LLMResponse } from './types';
 
 export interface CircuitBreakerOptions {
   /** Number of consecutive failures before opening (default: 5) */
@@ -7,7 +7,7 @@ export interface CircuitBreakerOptions {
   cooldownMs?: number;
 }
 
-type CircuitState = "closed" | "open" | "half-open";
+type CircuitState = 'closed' | 'open' | 'half-open';
 
 /**
  * Circuit breaker wrapper for any LLMProvider.
@@ -25,7 +25,7 @@ export class CircuitBreakerProvider implements LLMProvider {
   private cooldownMs: number;
   private consecutiveFailures = 0;
   private lastFailureTime = 0;
-  private _state: CircuitState = "closed";
+  private _state: CircuitState = 'closed';
 
   constructor(inner: LLMProvider, options: CircuitBreakerOptions = {}) {
     this.inner = inner;
@@ -35,11 +35,8 @@ export class CircuitBreakerProvider implements LLMProvider {
   }
 
   get state(): CircuitState {
-    if (
-      this._state === "open" &&
-      Date.now() - this.lastFailureTime >= this.cooldownMs
-    ) {
-      this._state = "half-open";
+    if (this._state === 'open' && Date.now() - this.lastFailureTime >= this.cooldownMs) {
+      this._state = 'half-open';
     }
     return this._state;
   }
@@ -47,43 +44,37 @@ export class CircuitBreakerProvider implements LLMProvider {
   async call(params: LLMCallParams): Promise<LLMResponse> {
     const currentState = this.state;
 
-    if (currentState === "open") {
+    if (currentState === 'open') {
       throw new Error(
         `Circuit breaker is open for provider "${this.inner.name}" — ` +
-        `${this.consecutiveFailures} consecutive failures, ` +
-        `cooldown ${this.cooldownMs}ms`
+          `${this.consecutiveFailures} consecutive failures, ` +
+          `cooldown ${this.cooldownMs}ms`
       );
     }
 
     try {
       const result = await this.inner.call(params);
       this.consecutiveFailures = 0;
-      this._state = "closed";
+      this._state = 'closed';
       return result;
     } catch (err) {
       this.consecutiveFailures++;
       this.lastFailureTime = Date.now();
 
-      if (
-        currentState === "half-open" ||
-        this.consecutiveFailures >= this.failureThreshold
-      ) {
-        this._state = "open";
+      if (currentState === 'half-open' || this.consecutiveFailures >= this.failureThreshold) {
+        this._state = 'open';
       }
 
       throw err;
     }
   }
 
-  calculateCost(
-    usage: { inputTokens: number; outputTokens: number },
-    model: string
-  ): number {
+  calculateCost(usage: { inputTokens: number; outputTokens: number }, model: string): number {
     return this.inner.calculateCost(usage, model);
   }
 
   reset(): void {
-    this._state = "closed";
+    this._state = 'closed';
     this.consecutiveFailures = 0;
     this.lastFailureTime = 0;
   }

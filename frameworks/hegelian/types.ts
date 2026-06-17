@@ -1,7 +1,7 @@
 // Core types for Hegelian Dialectic Framework
 // Thesis-Antithesis-Synthesis for resolving contradictions
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface DialecticalProblem {
   context: string;
@@ -34,7 +34,7 @@ export interface Synthesis {
 
 export interface DialecticalInsight {
   insight: string;
-  source: "thesis" | "antithesis" | "synthesis";
+  source: 'thesis' | 'antithesis' | 'synthesis';
   application: string;
 }
 
@@ -64,7 +64,7 @@ export interface HegelianConfig {
   };
   parameters: {
     temperature: number;
-    depth: "surface" | "moderate" | "deep";
+    depth: 'surface' | 'moderate' | 'deep';
   };
   validation: {
     requireGenuineOpposition: boolean;
@@ -80,7 +80,7 @@ export const DEFAULT_CONFIG: HegelianConfig = {
   },
   parameters: {
     temperature: 0.8,
-    depth: "deep",
+    depth: 'deep',
   },
   validation: {
     requireGenuineOpposition: true,

@@ -3,7 +3,7 @@
  * Adversarial stress-testing for security and architecture
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Target {
   system: string; // The system/design/architecture to test
@@ -26,7 +26,7 @@ export interface RedTeamAttack {
 
 export interface Vulnerability {
   category: string; // e.g., "Authentication", "Input Validation", "Logic Flaw"
-  severity: "critical" | "high" | "medium" | "low";
+  severity: 'critical' | 'high' | 'medium' | 'low';
   description: string;
   exploitation: string; // How to exploit it
   impact: string; // What happens if exploited
@@ -37,7 +37,7 @@ export interface AttackScenario {
   steps: string[];
   prerequisites: string[];
   impact: string;
-  likelihood: "high" | "medium" | "low";
+  likelihood: 'high' | 'medium' | 'low';
 }
 
 export interface ObserverReport {
@@ -45,7 +45,7 @@ export interface ObserverReport {
   highRiskScenarios: AttackScenario[];
   overallAssessment: string;
   prioritizedActions: string[];
-  verdict: "ready" | "needs-hardening" | "significant-risks";
+  verdict: 'ready' | 'needs-hardening' | 'significant-risks';
 }
 
 export interface RedBlueConfig {

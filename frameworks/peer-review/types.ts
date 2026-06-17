@@ -15,7 +15,7 @@ export interface Review {
   strengths: string[]; // What works well
   weaknesses: string[]; // What needs improvement
   questions: string[]; // Clarifying questions for author
-  recommendation: "accept" | "revise" | "reject";
+  recommendation: 'accept' | 'revise' | 'reject';
   confidence: number; // 1-5 scale
 }
 
@@ -29,7 +29,7 @@ export interface Rebuttal {
 }
 
 export interface EditorDecision {
-  decision: "accept" | "revise" | "reject";
+  decision: 'accept' | 'revise' | 'reject';
   reasoning: string; // Synthesis of reviews + rebuttal
   requiredChanges?: string[]; // If revise, what must change
   optionalSuggestions?: string[]; // Nice-to-haves

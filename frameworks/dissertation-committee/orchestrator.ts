@@ -1,8 +1,16 @@
-import { FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
-import type { DissertationWork, DissertationCommitteeResult, DissertationCommitteeConfig, CommitteeMember, StageReview, CommitteeConsensus, DevelopmentPlan } from "./types";
-import { DEFAULT_CONFIG } from "./types";
-import { conductReview, formCommittee, buildReviewPrompt, parseReviewResponse } from "./committee";
+import { FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
+import type {
+  DissertationWork,
+  DissertationCommitteeResult,
+  DissertationCommitteeConfig,
+  CommitteeMember,
+  StageReview,
+  CommitteeConsensus,
+  DevelopmentPlan,
+} from './types';
+import { DEFAULT_CONFIG } from './types';
+import { conductReview, formCommittee, buildReviewPrompt, parseReviewResponse } from './committee';
 
 export async function runCommitteeReview(
   work: DissertationWork,
@@ -11,39 +19,48 @@ export async function runCommitteeReview(
 ): Promise<DissertationCommitteeResult> {
   const startTime = Date.now();
 
-  console.log("\n" + "=".repeat(80));
-  console.log("🎓 DISSERTATION COMMITTEE REVIEW");
-  console.log("=".repeat(80));
+  console.log('\n' + '='.repeat(80));
+  console.log('🎓 DISSERTATION COMMITTEE REVIEW');
+  console.log('='.repeat(80));
   console.log(`\n📚 Title: ${work.title}`);
   console.log(`   Field: ${work.field}`);
   console.log(`   Stage: ${work.stage}`);
-  console.log(`   Abstract: ${work.abstract.substring(0, 100)}${work.abstract.length > 100 ? "..." : ""}`);
+  console.log(
+    `   Abstract: ${work.abstract.substring(0, 100)}${work.abstract.length > 100 ? '...' : ''}`
+  );
   console.log();
 
-  const runner = new FrameworkRunner<DissertationWork, DissertationCommitteeResult>("dissertation-committee", work);
+  const runner = new FrameworkRunner<DissertationWork, DissertationCommitteeResult>(
+    'dissertation-committee',
+    work
+  );
 
   // Step 1: Form committee
-  console.log("🎓 Phase 1: Committee Formation");
+  console.log('🎓 Phase 1: Committee Formation');
   const committee = formCommittee(work, config);
   console.log(`   ✅ Committee formed (${committee.length} members):`);
-  committee.forEach(m => console.log(`      • ${m.name} (${m.role}) - ${m.specialty}`));
+  committee.forEach((m) => console.log(`      • ${m.name} (${m.role}) - ${m.specialty}`));
 
   // Step 2: Individual reviews (sequential)
-  console.log("\n🎓 Phase 2: Individual Reviews");
+  console.log('\n🎓 Phase 2: Individual Reviews');
   const stageReviews: StageReview[] = [];
 
   for (const member of committee) {
     console.log(`   📝 ${member.name} reviewing...`);
-    const modelKey = member.role === "advisor" ? "advisor" :
-                     member.role === "methodologist" ? "methodologist" :
-                     member.role === "specialist" ? `specialist${Math.floor(Math.random() * 2) + 1}` :
-                     "advisor";
+    const modelKey =
+      member.role === 'advisor'
+        ? 'advisor'
+        : member.role === 'methodologist'
+          ? 'methodologist'
+          : member.role === 'specialist'
+            ? `specialist${Math.floor(Math.random() * 2) + 1}`
+            : 'advisor';
     const model = config.models[modelKey as keyof typeof config.models];
     const { system, user } = buildReviewPrompt(work, member, config);
 
     try {
       const response = await runner.runAgent(
-        `reviewer-${member.name.replace(/\s+/g, "-").toLowerCase()}`,
+        `reviewer-${member.name.replace(/\s+/g, '-').toLowerCase()}`,
         provider,
         model,
         user,
@@ -63,28 +80,28 @@ export async function runCommitteeReview(
         stage: work.stage,
         reviewer: member.name,
         assessment: {
-          strengths: ["Work received for review"],
-          weaknesses: ["Complete review pending"],
-          questions: ["Please resubmit for full review"],
+          strengths: ['Work received for review'],
+          weaknesses: ['Complete review pending'],
+          questions: ['Please resubmit for full review'],
         },
-        verdict: "revise",
-        requiredChanges: ["Address all committee feedback"],
-        suggestions: ["Provide more complete work sample"],
+        verdict: 'revise',
+        requiredChanges: ['Address all committee feedback'],
+        suggestions: ['Provide more complete work sample'],
       });
     }
   }
 
   // Step 3: Committee consensus
-  console.log("\n🎓 Phase 3: Committee Consensus");
+  console.log('\n🎓 Phase 3: Committee Consensus');
   const consensus = determineConsensus(stageReviews, config);
   console.log(`   ✅ Consensus: ${consensus.overallVerdict.toUpperCase()}`);
-  console.log(`   Unanimous: ${consensus.unanimous ? "Yes" : "No"}`);
+  console.log(`   Unanimous: ${consensus.unanimous ? 'Yes' : 'No'}`);
   if (consensus.conditions && consensus.conditions.length > 0) {
     console.log(`   Conditions: ${consensus.conditions.length}`);
   }
 
   // Step 4: Development plan
-  console.log("\n🎓 Phase 4: Development Plan");
+  console.log('\n🎓 Phase 4: Development Plan');
   const developmentPlan = generateDevelopmentPlan(work, stageReviews, consensus);
   console.log(`   ✅ Plan generated`);
   console.log(`   Immediate actions: ${developmentPlan.immediateActions.length}`);
@@ -92,28 +109,28 @@ export async function runCommitteeReview(
 
   const duration = Date.now() - startTime;
 
-  console.log("\n" + "=".repeat(80));
+  console.log('\n' + '='.repeat(80));
   console.log(`🎯 COMMITTEE REVIEW COMPLETE`);
   console.log(`   Verdict: ${consensus.overallVerdict.toUpperCase()}`);
   console.log(`   Reviews: ${stageReviews.length}`);
-  console.log(`   Unanimous: ${consensus.unanimous ? "Yes" : "No"}`);
+  console.log(`   Unanimous: ${consensus.unanimous ? 'Yes' : 'No'}`);
   console.log(`\n⏱️  Duration: ${(duration / 1000).toFixed(1)}s`);
-  console.log("=".repeat(80) + "\n");
+  console.log('='.repeat(80) + '\n');
 
   // Display summary
-  console.log("📊 COMMITTEE SUMMARY\n");
-  console.log("Individual Verdicts:");
-  stageReviews.forEach(r => {
-    const emoji = r.verdict === "approve" ? "✓" : r.verdict === "revise" ? "~" : "✗";
+  console.log('📊 COMMITTEE SUMMARY\n');
+  console.log('Individual Verdicts:');
+  stageReviews.forEach((r) => {
+    const emoji = r.verdict === 'approve' ? '✓' : r.verdict === 'revise' ? '~' : '✗';
     console.log(`  ${emoji} ${r.reviewer}: ${r.verdict.toUpperCase()}`);
   });
   console.log(`\nOverall: ${consensus.overallVerdict.toUpperCase()}`);
   if (consensus.conditions && consensus.conditions.length > 0) {
-    console.log("\nConditions for Approval:");
-    consensus.conditions.forEach(c => console.log(`  • ${c}`));
+    console.log('\nConditions for Approval:');
+    consensus.conditions.forEach((c) => console.log(`  • ${c}`));
   }
-  console.log("\nImmediate Actions Required:");
-  developmentPlan.immediateActions.forEach(a => console.log(`  → ${a}`));
+  console.log('\nImmediate Actions Required:');
+  developmentPlan.immediateActions.forEach((a) => console.log(`  → ${a}`));
   console.log();
 
   const result: DissertationCommitteeResult = {
@@ -130,33 +147,36 @@ export async function runCommitteeReview(
     },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
   result.metadata.costUSD = auditLog.metadata.totalCost;
 
   return result;
 }
 
-function formDefaultCommittee(work: DissertationWork, config: DissertationCommitteeConfig): CommitteeMember[] {
+function formDefaultCommittee(
+  work: DissertationWork,
+  config: DissertationCommitteeConfig
+): CommitteeMember[] {
   const committee: CommitteeMember[] = [
     {
-      name: "Primary Advisor",
+      name: 'Primary Advisor',
       specialty: work.field,
-      role: "advisor",
+      role: 'advisor',
     },
     {
-      name: "Specialist 1",
+      name: 'Specialist 1',
       specialty: `${work.field} - Theoretical Foundations`,
-      role: "specialist",
+      role: 'specialist',
     },
     {
-      name: "Specialist 2",
+      name: 'Specialist 2',
       specialty: `${work.field} - Applied Research`,
-      role: "specialist",
+      role: 'specialist',
     },
     {
-      name: "Methodologist",
-      specialty: "Research Methodology",
-      role: "methodologist",
+      name: 'Methodologist',
+      specialty: 'Research Methodology',
+      role: 'methodologist',
     },
   ];
 
@@ -167,32 +187,32 @@ function determineConsensus(
   stageReviews: StageReview[],
   config: DissertationCommitteeConfig
 ): CommitteeConsensus {
-  const verdicts = stageReviews.map(r => r.verdict);
-  const approveCount = verdicts.filter(v => v === "approve").length;
-  const reviseCount = verdicts.filter(v => v === "revise").length;
-  const rejectCount = verdicts.filter(v => v === "reject").length;
+  const verdicts = stageReviews.map((r) => r.verdict);
+  const approveCount = verdicts.filter((v) => v === 'approve').length;
+  const reviseCount = verdicts.filter((v) => v === 'revise').length;
+  const rejectCount = verdicts.filter((v) => v === 'reject').length;
 
-  let overallVerdict: "approve" | "revise" | "reject" = "revise";
+  let overallVerdict: 'approve' | 'revise' | 'reject' = 'revise';
   let unanimous = false;
 
   if (rejectCount > 0) {
-    overallVerdict = "reject";
+    overallVerdict = 'reject';
   } else if (approveCount === verdicts.length) {
-    overallVerdict = "approve";
+    overallVerdict = 'approve';
     unanimous = true;
   } else if (approveCount > verdicts.length / 2) {
-    overallVerdict = "approve";
+    overallVerdict = 'approve';
   }
 
   // Collect all required changes as conditions
   const conditions = stageReviews
-    .flatMap(r => r.requiredChanges || [])
+    .flatMap((r) => r.requiredChanges || [])
     .filter((v, i, a) => a.indexOf(v) === i); // dedupe
 
   // Collect dissenting views
   const dissentingViews = stageReviews
-    .filter(r => r.verdict !== overallVerdict)
-    .map(r => `${r.reviewer}: ${r.assessment.weaknesses.join("; ")}`);
+    .filter((r) => r.verdict !== overallVerdict)
+    .map((r) => `${r.reviewer}: ${r.assessment.weaknesses.join('; ')}`);
 
   return {
     overallVerdict,
@@ -209,37 +229,38 @@ function generateDevelopmentPlan(
 ): DevelopmentPlan {
   // Collect all required changes
   const immediateActions = stageReviews
-    .flatMap(r => r.requiredChanges || [])
+    .flatMap((r) => r.requiredChanges || [])
     .filter((v, i, a) => a.indexOf(v) === i);
 
   // Collect all suggestions
   const allSuggestions = stageReviews
-    .flatMap(r => r.suggestions || [])
+    .flatMap((r) => r.suggestions || [])
     .filter((v, i, a) => a.indexOf(v) === i);
 
   // Determine timeline based on stage
-  const timeline = work.stage === "proposal"
-    ? "6-12 months to completion"
-    : work.stage === "chapters"
-    ? "3-6 months to completion"
-    : work.stage === "draft"
-    ? "1-3 months to completion"
-    : "Final revisions only";
+  const timeline =
+    work.stage === 'proposal'
+      ? '6-12 months to completion'
+      : work.stage === 'chapters'
+        ? '3-6 months to completion'
+        : work.stage === 'draft'
+          ? '1-3 months to completion'
+          : 'Final revisions only';
 
   // Generate milestones
   const milestones = [
     `Address all required changes from ${work.stage} review`,
-    ...(work.stage !== "final" ? ["Complete next stage of work"] : []),
-    ...(work.stage !== "final" ? ["Submit for next committee review"] : []),
-    "Prepare for final defense/submission",
+    ...(work.stage !== 'final' ? ['Complete next stage of work'] : []),
+    ...(work.stage !== 'final' ? ['Submit for next committee review'] : []),
+    'Prepare for final defense/submission',
   ];
 
   // Resources
   const resources = [
-    "Committee feedback and guidance",
-    ...(work.methodology ? ["Methodology refinement resources"] : []),
-    "Writing and revision support",
-    "Peer review from colleagues",
+    'Committee feedback and guidance',
+    ...(work.methodology ? ['Methodology refinement resources'] : []),
+    'Writing and revision support',
+    'Peer review from colleagues',
   ];
 
   return {

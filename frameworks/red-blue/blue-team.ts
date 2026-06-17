@@ -2,9 +2,9 @@
  * Blue Team - proposes and defends the system
  */
 
-import type { LLMProvider } from "@core/types";
-import { parseJSON } from "@core/orchestrator";
-import type { Target, BlueTeamProposal, RedBlueConfig } from "./types";
+import type { LLMProvider } from '@core/types';
+import { parseJSON } from '@core/orchestrator';
+import type { Target, BlueTeamProposal, RedBlueConfig } from './types';
 
 export async function proposeSystem(
   target: Target,
@@ -16,7 +16,7 @@ export async function proposeSystem(
   const response = await provider.call({
     model: config.models.blueTeam,
     temperature: config.parameters.blueTemperature,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
     maxTokens: 4096,
   });
 
@@ -83,18 +83,18 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting.`;
 
 function validateProposal(proposal: BlueTeamProposal): void {
   if (!proposal.summary || proposal.summary.length < 20) {
-    throw new Error("Blue Team proposal missing or too brief");
+    throw new Error('Blue Team proposal missing or too brief');
   }
 
   if (!proposal.architecture || proposal.architecture.length < 50) {
-    throw new Error("Blue Team architecture description insufficient");
+    throw new Error('Blue Team architecture description insufficient');
   }
 
   if (!proposal.securityMeasures || proposal.securityMeasures.length === 0) {
-    throw new Error("Blue Team must specify security measures");
+    throw new Error('Blue Team must specify security measures');
   }
 
   if (!proposal.assumptions || proposal.assumptions.length === 0) {
-    throw new Error("Blue Team must state assumptions");
+    throw new Error('Blue Team must state assumptions');
   }
 }

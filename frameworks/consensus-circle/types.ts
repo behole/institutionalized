@@ -3,7 +3,7 @@
  * Quaker-style decision-making through consensus without voting
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Proposal {
   question: string;

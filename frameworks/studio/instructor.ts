@@ -2,8 +2,8 @@
  * Instructor - synthesizes feedback and provides guidance
  */
 
-import type { LLMProvider } from "@core/types";
-import { parseJSON } from "@core/orchestrator";
+import type { LLMProvider } from '@core/types';
+import { parseJSON } from '@core/orchestrator';
 import type {
   CreativeWork,
   PeerObservation,
@@ -11,7 +11,7 @@ import type {
   CreatorResponse,
   InstructorSynthesis,
   StudioConfig,
-} from "./types";
+} from './types';
 
 export async function synthesizeCritique(
   work: CreativeWork,
@@ -26,7 +26,7 @@ export async function synthesizeCritique(
   const response = await provider.call({
     model: config.models.instructor,
     temperature: config.parameters.instructorTemperature,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
     maxTokens: 3072,
   });
 
@@ -44,8 +44,8 @@ function buildPrompt(
 ): string {
   let prompt = `You are the INSTRUCTOR synthesizing a studio critique session.
 
-## THE WORK (${work.workType || "general"})
-${work.work.substring(0, 500)}${work.work.length > 500 ? "..." : ""}
+## THE WORK (${work.workType || 'general'})
+${work.work.substring(0, 500)}${work.work.length > 500 ? '...' : ''}
 
 ## PEER FEEDBACK (${critiques.length} peers)
 
@@ -102,22 +102,22 @@ IMPORTANT: Return ONLY valid JSON.`;
 
 function validateSynthesis(synthesis: InstructorSynthesis): void {
   if (!synthesis.overallAssessment || synthesis.overallAssessment.length < 20) {
-    throw new Error("Instructor assessment too brief");
+    throw new Error('Instructor assessment too brief');
   }
 
   if (!synthesis.coreFeedback || synthesis.coreFeedback.length === 0) {
-    throw new Error("Instructor must provide core feedback");
+    throw new Error('Instructor must provide core feedback');
   }
 
   if (!synthesis.prioritizedSuggestions || synthesis.prioritizedSuggestions.length === 0) {
-    throw new Error("Instructor must provide prioritized suggestions");
+    throw new Error('Instructor must provide prioritized suggestions');
   }
 
   if (!synthesis.encouragement || synthesis.encouragement.length < 10) {
-    throw new Error("Instructor must provide encouragement");
+    throw new Error('Instructor must provide encouragement');
   }
 
   if (!synthesis.nextSteps || synthesis.nextSteps.length === 0) {
-    throw new Error("Instructor must provide next steps");
+    throw new Error('Instructor must provide next steps');
   }
 }

@@ -3,40 +3,52 @@
  * Multi-domain system design validation
  */
 
-import { createProvider } from "@core/providers";
-import { getAPIKey } from "@core/config";
-import { parseJSON, FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider, RunFlags } from "@core/types";
-import type { ArchitectureProposal, SpecialistReview, BoardDecision, ArchitectureReviewConfig, ArchitectureReviewResult } from "./types";
-import { DEFAULT_CONFIG } from "./types";
+import { createProvider } from '@core/providers';
+import { getAPIKey } from '@core/config';
+import { parseJSON, FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider, RunFlags } from '@core/types';
+import type {
+  ArchitectureProposal,
+  SpecialistReview,
+  BoardDecision,
+  ArchitectureReviewConfig,
+  ArchitectureReviewResult,
+} from './types';
+import { DEFAULT_CONFIG } from './types';
 
 export async function run(
   input: ArchitectureProposal | { content: string },
   flags: RunFlags = {}
 ): Promise<ArchitectureReviewResult> {
-  const proposal: ArchitectureProposal = "title" in input
-    ? input
-    : {
-        title: "Untitled Architecture",
-        summary: "",
-        design: input.content || "",
-      };
+  const proposal: ArchitectureProposal =
+    'title' in input
+      ? input
+      : {
+          title: 'Untitled Architecture',
+          summary: '',
+          design: input.content || '',
+        };
 
   const config: ArchitectureReviewConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
   const cliFlags = flags as Record<string, unknown>;
   if (cliFlags.domains) {
-    config.domains = String(cliFlags.domains).split(",");
+    config.domains = String(cliFlags.domains).split(',');
   }
 
-  const providerName = flags.provider || "anthropic";
+  const providerName = flags.provider || 'anthropic';
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
   const verbose = flags.debug ?? false;
 
-  if (verbose) console.log("\n🏛️  ARCHITECTURE REVIEW BOARD\n");
+  if (verbose) {
+    console.log('\n🏛️  ARCHITECTURE REVIEW BOARD\n');
+  }
 
-  const runner = new FrameworkRunner<ArchitectureProposal, ArchitectureReviewResult>("architecture-review", proposal);
+  const runner = new FrameworkRunner<ArchitectureProposal, ArchitectureReviewResult>(
+    'architecture-review',
+    proposal
+  );
 
   // Phase 1: Domain specialists review
   const reviews = await conductReviews(proposal, config, provider, runner, verbose);
@@ -57,7 +69,7 @@ export async function run(
     metadata: { timestamp: new Date().toISOString(), config },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
 
   return {
     ...result,
@@ -72,13 +84,17 @@ async function conductReviews(
   runner: FrameworkRunner<ArchitectureProposal, ArchitectureReviewResult>,
   verbose: boolean
 ): Promise<SpecialistReview[]> {
-  if (verbose) console.log("Phase 1: Domain specialist reviews...\n");
+  if (verbose) {
+    console.log('Phase 1: Domain specialist reviews...\n');
+  }
 
   const responses = await runner.runParallel(
     config.domains.map((domain) => {
-      if (verbose) console.log(`  ${domain} specialist reviewing...`);
+      if (verbose) {
+        console.log(`  ${domain} specialist reviewing...`);
+      }
       return {
-        name: `specialist-${domain.toLowerCase().replace(/\s+/g, "-")}`,
+        name: `specialist-${domain.toLowerCase().replace(/\s+/g, '-')}`,
         provider,
         model: config.models.specialist,
         prompt: `You are an Architecture Review Board member specializing in: ${domain}
@@ -88,9 +104,9 @@ ARCHITECTURE PROPOSAL: ${proposal.title}
 SUMMARY:
 ${proposal.summary}
 
-${proposal.requirements ? `REQUIREMENTS:\n${proposal.requirements}\n` : ""}
+${proposal.requirements ? `REQUIREMENTS:\n${proposal.requirements}\n` : ''}
 
-${proposal.constraints ? `CONSTRAINTS:\n${proposal.constraints}\n` : ""}
+${proposal.constraints ? `CONSTRAINTS:\n${proposal.constraints}\n` : ''}
 
 DESIGN DOCUMENT:
 ${proposal.design}
@@ -123,14 +139,19 @@ async function synthesizeDecision(
   runner: FrameworkRunner<ArchitectureProposal, ArchitectureReviewResult>,
   verbose: boolean
 ): Promise<BoardDecision> {
-  if (verbose) console.log("\nPhase 2: Board chair synthesizing decision...\n");
+  if (verbose) {
+    console.log('\nPhase 2: Board chair synthesizing decision...\n');
+  }
 
-  const reviewsText = reviews.map((review) =>
-    `${review.domain}:\nVerdict: ${review.verdict}\nRisk Level: ${review.riskLevel}\nConcerns: ${review.concerns.join(", ")}\nRecommendations: ${review.recommendations.join(", ")}\nRationale: ${review.rationale}\n`
-  ).join("\n---\n\n");
+  const reviewsText = reviews
+    .map(
+      (review) =>
+        `${review.domain}:\nVerdict: ${review.verdict}\nRisk Level: ${review.riskLevel}\nConcerns: ${review.concerns.join(', ')}\nRecommendations: ${review.recommendations.join(', ')}\nRationale: ${review.rationale}\n`
+    )
+    .join('\n---\n\n');
 
   const response = await runner.runAgent(
-    "chair",
+    'chair',
     provider,
     config.models.chair,
     `You are the Architecture Review Board chair.
@@ -162,4 +183,4 @@ Decision criteria:
   return parseJSON<BoardDecision>(response.content);
 }
 
-export * from "./types";
+export * from './types';

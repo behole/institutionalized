@@ -1,13 +1,6 @@
-import { parseJSON } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
-import type {
-  Case,
-  Prosecution,
-  Defense,
-  JurorDeliberation,
-  CourtroomConfig,
-  Vote,
-} from "./types";
+import { parseJSON } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
+import type { Case, Prosecution, Defense, JurorDeliberation, CourtroomConfig, Vote } from './types';
 
 // LLMProvider is passed to runner.runParallel() in orchestrator.ts
 // This file exports prompt-building and response-parsing for jury deliberation
@@ -28,10 +21,10 @@ export function buildJurorPrompt(
 Alleged harm: ${ex.harm}
 
 **Defense Challenge ${i + 1}:**
-${defense.exhibitChallenges.find((c) => c.exhibit === i + 1)?.challenge || "No challenge filed"}
+${defense.exhibitChallenges.find((c) => c.exhibit === i + 1)?.challenge || 'No challenge filed'}
 `
     )
-    .join("\n");
+    .join('\n');
 
   return `You are Juror ${jurorNumber} in a courtroom evaluation system. You must independently evaluate the case and cast a vote.
 
@@ -89,31 +82,21 @@ Return valid JSON matching this structure:
 IMPORTANT: Return ONLY valid JSON, no markdown formatting, no code blocks.`;
 }
 
-export function parseJurorVerdict(
-  text: string,
-  jurorNumber: number
-): JurorDeliberation {
+export function parseJurorVerdict(text: string, jurorNumber: number): JurorDeliberation {
   const deliberation = parseJSON<JurorDeliberation>(text);
   validateJurorDeliberation(jurorNumber, deliberation);
   return deliberation;
 }
 
-function validateJurorDeliberation(
-  jurorNumber: number,
-  deliberation: JurorDeliberation
-): void {
+function validateJurorDeliberation(jurorNumber: number, deliberation: JurorDeliberation): void {
   // Check reasoning exists and is substantial
   if (!deliberation.reasoning || deliberation.reasoning.length < 100) {
-    throw new Error(
-      `Juror ${jurorNumber}: Reasoning too brief (min 100 characters)`
-    );
+    throw new Error(`Juror ${jurorNumber}: Reasoning too brief (min 100 characters)`);
   }
 
   // Check vote is valid
-  const validVotes: Vote[] = ["guilty", "not_guilty", "abstain"];
+  const validVotes: Vote[] = ['guilty', 'not_guilty', 'abstain'];
   if (!validVotes.includes(deliberation.vote)) {
-    throw new Error(
-      `Juror ${jurorNumber}: Invalid vote "${deliberation.vote}"`
-    );
+    throw new Error(`Juror ${jurorNumber}: Invalid vote "${deliberation.vote}"`);
   }
 }

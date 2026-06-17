@@ -3,7 +3,7 @@
  * Identify failure modes before committing to a decision
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Plan {
   description: string; // The plan/decision/launch being evaluated
@@ -17,8 +17,8 @@ export interface FailureScenario {
   scenario: string; // What went wrong
   rootCauses: string[]; // Why it happened
   earlyWarnings: string[]; // Signs it was coming
-  severity: "catastrophic" | "major" | "moderate" | "minor";
-  likelihood: "very-likely" | "likely" | "possible" | "unlikely";
+  severity: 'catastrophic' | 'major' | 'moderate' | 'minor';
+  likelihood: 'very-likely' | 'likely' | 'possible' | 'unlikely';
   preventable: boolean; // Could this have been prevented?
 }
 
@@ -28,15 +28,15 @@ export interface RiskAssessment {
   criticalAssumptions: string[]; // Assumptions that if wrong = failure
   earlyWarningSystem: string[]; // Metrics/signals to monitor
   mitigationPlan: Mitigation[];
-  overallRiskLevel: "high" | "medium" | "low";
-  recommendation: "proceed" | "mitigate-first" | "reconsider";
+  overallRiskLevel: 'high' | 'medium' | 'low';
+  recommendation: 'proceed' | 'mitigate-first' | 'reconsider';
 }
 
 export interface Mitigation {
   risk: string; // Which scenario it addresses
   action: string; // What to do
-  priority: "critical" | "high" | "medium" | "low";
-  effort: "high" | "medium" | "low";
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  effort: 'high' | 'medium' | 'low';
 }
 
 export interface PreMortemConfig {

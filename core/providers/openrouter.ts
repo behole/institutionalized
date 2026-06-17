@@ -1,5 +1,5 @@
-import type { LLMProvider, LLMCallParams, LLMResponse } from "../types";
-import { withRetry } from "../retry";
+import type { LLMProvider, LLMCallParams, LLMResponse } from '../types';
+import { withRetry } from '../retry';
 
 interface OpenRouterChatResponse {
   id: string;
@@ -21,9 +21,9 @@ interface OpenRouterChatResponse {
 }
 
 export class OpenRouterProvider implements LLMProvider {
-  name = "openrouter";
+  name = 'openrouter';
   private apiKey: string;
-  private baseURL = "https://openrouter.ai/api/v1";
+  private baseURL = 'https://openrouter.ai/api/v1';
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -31,24 +31,22 @@ export class OpenRouterProvider implements LLMProvider {
 
   async call(params: LLMCallParams): Promise<LLMResponse> {
     const messages = params.systemPrompt
-      ? [{ role: "system" as const, content: params.systemPrompt }, ...params.messages]
+      ? [{ role: 'system' as const, content: params.systemPrompt }, ...params.messages]
       : params.messages;
 
     const context = { model: params.model };
 
     return withRetry(
       async (signal) => {
-        const combinedSignal = params.signal
-          ? AbortSignal.any([signal, params.signal])
-          : signal;
+        const combinedSignal = params.signal ? AbortSignal.any([signal, params.signal]) : signal;
 
         const response = await fetch(`${this.baseURL}/chat/completions`, {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
             Authorization: `Bearer ${this.apiKey}`,
-            "HTTP-Referer": "https://github.com/institutional-reasoning",
-            "X-Title": "Institutional Reasoning",
+            'HTTP-Referer': 'https://github.com/institutional-reasoning',
+            'X-Title': 'Institutional Reasoning',
           },
           body: JSON.stringify({
             model: params.model,
@@ -73,7 +71,7 @@ export class OpenRouterProvider implements LLMProvider {
           throw err;
         }
 
-        const data = await response.json() as OpenRouterChatResponse;
+        const data = (await response.json()) as OpenRouterChatResponse;
         const choice = data.choices[0];
 
         return {
@@ -93,20 +91,17 @@ export class OpenRouterProvider implements LLMProvider {
     );
   }
 
-  calculateCost(
-    usage: { inputTokens: number; outputTokens: number },
-    model: string
-  ): number {
+  calculateCost(usage: { inputTokens: number; outputTokens: number }, model: string): number {
     // OpenRouter pricing varies by model
     // For now, use generic estimate or could fetch from their API
     // https://openrouter.ai/docs#models
 
     // Rough estimates (per million tokens)
     const pricing: Record<string, { input: number; output: number }> = {
-      "anthropic/claude-3.5-sonnet": { input: 3.0, output: 15.0 },
-      "openai/gpt-4o": { input: 2.5, output: 10.0 },
-      "google/gemini-pro-1.5": { input: 1.25, output: 5.0 },
-      "meta-llama/llama-3.1-70b": { input: 0.5, output: 0.8 },
+      'anthropic/claude-3.5-sonnet': { input: 3.0, output: 15.0 },
+      'openai/gpt-4o': { input: 2.5, output: 10.0 },
+      'google/gemini-pro-1.5': { input: 1.25, output: 5.0 },
+      'meta-llama/llama-3.1-70b': { input: 0.5, output: 0.8 },
     };
 
     const rates = pricing[model] || { input: 1.0, output: 3.0 }; // Default estimate

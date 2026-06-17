@@ -1,5 +1,5 @@
 // Observability: audit trails, cost tracking, replay capability
-import type { LLMResponse } from "./types";
+import type { LLMResponse } from './types';
 
 export interface AuditStep {
   agent: string;
@@ -111,7 +111,7 @@ export class AuditTrail {
    * Save audit log to file
    */
   async save(filepath: string): Promise<void> {
-    const log = this.finalize(null, "incomplete");
+    const log = this.finalize(null, 'incomplete');
     await Bun.write(filepath, JSON.stringify(log, null, 2));
   }
 }

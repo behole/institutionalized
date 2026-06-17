@@ -27,26 +27,31 @@
   - Supports models from Anthropic, OpenAI, Google, Meta via single API
 
 **Provider Selection Logic (`core/providers/index.ts`):**
+
 - `getProviderFromEnv()` checks preferred provider first, then falls back: Anthropic → OpenAI → OpenRouter
 - All providers implement the `LLMProvider` interface from `core/types.ts`
 
 ## Data Storage
 
 **Databases:**
+
 - None. No database dependencies.
 
 **File Storage:**
+
 - Local filesystem only
 - Audit logs written via `Bun.write(filepath, ...)` in `core/observability.ts` (`AuditTrail.save()`)
 - CLI output optionally saved to JSON file via `--output FILE` flag (`cli.ts`)
 - Input files loaded via `Bun.file(filepath)` in `cli.ts`
 
 **Caching:**
+
 - None. No caching layer.
 
 ## Authentication & Identity
 
 **Auth Provider:**
+
 - None (no user authentication)
 - Service authentication is API-key-based for each LLM provider (see above)
 - Keys read via `process.env[envVar] || Bun.env[envVar]` pattern in `core/config.ts`
@@ -54,9 +59,11 @@
 ## Monitoring & Observability
 
 **Error Tracking:**
+
 - None (no Sentry, Datadog, etc.)
 
 **Logs:**
+
 - Custom in-process audit trail via `AuditTrail` class in `core/observability.ts`
 - Records per-step: agent name, model, prompt, response, duration, token counts, cost, timestamp
 - Produces `AuditLog` JSON with `totalCost`, `totalDuration`, `outcome`
@@ -64,6 +71,7 @@
 - Console output via `console.error()` in MCP server for operational logs
 
 **Cost Tracking:**
+
 - Built-in per-provider cost calculation in each provider's `calculateCost()` method
 - Per-million-token pricing tables hardcoded in `core/providers/anthropic.ts`, `openai.ts`, `openrouter.ts`
 
@@ -72,12 +80,14 @@
 **Protocol:** Model Context Protocol (MCP) via `@modelcontextprotocol/sdk` ^1.0.4
 
 **Server:** `mcp-server/index.ts`
+
 - Transport: `StdioServerTransport` (stdio-based, for use with Claude Code)
 - Exposes all 26 frameworks as MCP tools
 - Each tool has typed `inputSchema` matching the framework's input contract
 - Dynamically imports framework modules on tool invocation
 
 **Client Configuration:** `mcp-server/claude-code-config.json`
+
 - Intended for placement at `~/.config/claude-code/mcp_settings.json`
 - Launches server via `bun run /path/to/mcp-server/index.ts`
 - Passes `ANTHROPIC_API_KEY` from environment
@@ -87,26 +97,31 @@
 ## CI/CD & Deployment
 
 **Hosting:**
+
 - No deployment target (library/tool, not a hosted service)
 - GitHub repository
 
 **CI Pipeline:**
+
 - GitHub Actions (`.github/workflows/test.yml`, `.github/workflows/release.yml`)
 - Unit tests: run on every PR and push to main (no API key required)
 - E2E tests: run only on main branch pushes; require `ANTHROPIC_API_KEY` GitHub secret
 - Release: triggered by version tags (`v*`); builds MCP binary, creates GitHub release with artifacts
 
 **Dependency Updates:**
+
 - Dependabot configured (`.github/dependabot.yml`) - weekly schedule, groups Anthropic/OpenAI/dev deps
 
 ## Environment Configuration
 
 **Required env vars (at least one LLM provider key):**
+
 - `ANTHROPIC_API_KEY` - Anthropic Claude API key
 - `OPENAI_API_KEY` - OpenAI API key
 - `OPENROUTER_API_KEY` - OpenRouter API key
 
 **Secrets location:**
+
 - Runtime: shell environment (no `.env` file)
 - CI: GitHub Actions secrets (`ANTHROPIC_API_KEY` used for E2E tests)
 - MCP config: `mcp-server/claude-code-config.json` references `${ANTHROPIC_API_KEY}` as a placeholder
@@ -114,11 +129,13 @@
 ## Webhooks & Callbacks
 
 **Incoming:**
+
 - None
 
 **Outgoing:**
+
 - None (all external calls are request/response to LLM provider APIs)
 
 ---
 
-*Integration audit: 2026-03-16*
+_Integration audit: 2026-03-16_

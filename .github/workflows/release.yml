@@ -27,8 +27,17 @@ jobs:
       - name: Type check
         run: bun typecheck
 
+      - name: Run ESLint
+        run: bun run lint
+
+      - name: Run Prettier check
+        run: bun run format:check
+
       - name: Run unit tests
         run: bun test:unit
+
+      - name: Build CLI
+        run: bun run build
 
       - name: Build MCP server
         run: cd mcp-server && bun run build
@@ -38,6 +47,7 @@ jobs:
         with:
           generate_release_notes: true
           files: |
+            dist/cli.js
             mcp-server/dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

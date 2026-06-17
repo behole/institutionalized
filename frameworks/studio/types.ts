@@ -3,13 +3,13 @@
  * Creative work evaluation with peer feedback
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface CreativeWork {
   work: string; // The creative work to critique (essay, design, code, etc.)
   context?: string[]; // Background, intent, constraints
   creatorStatement?: string; // What the creator was trying to achieve
-  workType?: "writing" | "visual" | "code" | "design" | "general";
+  workType?: 'writing' | 'visual' | 'code' | 'design' | 'general';
 }
 
 export interface PeerObservation {

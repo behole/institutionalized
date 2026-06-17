@@ -2,11 +2,11 @@
  * Orchestrator for Pre-mortem framework
  */
 
-import { FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
-import type { Plan, PreMortemConfig, PreMortemResult } from "./types";
-import { imagineFailure } from "./pessimist";
-import { synthesizeRisks } from "./facilitator";
+import { FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
+import type { Plan, PreMortemConfig, PreMortemResult } from './types';
+import { imagineFailure } from './pessimist';
+import { synthesizeRisks } from './facilitator';
 
 export async function runPreMortem(
   plan: Plan,
@@ -14,25 +14,24 @@ export async function runPreMortem(
   provider: LLMProvider,
   verbose: boolean = false
 ): Promise<PreMortemResult> {
-  const runner = new FrameworkRunner<Plan, PreMortemResult>("pre-mortem", plan);
+  const runner = new FrameworkRunner<Plan, PreMortemResult>('pre-mortem', plan);
 
   if (verbose) {
-    console.log("\n" + "=".repeat(80));
-    console.log("⏪ PRE-MORTEM EXERCISE");
-    console.log("=".repeat(80));
+    console.log('\n' + '='.repeat(80));
+    console.log('⏪ PRE-MORTEM EXERCISE');
+    console.log('='.repeat(80));
     console.log(`\nPlan: ${plan.description}`);
     console.log(`Pessimists: ${config.parameters.numPessimists}\n`);
   }
 
   // Phase 1: Pessimists imagine failures (parallel)
   if (verbose) {
-    console.log("💀 PHASE 1: IMAGINE FAILURE");
+    console.log('💀 PHASE 1: IMAGINE FAILURE');
     console.log(`${config.parameters.numPessimists} pessimists imagining what could go wrong...\n`);
   }
 
-  const pessimistPromises = Array.from(
-    { length: config.parameters.numPessimists },
-    (_, i) => imagineFailure(i + 1, plan, config, provider)
+  const pessimistPromises = Array.from({ length: config.parameters.numPessimists }, (_, i) =>
+    imagineFailure(i + 1, plan, config, provider)
   );
 
   const scenarios = await Promise.all(pessimistPromises);
@@ -49,21 +48,23 @@ export async function runPreMortem(
 
   // Phase 2: Facilitator synthesizes
   if (verbose) {
-    console.log("🎯 PHASE 2: RISK ASSESSMENT");
-    console.log("Facilitator synthesizing scenarios...\n");
+    console.log('🎯 PHASE 2: RISK ASSESSMENT');
+    console.log('Facilitator synthesizing scenarios...\n');
   }
 
   const assessment = await synthesizeRisks(plan, scenarios, config, provider);
 
   if (verbose) {
-    console.log("=".repeat(80));
+    console.log('='.repeat(80));
     console.log(`RISK LEVEL: ${assessment.overallRiskLevel.toUpperCase()}`);
     console.log(`RECOMMENDATION: ${assessment.recommendation.toUpperCase()}`);
-    console.log("=".repeat(80));
+    console.log('='.repeat(80));
 
     console.log(`\nTop Risks (${assessment.topRisks.length}):`);
     assessment.topRisks.forEach((risk, i) => {
-      console.log(`  ${i + 1}. [${risk.severity}/${risk.likelihood}] ${risk.scenario.substring(0, 100)}...`);
+      console.log(
+        `  ${i + 1}. [${risk.severity}/${risk.likelihood}] ${risk.scenario.substring(0, 100)}...`
+      );
     });
 
     console.log(`\nCommon Themes (${assessment.commonThemes.length}):`);
@@ -77,7 +78,7 @@ export async function runPreMortem(
     });
 
     const criticalMitigations = assessment.mitigationPlan.filter(
-      (m) => m.priority === "critical" || m.priority === "high"
+      (m) => m.priority === 'critical' || m.priority === 'high'
     );
 
     if (criticalMitigations.length > 0) {
@@ -94,7 +95,7 @@ export async function runPreMortem(
       console.log(`  ${i + 1}. ${signal}`);
     });
 
-    console.log("\n" + "=".repeat(80) + "\n");
+    console.log('\n' + '='.repeat(80) + '\n');
   }
 
   const result: PreMortemResult = {
@@ -108,7 +109,7 @@ export async function runPreMortem(
     },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
 
   return {
     ...result,

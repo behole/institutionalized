@@ -3,7 +3,7 @@
  * Formal challenge to proposals
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Proposal {
   description: string;
@@ -29,7 +29,7 @@ export interface Rebuttal {
 }
 
 export interface Verdict {
-  decision: "approved" | "approved-with-conditions" | "rejected";
+  decision: 'approved' | 'approved-with-conditions' | 'rejected';
   reasoning: string;
   conditions?: string[];
   verdict: string;

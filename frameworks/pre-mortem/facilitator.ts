@@ -2,9 +2,9 @@
  * Facilitator - synthesizes scenarios and creates risk assessment
  */
 
-import type { LLMProvider } from "@core/types";
-import { parseJSON } from "@core/orchestrator";
-import type { Plan, FailureScenario, RiskAssessment, PreMortemConfig } from "./types";
+import type { LLMProvider } from '@core/types';
+import { parseJSON } from '@core/orchestrator';
+import type { Plan, FailureScenario, RiskAssessment, PreMortemConfig } from './types';
 
 export async function synthesizeRisks(
   plan: Plan,
@@ -17,7 +17,7 @@ export async function synthesizeRisks(
   const response = await provider.call({
     model: config.models.facilitator,
     temperature: config.parameters.facilitatorTemperature,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
     maxTokens: 4096,
   });
 
@@ -115,31 +115,31 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting.`;
 
 function validateAssessment(assessment: RiskAssessment): void {
   if (!assessment.topRisks || assessment.topRisks.length === 0) {
-    throw new Error("Assessment must identify top risks");
+    throw new Error('Assessment must identify top risks');
   }
 
   if (!assessment.commonThemes || assessment.commonThemes.length === 0) {
-    throw new Error("Assessment must identify common themes");
+    throw new Error('Assessment must identify common themes');
   }
 
   if (!assessment.criticalAssumptions || assessment.criticalAssumptions.length === 0) {
-    throw new Error("Assessment must identify critical assumptions");
+    throw new Error('Assessment must identify critical assumptions');
   }
 
   if (!assessment.earlyWarningSystem || assessment.earlyWarningSystem.length === 0) {
-    throw new Error("Assessment must define early warning system");
+    throw new Error('Assessment must define early warning system');
   }
 
   if (!assessment.mitigationPlan || assessment.mitigationPlan.length === 0) {
-    throw new Error("Assessment must provide mitigation plan");
+    throw new Error('Assessment must provide mitigation plan');
   }
 
-  const validRiskLevels = ["high", "medium", "low"];
+  const validRiskLevels = ['high', 'medium', 'low'];
   if (!validRiskLevels.includes(assessment.overallRiskLevel)) {
     throw new Error(`Invalid risk level: ${assessment.overallRiskLevel}`);
   }
 
-  const validRecommendations = ["proceed", "mitigate-first", "reconsider"];
+  const validRecommendations = ['proceed', 'mitigate-first', 'reconsider'];
   if (!validRecommendations.includes(assessment.recommendation)) {
     throw new Error(`Invalid recommendation: ${assessment.recommendation}`);
   }
@@ -147,14 +147,14 @@ function validateAssessment(assessment: RiskAssessment): void {
   // Validate each mitigation
   for (const mitigation of assessment.mitigationPlan) {
     if (!mitigation.risk || !mitigation.action) {
-      throw new Error("Mitigation missing risk or action");
+      throw new Error('Mitigation missing risk or action');
     }
 
-    if (!["critical", "high", "medium", "low"].includes(mitigation.priority)) {
+    if (!['critical', 'high', 'medium', 'low'].includes(mitigation.priority)) {
       throw new Error(`Invalid mitigation priority: ${mitigation.priority}`);
     }
 
-    if (!["high", "medium", "low"].includes(mitigation.effort)) {
+    if (!['high', 'medium', 'low'].includes(mitigation.effort)) {
       throw new Error(`Invalid mitigation effort: ${mitigation.effort}`);
     }
   }

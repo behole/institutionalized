@@ -2,8 +2,8 @@
  * Author agent - responds to reviewer critiques
  */
 
-import type { LLMProvider } from "@core/types";
-import type { Submission, Review, Rebuttal, PeerReviewConfig } from "./types";
+import type { LLMProvider } from '@core/types';
+import type { Submission, Review, Rebuttal, PeerReviewConfig } from './types';
 
 export async function createRebuttal(
   submission: Submission,
@@ -18,8 +18,8 @@ export async function createRebuttal(
     model: config.models.author,
     temperature: 0.7, // Creative but focused
     messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
     ],
   });
 
@@ -112,7 +112,7 @@ function parseRebuttal(content: string): Rebuttal {
   // Extract JSON from response
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error("Author: No JSON found in rebuttal response");
+    throw new Error('Author: No JSON found in rebuttal response');
   }
 
   try {
@@ -129,18 +129,13 @@ function parseRebuttal(content: string): Rebuttal {
 
 function validateRebuttal(rebuttal: Rebuttal, reviews: Review[]): void {
   // Check required fields
-  if (
-    !rebuttal.generalResponse ||
-    rebuttal.generalResponse.trim().length === 0
-  ) {
-    throw new Error("Author: General response is required");
+  if (!rebuttal.generalResponse || rebuttal.generalResponse.trim().length === 0) {
+    throw new Error('Author: General response is required');
   }
 
   // Must address at least one concern
   if (rebuttal.pointByPoint.length === 0) {
-    throw new Error(
-      "Author: Must address at least one reviewer concern point-by-point"
-    );
+    throw new Error('Author: Must address at least one reviewer concern point-by-point');
   }
 
   // Count total weaknesses and questions from all reviews
@@ -172,17 +167,11 @@ function validateRebuttal(rebuttal: Rebuttal, reviews: Review[]): void {
     }
 
     // Check for generic/dismissive responses
-    const dismissivePhrases = [
-      "i disagree",
-      "this is wrong",
-      "not true",
-      "incorrect",
-    ];
+    const dismissivePhrases = ['i disagree', 'this is wrong', 'not true', 'incorrect'];
 
     const responseText = response.response.toLowerCase();
     const isDismissive = dismissivePhrases.some(
-      (phrase) =>
-        responseText.includes(phrase) && responseText.length < 100
+      (phrase) => responseText.includes(phrase) && responseText.length < 100
     );
 
     if (isDismissive) {

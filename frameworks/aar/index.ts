@@ -3,40 +3,43 @@
  * Blameless learning from execution
  */
 
-import { createProvider } from "@core/providers";
-import { getAPIKey } from "@core/config";
-import { parseJSON, FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider, RunFlags } from "@core/types";
-import type { ActionReview, AARConfig, AARResult } from "./types";
-import { DEFAULT_CONFIG } from "./types";
+import { createProvider } from '@core/providers';
+import { getAPIKey } from '@core/config';
+import { parseJSON, FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider, RunFlags } from '@core/types';
+import type { ActionReview, AARConfig, AARResult } from './types';
+import { DEFAULT_CONFIG } from './types';
 
 export async function run(
   input: ActionReview | { content: string },
   flags: RunFlags = {}
 ): Promise<AARResult> {
-  const review: ActionReview = "situation" in input
-    ? input
-    : { situation: input.content || "", intended: [], actual: [] };
+  const review: ActionReview =
+    'situation' in input ? input : { situation: input.content || '', intended: [], actual: [] };
 
   const config: AARConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  const providerName = flags.provider || "anthropic";
+  const providerName = flags.provider || 'anthropic';
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
   const verbose = flags.debug ?? false;
 
-  if (verbose) console.log("\n🔄 AFTER-ACTION REVIEW\n");
+  if (verbose) {
+    console.log('\n🔄 AFTER-ACTION REVIEW\n');
+  }
 
-  const runner = new FrameworkRunner<ActionReview, AARResult>("aar", review);
+  const runner = new FrameworkRunner<ActionReview, AARResult>('aar', review);
 
   const result = await conductAAR(review, config, provider, runner, verbose);
 
   if (verbose) {
     console.log(`\nKey Insights: ${result.learnings.keyInsights.length}`);
-    console.log(`Action Items: ${result.actionItems.immediate.length + result.actionItems.systemicChanges.length}\n`);
+    console.log(
+      `Action Items: ${result.actionItems.immediate.length + result.actionItems.systemicChanges.length}\n`
+    );
   }
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
 
   return {
     ...result,
@@ -52,7 +55,7 @@ async function conductAAR(
   verbose: boolean
 ): Promise<AARResult> {
   const response = await runner.runAgent(
-    "facilitator",
+    'facilitator',
     provider,
     config.models.facilitator,
     `Conduct an After-Action Review (blameless post-mortem):
@@ -60,10 +63,10 @@ async function conductAAR(
 SITUATION: ${review.situation}
 
 WHAT WAS INTENDED:
-${review.intended.map((i, idx) => `${idx + 1}. ${i}`).join("\n")}
+${review.intended.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}
 
 WHAT ACTUALLY HAPPENED:
-${review.actual.map((a, idx) => `${idx + 1}. ${a}`).join("\n")}
+${review.actual.map((a, idx) => `${idx + 1}. ${a}`).join('\n')}
 
 Provide comprehensive AAR in JSON:
 {
@@ -103,4 +106,4 @@ Provide comprehensive AAR in JSON:
   };
 }
 
-export * from "./types";
+export * from './types';

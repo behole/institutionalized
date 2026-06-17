@@ -1,5 +1,5 @@
-import { parseJSON } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import { parseJSON } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
 import type {
   Case,
   Prosecution,
@@ -8,7 +8,7 @@ import type {
   Verdict,
   CourtroomConfig,
   Decision,
-} from "./types";
+} from './types';
 
 // LLMProvider is passed to runner.runAgent() in orchestrator.ts
 // This file exports prompt-building and response-parsing for the judge verdict
@@ -28,7 +28,7 @@ export function buildVerdictPrompt(
 ${j.reasoning}
 `
     )
-    .join("\n---\n");
+    .join('\n---\n');
 
   return `You are the judge in a courtroom evaluation system. You must render a final verdict after hearing from the prosecution, defense, and jury.
 
@@ -39,7 +39,7 @@ ${caseInput.question}
 ${prosecution.caseStatement}
 
 **Evidence:**
-${prosecution.exhibits.map((ex, i) => `Exhibit ${i + 1}: "${ex.sourceQuote}" → "${ex.targetQuote}" (Harm: ${ex.harm})`).join("\n")}
+${prosecution.exhibits.map((ex, i) => `Exhibit ${i + 1}: "${ex.sourceQuote}" → "${ex.targetQuote}" (Harm: ${ex.harm})`).join('\n')}
 
 **Harm Analysis:**
 ${prosecution.harmAnalysis}
@@ -56,7 +56,7 @@ ${defense.alternative}
 ## JURY VERDICT
 **Votes:** ${jury.guiltyCount} guilty, ${jury.notGuiltyCount} not guilty, ${jury.abstainCount} abstain
 **Threshold:** ${config.parameters.juryThreshold} guilty votes needed
-**Proceeding:** ${jury.proceedsToJudge ? "Yes" : "No (case dismissed)"}
+**Proceeding:** ${jury.proceedsToJudge ? 'Yes' : 'No (case dismissed)'}
 
 ${juryAnalysis}
 
@@ -107,32 +107,28 @@ export function parseVerdictResponse(text: string): Verdict {
 
 function validateVerdict(verdict: Verdict): void {
   // Check decision is valid
-  const validDecisions: Decision[] = ["guilty", "not_guilty", "dismissed"];
+  const validDecisions: Decision[] = ['guilty', 'not_guilty', 'dismissed'];
   if (!validDecisions.includes(verdict.decision)) {
     throw new Error(`Invalid decision: "${verdict.decision}"`);
   }
 
   // Check reasoning is substantial
   if (!verdict.reasoning || verdict.reasoning.length < 200) {
-    throw new Error("Judge reasoning too brief (min 200 characters)");
+    throw new Error('Judge reasoning too brief (min 200 characters)');
   }
 
   // Check rationale exists
   if (!verdict.rationale || verdict.rationale.length < 20) {
-    throw new Error("Judge rationale too brief (min 20 characters)");
+    throw new Error('Judge rationale too brief (min 20 characters)');
   }
 
   // If guilty, must have actions
-  if (verdict.decision === "guilty" && (!verdict.actions || verdict.actions.length === 0)) {
+  if (verdict.decision === 'guilty' && (!verdict.actions || verdict.actions.length === 0)) {
     throw new Error('Verdict "guilty" requires specific actions');
   }
 
   // Check confidence is in valid range
-  if (
-    typeof verdict.confidence !== "number" ||
-    verdict.confidence < 0 ||
-    verdict.confidence > 1
-  ) {
+  if (typeof verdict.confidence !== 'number' || verdict.confidence < 0 || verdict.confidence > 1) {
     throw new Error(`Invalid confidence score: ${verdict.confidence}`);
   }
 }

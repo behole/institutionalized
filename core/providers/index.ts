@@ -1,19 +1,19 @@
-import type { LLMProvider, ProviderConfig } from "../types";
-import { AnthropicProvider } from "./anthropic";
-import { OpenAIProvider } from "./openai";
-import { OpenRouterProvider } from "./openrouter";
+import type { LLMProvider, ProviderConfig } from '../types';
+import { AnthropicProvider } from './anthropic';
+import { OpenAIProvider } from './openai';
+import { OpenRouterProvider } from './openrouter';
 
 export { AnthropicProvider, OpenAIProvider, OpenRouterProvider };
 
 export function createProvider(config: ProviderConfig): LLMProvider {
   switch (config.name) {
-    case "anthropic":
+    case 'anthropic':
       return new AnthropicProvider(config.apiKey);
 
-    case "openai":
+    case 'openai':
       return new OpenAIProvider(config.apiKey, config.baseURL);
 
-    case "openrouter":
+    case 'openrouter':
       return new OpenRouterProvider(config.apiKey);
 
     default:
@@ -47,7 +47,7 @@ export function getProviderFromEnv(preferredProvider?: string): LLMProvider {
   }
 
   throw new Error(
-    "No LLM provider API key found. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY"
+    'No LLM provider API key found. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY'
   );
 }
 
@@ -56,9 +56,9 @@ export const getProvider = getProviderFromEnv;
 
 function getApiKey(provider: string): string | undefined {
   const envVars: Record<string, string> = {
-    anthropic: "ANTHROPIC_API_KEY",
-    openai: "OPENAI_API_KEY",
-    openrouter: "OPENROUTER_API_KEY",
+    anthropic: 'ANTHROPIC_API_KEY',
+    openai: 'OPENAI_API_KEY',
+    openrouter: 'OPENROUTER_API_KEY',
   };
 
   const envVar = envVars[provider];

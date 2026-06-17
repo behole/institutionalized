@@ -2,9 +2,15 @@
  * Creator - responds to feedback
  */
 
-import type { LLMProvider } from "@core/types";
-import { parseJSON } from "@core/orchestrator";
-import type { CreativeWork, PeerObservation, CritiqueRound, CreatorResponse, StudioConfig } from "./types";
+import type { LLMProvider } from '@core/types';
+import { parseJSON } from '@core/orchestrator';
+import type {
+  CreativeWork,
+  PeerObservation,
+  CritiqueRound,
+  CreatorResponse,
+  StudioConfig,
+} from './types';
 
 export async function respondToFeedback(
   work: CreativeWork,
@@ -18,7 +24,7 @@ export async function respondToFeedback(
   const response = await provider.call({
     model: config.models.creator,
     temperature: 0.6,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
     maxTokens: 2048,
   });
 

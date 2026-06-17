@@ -2,14 +2,8 @@
  * Editor agent - synthesizes reviews and rebuttal into final decision
  */
 
-import type { LLMProvider } from "@core/types";
-import type {
-  Submission,
-  Review,
-  Rebuttal,
-  EditorDecision,
-  PeerReviewConfig,
-} from "./types";
+import type { LLMProvider } from '@core/types';
+import type { Submission, Review, Rebuttal, EditorDecision, PeerReviewConfig } from './types';
 
 export async function makeDecision(
   submission: Submission,
@@ -25,8 +19,8 @@ export async function makeDecision(
     model: config.models.editor,
     temperature: config.parameters.editorTemperature,
     messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
     ],
   });
 
@@ -141,7 +135,7 @@ function parseDecision(content: string): EditorDecision {
   // Extract JSON from response
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error("Editor: No JSON found in decision response");
+    throw new Error('Editor: No JSON found in decision response');
   }
 
   try {
@@ -161,100 +155,74 @@ function parseDecision(content: string): EditorDecision {
 
 function validateDecision(decision: EditorDecision, reviews: Review[]): void {
   // Check required fields
-  if (!["accept", "revise", "reject"].includes(decision.decision)) {
+  if (!['accept', 'revise', 'reject'].includes(decision.decision)) {
     throw new Error(`Editor: Invalid decision "${decision.decision}"`);
   }
 
   if (!decision.reasoning || decision.reasoning.trim().length < 100) {
-    throw new Error(
-      "Editor: Reasoning must be substantial (at least 100 characters)"
-    );
+    throw new Error('Editor: Reasoning must be substantial (at least 100 characters)');
   }
 
   if (!decision.rationale || decision.rationale.trim().length === 0) {
-    throw new Error("Editor: Rationale is required");
+    throw new Error('Editor: Rationale is required');
   }
 
   // If revise, must have required changes
-  if (decision.decision === "revise") {
-    if (
-      !decision.requiredChanges ||
-      decision.requiredChanges.length === 0
-    ) {
-      throw new Error(
-        'Editor: "revise" decision must specify required changes'
-      );
+  if (decision.decision === 'revise') {
+    if (!decision.requiredChanges || decision.requiredChanges.length === 0) {
+      throw new Error('Editor: "revise" decision must specify required changes');
     }
 
     // Check changes are specific
     const vagueChanges = decision.requiredChanges.filter(
       (change) =>
-        change.length < 20 ||
-        /improve|enhance|better|fix|update/.test(change.toLowerCase())
+        change.length < 20 || /improve|enhance|better|fix|update/.test(change.toLowerCase())
     );
 
     if (vagueChanges.length > 0) {
-      throw new Error(
-        `Editor: Required changes too vague: "${vagueChanges.join('", "')}"`
-      );
+      throw new Error(`Editor: Required changes too vague: "${vagueChanges.join('", "')}"`);
     }
   }
 
   // Check reasoning references reviews
-  const reviewerMentions = reviews.filter((review) =>
-    decision.reasoning.includes(review.reviewer)
-  );
+  const reviewerMentions = reviews.filter((review) => decision.reasoning.includes(review.reviewer));
 
   if (reviewerMentions.length === 0) {
-    throw new Error(
-      "Editor: Reasoning must reference specific reviewers (e.g. 'Reviewer 1')"
-    );
+    throw new Error("Editor: Reasoning must reference specific reviewers (e.g. 'Reviewer 1')");
   }
 
   // Check for synthesis (not just picking one reviewer)
   if (reviews.length > 1) {
-    const uniqueMentions = new Set(
-      reviewerMentions.map((r) => r.reviewer)
-    ).size;
+    const uniqueMentions = new Set(reviewerMentions.map((r) => r.reviewer)).size;
 
     if (uniqueMentions < 2 && reviews.length >= 2) {
-      throw new Error(
-        "Editor: Must synthesize multiple reviewers, not just pick one"
-      );
+      throw new Error('Editor: Must synthesize multiple reviewers, not just pick one');
     }
   }
 
   // Check reasoning doesn't contradict decision
   const reasoningLower = decision.reasoning.toLowerCase();
 
-  if (decision.decision === "accept") {
+  if (decision.decision === 'accept') {
     const rejectWords = [
-      "fundamental flaw",
-      "major issue",
-      "significant problem",
-      "cannot be fixed",
+      'fundamental flaw',
+      'major issue',
+      'significant problem',
+      'cannot be fixed',
     ];
-    const hasRejectWords = rejectWords.some((word) =>
-      reasoningLower.includes(word)
-    );
+    const hasRejectWords = rejectWords.some((word) => reasoningLower.includes(word));
 
     if (hasRejectWords) {
-      throw new Error(
-        "Editor: Reasoning contains rejection language but decision is 'accept'"
-      );
+      throw new Error("Editor: Reasoning contains rejection language but decision is 'accept'");
     }
   }
 
-  if (decision.decision === "reject") {
-    const acceptWords = ["minor issue", "small change", "easily fixed"];
-    const hasAcceptWords = acceptWords.some((word) =>
-      reasoningLower.includes(word)
-    );
+  if (decision.decision === 'reject') {
+    const acceptWords = ['minor issue', 'small change', 'easily fixed'];
+    const hasAcceptWords = acceptWords.some((word) => reasoningLower.includes(word));
 
     if (hasAcceptWords) {
-      throw new Error(
-        "Editor: Reasoning suggests fixable issues but decision is 'reject'"
-      );
+      throw new Error("Editor: Reasoning suggests fixable issues but decision is 'reject'");
     }
   }
 }

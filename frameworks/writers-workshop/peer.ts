@@ -1,6 +1,6 @@
-import type { Manuscript, WritersWorkshopConfig, PeerReview } from "./types";
-import { parseJSON } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { Manuscript, WritersWorkshopConfig, PeerReview } from './types';
+import { parseJSON } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
 
 export function buildPeerReviewPrompt(
   manuscript: Manuscript,
@@ -30,12 +30,12 @@ You MUST respond with valid JSON matching this structure:
 Be specific, kind, and constructive. Quote from the text when possible.`;
 
   const user = `MANUSCRIPT: "${manuscript.title}"
-${manuscript.genre ? `Genre: ${manuscript.genre}` : ""}
-${manuscript.wordCount ? `Word Count: ${manuscript.wordCount}` : ""}
-${manuscript.authorIntent ? `Author's Intent: ${manuscript.authorIntent}` : ""}
+${manuscript.genre ? `Genre: ${manuscript.genre}` : ''}
+${manuscript.wordCount ? `Word Count: ${manuscript.wordCount}` : ''}
+${manuscript.authorIntent ? `Author's Intent: ${manuscript.authorIntent}` : ''}
 
 CONTENT:
-${manuscript.content.substring(0, 8000)}${manuscript.content.length > 8000 ? "\n... [truncated for review]" : ""}
+${manuscript.content.substring(0, 8000)}${manuscript.content.length > 8000 ? '\n... [truncated for review]' : ''}
 
 Provide your workshop feedback following the Clarion method. Respond ONLY with valid JSON matching the required structure.`;
 
@@ -49,17 +49,17 @@ export function parsePeerReviewResponse(text: string, reviewerId: string): PeerR
     return {
       reviewerId,
       positive: {
-        whatWorks: "Unable to generate detailed feedback",
-        strengths: ["Manuscript received"],
+        whatWorks: 'Unable to generate detailed feedback',
+        strengths: ['Manuscript received'],
         memorableMoments: [],
       },
       constructive: {
-        questions: ["Please try again with a shorter excerpt"],
+        questions: ['Please try again with a shorter excerpt'],
         confusionPoints: [],
-        suggestions: ["Consider breaking into smaller sections for review"],
+        suggestions: ['Consider breaking into smaller sections for review'],
         craftConcerns: [],
       },
-      overallImpression: "Review generation encountered an error",
+      overallImpression: 'Review generation encountered an error',
     };
   }
 }
@@ -75,7 +75,7 @@ export async function conductPeerReview(
   try {
     const response = await provider.call({
       model: config.models[reviewerId],
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: config.parameters.temperature,
       systemPrompt: system,
       maxTokens: 4096,
@@ -86,17 +86,17 @@ export async function conductPeerReview(
     return {
       reviewerId,
       positive: {
-        whatWorks: "Unable to generate detailed feedback",
-        strengths: ["Manuscript received"],
+        whatWorks: 'Unable to generate detailed feedback',
+        strengths: ['Manuscript received'],
         memorableMoments: [],
       },
       constructive: {
-        questions: ["Please try again with a shorter excerpt"],
+        questions: ['Please try again with a shorter excerpt'],
         confusionPoints: [],
-        suggestions: ["Consider breaking into smaller sections for review"],
+        suggestions: ['Consider breaking into smaller sections for review'],
         craftConcerns: [],
       },
-      overallImpression: "Review generation encountered an error",
+      overallImpression: 'Review generation encountered an error',
     };
   }
 }

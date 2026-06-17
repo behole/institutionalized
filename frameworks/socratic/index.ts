@@ -3,20 +3,18 @@
  * Systematic questioning to expose assumptions and refine understanding
  */
 
-import { createProvider } from "@core/providers";
-import { getAPIKey } from "@core/config";
-import { parseJSON, FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider, RunFlags } from "@core/types";
-import type { Statement, SocraticExchange, SocraticResult, SocraticConfig } from "./types";
-import { DEFAULT_CONFIG } from "./types";
+import { createProvider } from '@core/providers';
+import { getAPIKey } from '@core/config';
+import { parseJSON, FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider, RunFlags } from '@core/types';
+import type { Statement, SocraticExchange, SocraticResult, SocraticConfig } from './types';
+import { DEFAULT_CONFIG } from './types';
 
 export async function run(
   input: Statement | { content: string },
   flags: RunFlags = {}
 ): Promise<SocraticResult> {
-  const statement: Statement = "claim" in input
-    ? input
-    : { claim: input.content || "" };
+  const statement: Statement = 'claim' in input ? input : { claim: input.content || '' };
 
   const config: SocraticConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
   const cliFlags = flags as Record<string, unknown>;
@@ -24,33 +22,56 @@ export async function run(
     config.parameters.maxRounds = parseInt(String(cliFlags.rounds), 10);
   }
 
-  const providerName = flags.provider || "anthropic";
+  const providerName = flags.provider || 'anthropic';
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
   const verbose = flags.debug ?? false;
 
-  if (verbose) console.log("\n🏛️  SOCRATIC METHOD\n");
+  if (verbose) {
+    console.log('\n🏛️  SOCRATIC METHOD\n');
+  }
 
-  const runner = new FrameworkRunner<Statement, SocraticResult>("socratic", statement);
+  const runner = new FrameworkRunner<Statement, SocraticResult>('socratic', statement);
 
   const exchanges: SocraticExchange[] = [];
 
   for (let round = 1; round <= config.parameters.maxRounds; round++) {
-    if (verbose) console.log(`\nRound ${round}...`);
+    if (verbose) {
+      console.log(`\nRound ${round}...`);
+    }
 
-    const exchange = await conductExchange(statement, exchanges, round, config, provider, runner, verbose);
+    const exchange = await conductExchange(
+      statement,
+      exchanges,
+      round,
+      config,
+      provider,
+      runner,
+      verbose
+    );
     exchanges.push(exchange);
 
     // Stop if we've reached a natural conclusion
-    if (exchange.response.toLowerCase().includes("i don't know") ||
-        exchange.response.toLowerCase().includes("acknowledged")) {
-      if (verbose) console.log("  Reached epistemic humility");
+    if (
+      exchange.response.toLowerCase().includes("i don't know") ||
+      exchange.response.toLowerCase().includes('acknowledged')
+    ) {
+      if (verbose) {
+        console.log('  Reached epistemic humility');
+      }
       break;
     }
   }
 
-  const conclusion = await synthesizeConclusion(statement, exchanges, config, provider, runner, verbose);
+  const conclusion = await synthesizeConclusion(
+    statement,
+    exchanges,
+    config,
+    provider,
+    runner,
+    verbose
+  );
 
   if (verbose) {
     console.log(`\nExchanges: ${exchanges.length}`);
@@ -65,7 +86,7 @@ export async function run(
     metadata: { timestamp: new Date().toISOString(), config },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
 
   return {
     ...result,
@@ -86,9 +107,9 @@ async function conductExchange(
   const questionPrompt = `You are Socrates conducting a dialogue.
 
 ORIGINAL CLAIM: ${statement.claim}
-${statement.context ? `CONTEXT: ${statement.context}\n` : ""}
+${statement.context ? `CONTEXT: ${statement.context}\n` : ''}
 
-${previousExchanges.length > 0 ? `PREVIOUS EXCHANGES:\n${previousExchanges.map((e) => `Q: ${e.question}\nA: ${e.response}`).join("\n\n")}\n` : ""}
+${previousExchanges.length > 0 ? `PREVIOUS EXCHANGES:\n${previousExchanges.map((e) => `Q: ${e.question}\nA: ${e.response}`).join('\n\n')}\n` : ''}
 
 Ask a probing question (Round ${round}) that:
 - Tests assumptions
@@ -112,14 +133,16 @@ Provide in JSON:
   );
 
   const { question } = parseJSON<{ question: string }>(questionResponse.content);
-  if (verbose) console.log(`  Q: ${question}`);
+  if (verbose) {
+    console.log(`  Q: ${question}`);
+  }
 
   // Respondent answers
   const responsePrompt = `You are responding to Socratic questioning about your claim.
 
 YOUR CLAIM: ${statement.claim}
 
-${previousExchanges.length > 0 ? `PREVIOUS EXCHANGES:\n${previousExchanges.map((e) => `Q: ${e.question}\nA: ${e.response}`).join("\n\n")}\n` : ""}
+${previousExchanges.length > 0 ? `PREVIOUS EXCHANGES:\n${previousExchanges.map((e) => `Q: ${e.question}\nA: ${e.response}`).join('\n\n')}\n` : ''}
 
 QUESTION: ${question}
 
@@ -141,8 +164,10 @@ Be honest. If you realize you don't know or find a contradiction, acknowledge it
     1024
   );
 
-  const answer = parseJSON<Omit<SocraticExchange, "round" | "question">>(answerResponse.content);
-  if (verbose) console.log(`  A: ${answer.response}`);
+  const answer = parseJSON<Omit<SocraticExchange, 'round' | 'question'>>(answerResponse.content);
+  if (verbose) {
+    console.log(`  A: ${answer.response}`);
+  }
 
   return {
     round,
@@ -158,15 +183,20 @@ async function synthesizeConclusion(
   provider: LLMProvider,
   runner: FrameworkRunner<Statement, SocraticResult>,
   verbose: boolean
-): Promise<SocraticResult["conclusion"]> {
-  if (verbose) console.log("\nSynthesizing conclusion...\n");
+): Promise<SocraticResult['conclusion']> {
+  if (verbose) {
+    console.log('\nSynthesizing conclusion...\n');
+  }
 
-  const exchangesText = exchanges.map((e) =>
-    `Round ${e.round}:\nQ: ${e.question}\nA: ${e.response}${e.exposedAssumption ? `\nAssumption: ${e.exposedAssumption}` : ""}${e.contradiction ? `\nContradiction: ${e.contradiction}` : ""}`
-  ).join("\n\n");
+  const exchangesText = exchanges
+    .map(
+      (e) =>
+        `Round ${e.round}:\nQ: ${e.question}\nA: ${e.response}${e.exposedAssumption ? `\nAssumption: ${e.exposedAssumption}` : ''}${e.contradiction ? `\nContradiction: ${e.contradiction}` : ''}`
+    )
+    .join('\n\n');
 
   const response = await runner.runAgent(
-    "questioner-conclusion",
+    'questioner-conclusion',
     provider,
     config.models.questioner,
     `Synthesize the Socratic dialogue.
@@ -189,7 +219,7 @@ Provide conclusion in JSON:
     1536
   );
 
-  return parseJSON<SocraticResult["conclusion"]>(response.content);
+  return parseJSON<SocraticResult['conclusion']>(response.content);
 }
 
-export * from "./types";
+export * from './types';

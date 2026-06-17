@@ -1,13 +1,13 @@
 // Core types for Dissertation Committee Framework
 // Multi-stage work validation with advisor and committee
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface DissertationWork {
   title: string;
   abstract: string;
   field: string;
-  stage: "proposal" | "chapters" | "draft" | "final";
+  stage: 'proposal' | 'chapters' | 'draft' | 'final';
   content: string;
   methodology?: string;
   contributions?: string[];
@@ -16,7 +16,7 @@ export interface DissertationWork {
 export interface CommitteeMember {
   name: string;
   specialty: string;
-  role: "advisor" | "specialist" | "external" | "methodologist";
+  role: 'advisor' | 'specialist' | 'external' | 'methodologist';
 }
 
 export interface StageReview {
@@ -27,13 +27,13 @@ export interface StageReview {
     weaknesses: string[];
     questions: string[];
   };
-  verdict: "approve" | "revise" | "reject";
+  verdict: 'approve' | 'revise' | 'reject';
   requiredChanges?: string[];
   suggestions?: string[];
 }
 
 export interface CommitteeConsensus {
-  overallVerdict: "approve" | "revise" | "reject";
+  overallVerdict: 'approve' | 'revise' | 'reject';
   unanimous: boolean;
   dissentingViews?: string[];
   conditions?: string[];

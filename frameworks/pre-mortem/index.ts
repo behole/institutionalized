@@ -3,12 +3,12 @@
  * Identify failure modes before committing to a decision
  */
 
-import { createProvider } from "@core/providers";
-import { getAPIKey } from "@core/config";
-import { runPreMortem } from "./orchestrator";
-import type { Plan, PreMortemConfig, PreMortemResult } from "./types";
-import type { RunFlags } from "@core/types";
-import { DEFAULT_CONFIG } from "./types";
+import { createProvider } from '@core/providers';
+import { getAPIKey } from '@core/config';
+import { runPreMortem } from './orchestrator';
+import type { Plan, PreMortemConfig, PreMortemResult } from './types';
+import type { RunFlags } from '@core/types';
+import { DEFAULT_CONFIG } from './types';
 
 /**
  * Main entry point for CLI
@@ -19,10 +19,10 @@ export async function run(
 ): Promise<PreMortemResult> {
   // If input is plain text, wrap it as a plan
   const plan: Plan =
-    "description" in input
+    'description' in input
       ? input
       : {
-          description: input.content || "",
+          description: input.content || '',
         };
 
   // Get configuration
@@ -39,7 +39,7 @@ export async function run(
   }
 
   // Create provider
-  const providerName = flags.provider || "anthropic";
+  const providerName = flags.provider || 'anthropic';
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({
     name: providerName,
@@ -47,16 +47,11 @@ export async function run(
   });
 
   // Run pre-mortem
-  const result = await runPreMortem(
-    plan,
-    config,
-    provider,
-    flags.debug ?? false
-  );
+  const result = await runPreMortem(plan, config, provider, flags.debug ?? false);
 
   return result;
 }
 
 // Re-export for programmatic use
 export { runPreMortem };
-export * from "./types";
+export * from './types';

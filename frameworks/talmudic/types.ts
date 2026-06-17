@@ -1,7 +1,7 @@
 // Core types for Talmudic Dialectic Framework
 // Multi-interpretation reasoning from Jewish textual tradition
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface TextualProblem {
   text: string;

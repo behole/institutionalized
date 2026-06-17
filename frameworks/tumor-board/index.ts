@@ -3,48 +3,79 @@
  * Multi-disciplinary consensus for complex decisions
  */
 
-import { createProvider } from "@core/providers";
-import { getAPIKey } from "@core/config";
-import { parseJSON, FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider, RunFlags } from "@core/types";
-import type { Case, SpecialistInput, TeamDiscussion, Recommendation, TumorBoardConfig, TumorBoardResult } from "./types";
-import { DEFAULT_CONFIG } from "./types";
+import { createProvider } from '@core/providers';
+import { getAPIKey } from '@core/config';
+import { parseJSON, FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider, RunFlags } from '@core/types';
+import type {
+  Case,
+  SpecialistInput,
+  TeamDiscussion,
+  Recommendation,
+  TumorBoardConfig,
+  TumorBoardResult,
+} from './types';
+import { DEFAULT_CONFIG } from './types';
 
 export async function run(
   input: Case | { content: string },
   flags: RunFlags = {}
 ): Promise<TumorBoardResult> {
-  const caseData: Case = "caseId" in input
-    ? input
-    : {
-        caseId: "case-1",
-        summary: input.content || "",
-      };
+  const caseData: Case =
+    'caseId' in input
+      ? input
+      : {
+          caseId: 'case-1',
+          summary: input.content || '',
+        };
 
   const config: TumorBoardConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
   const cliFlags = flags as Record<string, unknown>;
   if (cliFlags.specialties) {
-    config.specialties = String(cliFlags.specialties).split(",");
+    config.specialties = String(cliFlags.specialties).split(',');
   }
 
-  const providerName = flags.provider || "anthropic";
+  const providerName = flags.provider || 'anthropic';
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
   const verbose = flags.debug ?? false;
 
-  if (verbose) console.log("\n🏥 MULTIDISCIPLINARY TEAM BOARD\n");
+  if (verbose) {
+    console.log('\n🏥 MULTIDISCIPLINARY TEAM BOARD\n');
+  }
 
-  const runner = new FrameworkRunner<Case, TumorBoardResult>("tumor-board", caseData);
+  const runner = new FrameworkRunner<Case, TumorBoardResult>('tumor-board', caseData);
 
   // Phase 1: Specialist inputs
-  const specialistInputs = await gatherSpecialistInputs(caseData, config, provider, runner, verbose);
+  const specialistInputs = await gatherSpecialistInputs(
+    caseData,
+    config,
+    provider,
+    runner,
+    verbose
+  );
 
   // Phase 2: Team discussion
-  const discussion = await facilitateDiscussion(caseData, specialistInputs, config, provider, runner, verbose);
+  const discussion = await facilitateDiscussion(
+    caseData,
+    specialistInputs,
+    config,
+    provider,
+    runner,
+    verbose
+  );
 
   // Phase 3: Consensus recommendation
-  const recommendation = await formulateRecommendation(caseData, specialistInputs, discussion, config, provider, runner, verbose);
+  const recommendation = await formulateRecommendation(
+    caseData,
+    specialistInputs,
+    discussion,
+    config,
+    provider,
+    runner,
+    verbose
+  );
 
   if (verbose) {
     console.log(`\nSpecialists Consulted: ${specialistInputs.length}`);
@@ -60,7 +91,7 @@ export async function run(
     metadata: { timestamp: new Date().toISOString(), config },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
 
   return {
     ...result,
@@ -75,13 +106,17 @@ async function gatherSpecialistInputs(
   runner: FrameworkRunner<Case, TumorBoardResult>,
   verbose: boolean
 ): Promise<SpecialistInput[]> {
-  if (verbose) console.log("Phase 1: Gathering specialist inputs...\n");
+  if (verbose) {
+    console.log('Phase 1: Gathering specialist inputs...\n');
+  }
 
   const responses = await runner.runParallel(
     config.specialties.map((specialty) => {
-      if (verbose) console.log(`  ${specialty} reviewing...`);
+      if (verbose) {
+        console.log(`  ${specialty} reviewing...`);
+      }
       return {
-        name: `specialist-${specialty.toLowerCase().replace(/\s+/g, "-")}`,
+        name: `specialist-${specialty.toLowerCase().replace(/\s+/g, '-')}`,
         provider,
         model: config.models.specialist,
         prompt: `You are a ${specialty} specialist in a multidisciplinary team meeting.
@@ -91,9 +126,9 @@ CASE: ${caseData.caseId}
 SUMMARY:
 ${caseData.summary}
 
-${caseData.patientFactors ? `PATIENT FACTORS:\n${caseData.patientFactors.map((f) => `- ${f}`).join("\n")}\n` : ""}
-${caseData.constraints ? `CONSTRAINTS:\n${caseData.constraints.map((c) => `- ${c}`).join("\n")}\n` : ""}
-${caseData.options ? `OPTIONS:\n${caseData.options.map((o) => `- ${o}`).join("\n")}\n` : ""}
+${caseData.patientFactors ? `PATIENT FACTORS:\n${caseData.patientFactors.map((f) => `- ${f}`).join('\n')}\n` : ''}
+${caseData.constraints ? `CONSTRAINTS:\n${caseData.constraints.map((c) => `- ${c}`).join('\n')}\n` : ''}
+${caseData.options ? `OPTIONS:\n${caseData.options.map((o) => `- ${o}`).join('\n')}\n` : ''}
 
 Provide your specialist input in JSON:
 {
@@ -120,14 +155,19 @@ async function facilitateDiscussion(
   runner: FrameworkRunner<Case, TumorBoardResult>,
   verbose: boolean
 ): Promise<TeamDiscussion> {
-  if (verbose) console.log("\nPhase 2: Facilitating team discussion...\n");
+  if (verbose) {
+    console.log('\nPhase 2: Facilitating team discussion...\n');
+  }
 
-  const inputsText = specialistInputs.map((input) =>
-    `${input.specialty}:\nAssessment: ${input.assessment}\nRecommendations: ${input.recommendations.join(", ")}\nConcerns: ${input.concerns.join(", ")}`
-  ).join("\n\n");
+  const inputsText = specialistInputs
+    .map(
+      (input) =>
+        `${input.specialty}:\nAssessment: ${input.assessment}\nRecommendations: ${input.recommendations.join(', ')}\nConcerns: ${input.concerns.join(', ')}`
+    )
+    .join('\n\n');
 
   const response = await runner.runAgent(
-    "chair-discussion",
+    'chair-discussion',
     provider,
     config.models.chair,
     `You are chairing a multidisciplinary team discussion.
@@ -165,14 +205,16 @@ async function formulateRecommendation(
   runner: FrameworkRunner<Case, TumorBoardResult>,
   verbose: boolean
 ): Promise<Recommendation> {
-  if (verbose) console.log("\nPhase 3: Formulating consensus recommendation...\n");
+  if (verbose) {
+    console.log('\nPhase 3: Formulating consensus recommendation...\n');
+  }
 
-  const inputsText = specialistInputs.map((input) =>
-    `${input.specialty}: ${input.recommendations.join(", ")}`
-  ).join("\n");
+  const inputsText = specialistInputs
+    .map((input) => `${input.specialty}: ${input.recommendations.join(', ')}`)
+    .join('\n');
 
   const response = await runner.runAgent(
-    "chair-recommendation",
+    'chair-recommendation',
     provider,
     config.models.chair,
     `Formulate the multidisciplinary team's consensus recommendation.
@@ -180,10 +222,10 @@ async function formulateRecommendation(
 CASE: ${caseData.caseId}
 
 CONSENSUS POINTS:
-${discussion.consensusPoints.map((p) => `- ${p}`).join("\n")}
+${discussion.consensusPoints.map((p) => `- ${p}`).join('\n')}
 
 DISAGREEMENTS:
-${discussion.disagreements.map((d) => `${d.point}: ${d.perspectives.join(", ")}`).join("\n")}
+${discussion.disagreements.map((d) => `${d.point}: ${d.perspectives.join(', ')}`).join('\n')}
 
 SPECIALIST RECOMMENDATIONS:
 ${inputsText}
@@ -205,4 +247,4 @@ Provide consensus recommendation in JSON:
   return parseJSON<Recommendation>(response.content);
 }
 
-export * from "./types";
+export * from './types';

@@ -1,6 +1,6 @@
-import type { Manuscript, WritersWorkshopConfig, PeerReview, DiscussionPoint } from "./types";
-import { parseJSON } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type { Manuscript, WritersWorkshopConfig, PeerReview, DiscussionPoint } from './types';
+import { parseJSON } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
 
 export function buildFacilitatorPrompt(
   manuscript: Manuscript,
@@ -28,13 +28,17 @@ You MUST respond with valid JSON matching this structure:
 
 Be balanced and comprehensive.`;
 
-  const reviewsSummary = peerReviews.map(r => `
+  const reviewsSummary = peerReviews
+    .map(
+      (r) => `
 ${r.reviewerId}:
-- Strengths: ${r.positive.strengths.join("; ")}
-- Questions: ${r.constructive.questions.join("; ")}
-- Suggestions: ${r.constructive.suggestions.join("; ")}
-- Concerns: ${r.constructive.craftConcerns.join("; ")}
-`).join("\n");
+- Strengths: ${r.positive.strengths.join('; ')}
+- Questions: ${r.constructive.questions.join('; ')}
+- Suggestions: ${r.constructive.suggestions.join('; ')}
+- Concerns: ${r.constructive.craftConcerns.join('; ')}
+`
+    )
+    .join('\n');
 
   const user = `MANUSCRIPT: "${manuscript.title}"
 
@@ -62,7 +66,7 @@ export async function facilitateDiscussion(
   try {
     const response = await provider.call({
       model: config.models.facilitator,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: 0.5,
       systemPrompt: system,
       maxTokens: 4096,
@@ -74,10 +78,12 @@ export async function facilitateDiscussion(
 
     return result.discussion;
   } catch (error) {
-    console.warn("Failed to facilitate discussion:", error);
-    return [{
-      topic: "General Feedback",
-      perspectives: peerReviews.map(r => `${r.reviewerId}: ${r.overallImpression}`),
-    }];
+    console.warn('Failed to facilitate discussion:', error);
+    return [
+      {
+        topic: 'General Feedback',
+        perspectives: peerReviews.map((r) => `${r.reviewerId}: ${r.overallImpression}`),
+      },
+    ];
   }
 }

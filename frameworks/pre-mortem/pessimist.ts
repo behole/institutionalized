@@ -2,9 +2,9 @@
  * Pessimist agent - imagines specific failure scenarios
  */
 
-import type { LLMProvider } from "@core/types";
-import { parseJSON } from "@core/orchestrator";
-import type { Plan, FailureScenario, PreMortemConfig } from "./types";
+import type { LLMProvider } from '@core/types';
+import { parseJSON } from '@core/orchestrator';
+import type { Plan, FailureScenario, PreMortemConfig } from './types';
 
 export async function imagineFailure(
   pessimistNumber: number,
@@ -17,11 +17,11 @@ export async function imagineFailure(
   const response = await provider.call({
     model: config.models.pessimists,
     temperature: config.parameters.pessimistTemperature,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
     maxTokens: 2048,
   });
 
-  const parsed = parseJSON<Omit<FailureScenario, "pessimist">>(response.content);
+  const parsed = parseJSON<Omit<FailureScenario, 'pessimist'>>(response.content);
 
   const scenario: FailureScenario = {
     pessimist: `Pessimist ${pessimistNumber}`,
@@ -55,14 +55,14 @@ ${plan.description}
   }
 
   if (plan.stakeholders && plan.stakeholders.length > 0) {
-    prompt += `\n## STAKEHOLDERS\n${plan.stakeholders.join(", ")}\n`;
+    prompt += `\n## STAKEHOLDERS\n${plan.stakeholders.join(', ')}\n`;
   }
 
   prompt += `
 
 ## YOUR TASK
 
-**Imagine it's ${plan.timeline || "6 months from now"} and this plan has FAILED.**
+**Imagine it's ${plan.timeline || '6 months from now'} and this plan has FAILED.**
 
 You must:
 1. **Describe the failure scenario** - What went wrong? Be specific.
@@ -133,17 +133,17 @@ function validateScenario(scenario: FailureScenario): void {
     throw new Error(`${scenario.pessimist}: Must identify early warnings`);
   }
 
-  const validSeverities = ["catastrophic", "major", "moderate", "minor"];
+  const validSeverities = ['catastrophic', 'major', 'moderate', 'minor'];
   if (!validSeverities.includes(scenario.severity)) {
     throw new Error(`${scenario.pessimist}: Invalid severity`);
   }
 
-  const validLikelihoods = ["very-likely", "likely", "possible", "unlikely"];
+  const validLikelihoods = ['very-likely', 'likely', 'possible', 'unlikely'];
   if (!validLikelihoods.includes(scenario.likelihood)) {
     throw new Error(`${scenario.pessimist}: Invalid likelihood`);
   }
 
-  if (typeof scenario.preventable !== "boolean") {
+  if (typeof scenario.preventable !== 'boolean') {
     throw new Error(`${scenario.pessimist}: Preventable must be boolean`);
   }
 }

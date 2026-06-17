@@ -3,7 +3,7 @@
  * Systematic diagnostic reasoning from medical practice
  */
 
-import { DEFAULT_MODELS } from "@core/config";
+import { DEFAULT_MODELS } from '@core/config';
 
 export interface Symptoms {
   presenting: string;
@@ -30,7 +30,7 @@ export interface DiagnosticTest {
 
 export interface FinalDiagnosis {
   mostLikely: string;
-  confidence: "low" | "medium" | "high" | "definitive";
+  confidence: 'low' | 'medium' | 'high' | 'definitive';
   differentials: Array<{
     diagnosis: string;
     likelihood: number;

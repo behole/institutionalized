@@ -1,13 +1,24 @@
-import { FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
-import type { TextualProblem, TalmudicResult, TalmudicConfig, Interpretation, CounterInterpretation, Resolution, TalmudicInsight } from "./types";
-import { DEFAULT_CONFIG } from "./types";
+import { FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
+import type {
+  TextualProblem,
+  TalmudicResult,
+  TalmudicConfig,
+  Interpretation,
+  CounterInterpretation,
+  Resolution,
+  TalmudicInsight,
+} from './types';
+import { DEFAULT_CONFIG } from './types';
 import {
-  buildInterpretationPrompt, parseInterpretationResponse,
-  buildCounterpointPrompt, parseCounterpointResponse,
-  buildResolutionPrompt, parseResolutionResponse,
-  extractInsights
-} from "./interpreters";
+  buildInterpretationPrompt,
+  parseInterpretationResponse,
+  buildCounterpointPrompt,
+  parseCounterpointResponse,
+  buildResolutionPrompt,
+  parseResolutionResponse,
+  extractInsights,
+} from './interpreters';
 
 export async function runTalmudicAnalysis(
   problem: TextualProblem,
@@ -16,21 +27,23 @@ export async function runTalmudicAnalysis(
 ): Promise<TalmudicResult> {
   const startTime = Date.now();
 
-  console.log("\n" + "=".repeat(80));
-  console.log("📜 TALMUDIC DIALECTIC");
-  console.log("=".repeat(80));
-  console.log(`\n📜 Text: ${problem.text.substring(0, 100)}${problem.text.length > 100 ? "..." : ""}`);
+  console.log('\n' + '='.repeat(80));
+  console.log('📜 TALMUDIC DIALECTIC');
+  console.log('='.repeat(80));
+  console.log(
+    `\n📜 Text: ${problem.text.substring(0, 100)}${problem.text.length > 100 ? '...' : ''}`
+  );
   if (problem.specificQuestion) {
     console.log(`   Question: ${problem.specificQuestion}`);
   }
   console.log();
 
-  const runner = new FrameworkRunner<TextualProblem, TalmudicResult>("talmudic", problem);
+  const runner = new FrameworkRunner<TextualProblem, TalmudicResult>('talmudic', problem);
 
   // Step 1: Generate multiple interpretations
-  console.log("📜 Phase 1: Multiple Interpretations");
+  console.log('📜 Phase 1: Multiple Interpretations');
   const interpretations: Interpretation[] = [];
-  const interpreterNames = Object.keys(config.models).filter(k => k.startsWith("interpreter"));
+  const interpreterNames = Object.keys(config.models).filter((k) => k.startsWith('interpreter'));
 
   for (let i = 0; i < config.parameters.interpreterCount && i < interpreterNames.length; i++) {
     const interpreterName = interpreterNames[i];
@@ -51,7 +64,7 @@ export async function runTalmudicAnalysis(
   }
 
   // Step 2: Generate counterpoints between interpretations
-  console.log("\n📜 Phase 2: Counterpoints and Debate");
+  console.log('\n📜 Phase 2: Counterpoints and Debate');
   const counterpoints: CounterInterpretation[] = [];
 
   for (let i = 0; i < interpretations.length; i++) {
@@ -73,7 +86,11 @@ export async function runTalmudicAnalysis(
           4096,
           system
         );
-        const counterpoint = parseCounterpointResponse(response.content, interpretations[i], interpretations[j]);
+        const counterpoint = parseCounterpointResponse(
+          response.content,
+          interpretations[i],
+          interpretations[j]
+        );
         counterpoints.push(counterpoint);
       }
     }
@@ -81,10 +98,15 @@ export async function runTalmudicAnalysis(
   console.log(`   ✅ ${counterpoints.length} counterpoints generated`);
 
   // Step 3: Generate practical resolutions
-  console.log("\n📜 Phase 3: Practical Resolutions");
-  const { system: resolverSystem, user: resolverUser } = buildResolutionPrompt(problem, interpretations, counterpoints, config);
+  console.log('\n📜 Phase 3: Practical Resolutions');
+  const { system: resolverSystem, user: resolverUser } = buildResolutionPrompt(
+    problem,
+    interpretations,
+    counterpoints,
+    config
+  );
   const resolverResponse = await runner.runAgent(
-    "resolver",
+    'resolver',
     provider,
     config.models.resolver,
     resolverUser,
@@ -100,17 +122,17 @@ export async function runTalmudicAnalysis(
 
   const duration = Date.now() - startTime;
 
-  console.log("\n" + "=".repeat(80));
+  console.log('\n' + '='.repeat(80));
   console.log(`🎯 ANALYSIS COMPLETE`);
   console.log(`   Interpretations: ${interpretations.length}`);
   console.log(`   Counterpoints: ${counterpoints.length}`);
   console.log(`   Resolutions: ${resolutions.length}`);
   console.log(`   Insights: ${insights.length}`);
   console.log(`\n⏱️  Duration: ${(duration / 1000).toFixed(1)}s`);
-  console.log("=".repeat(80) + "\n");
+  console.log('='.repeat(80) + '\n');
 
   // Display interpretations
-  console.log("📊 INTERPRETATIONS\n");
+  console.log('📊 INTERPRETATIONS\n');
   interpretations.forEach((interp, i) => {
     console.log(`${i + 1}. ${interp.interpreter}:`);
     console.log(`   ${interp.interpretation}`);
@@ -119,7 +141,7 @@ export async function runTalmudicAnalysis(
   });
 
   // Display resolutions
-  console.log("📊 PRACTICAL RESOLUTIONS\n");
+  console.log('📊 PRACTICAL RESOLUTIONS\n');
   resolutions.forEach((res, i) => {
     console.log(`${i + 1}. ${res.question}`);
     console.log(`   Ruling: ${res.practicalRuling}`);
@@ -144,7 +166,7 @@ export async function runTalmudicAnalysis(
     },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
   result.metadata.costUSD = auditLog.metadata.totalCost;
 
   return result;

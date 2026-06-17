@@ -2,15 +2,15 @@
  * Observer - synthesizes findings and makes recommendations
  */
 
-import type { LLMProvider } from "@core/types";
-import { parseJSON } from "@core/orchestrator";
+import type { LLMProvider } from '@core/types';
+import { parseJSON } from '@core/orchestrator';
 import type {
   Target,
   BlueTeamProposal,
   RedTeamAttack,
   ObserverReport,
   RedBlueConfig,
-} from "./types";
+} from './types';
 
 export async function synthesizeFindings(
   target: Target,
@@ -24,7 +24,7 @@ export async function synthesizeFindings(
   const response = await provider.call({
     model: config.models.observer,
     temperature: config.parameters.observerTemperature,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
     maxTokens: 4096,
   });
 
@@ -118,27 +118,21 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting.`;
 
 function validateReport(report: ObserverReport): void {
   if (!report.overallAssessment || report.overallAssessment.length < 50) {
-    throw new Error("Observer assessment too brief");
+    throw new Error('Observer assessment too brief');
   }
 
-  if (
-    !report.prioritizedActions ||
-    report.prioritizedActions.length === 0
-  ) {
-    throw new Error("Observer must provide prioritized actions");
+  if (!report.prioritizedActions || report.prioritizedActions.length === 0) {
+    throw new Error('Observer must provide prioritized actions');
   }
 
-  if (!["ready", "needs-hardening", "significant-risks"].includes(report.verdict)) {
+  if (!['ready', 'needs-hardening', 'significant-risks'].includes(report.verdict)) {
     throw new Error(`Invalid verdict: ${report.verdict}`);
   }
 
   // At least some findings should be reported
-  const totalFindings =
-    report.criticalVulnerabilities.length + report.highRiskScenarios.length;
+  const totalFindings = report.criticalVulnerabilities.length + report.highRiskScenarios.length;
 
-  if (totalFindings === 0 && report.verdict !== "ready") {
-    throw new Error(
-      "If verdict is not 'ready', must report vulnerabilities or scenarios"
-    );
+  if (totalFindings === 0 && report.verdict !== 'ready') {
+    throw new Error("If verdict is not 'ready', must report vulnerabilities or scenarios");
   }
 }

@@ -3,12 +3,12 @@
  * Adversarial stress-testing for security and architecture
  */
 
-import { createProvider } from "@core/providers";
-import { getAPIKey } from "@core/config";
-import { runRedBlue } from "./orchestrator";
-import type { Target, RedBlueConfig, RedBlueResult } from "./types";
-import type { RunFlags } from "@core/types";
-import { DEFAULT_CONFIG } from "./types";
+import { createProvider } from '@core/providers';
+import { getAPIKey } from '@core/config';
+import { runRedBlue } from './orchestrator';
+import type { Target, RedBlueConfig, RedBlueResult } from './types';
+import type { RunFlags } from '@core/types';
+import { DEFAULT_CONFIG } from './types';
 
 /**
  * Main entry point for CLI
@@ -19,10 +19,10 @@ export async function run(
 ): Promise<RedBlueResult> {
   // If input is plain text, wrap it as a target
   const target: Target =
-    "system" in input
+    'system' in input
       ? input
       : {
-          system: input.content || "",
+          system: input.content || '',
         };
 
   // Get configuration
@@ -39,7 +39,7 @@ export async function run(
   }
 
   // Create provider
-  const providerName = flags.provider || "anthropic";
+  const providerName = flags.provider || 'anthropic';
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({
     name: providerName,
@@ -47,16 +47,11 @@ export async function run(
   });
 
   // Run red-blue exercise
-  const result = await runRedBlue(
-    target,
-    config,
-    provider,
-    flags.debug ?? false
-  );
+  const result = await runRedBlue(target, config, provider, flags.debug ?? false);
 
   return result;
 }
 
 // Re-export for programmatic use
 export { runRedBlue };
-export * from "./types";
+export * from './types';

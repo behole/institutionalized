@@ -1,7 +1,7 @@
 // Shared core types for all frameworks
 
 export interface Message {
-  role: "user" | "assistant" | "system";
+  role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
@@ -35,7 +35,7 @@ export interface LLMProvider {
 }
 
 export interface ProviderConfig {
-  name: "anthropic" | "openai" | "openrouter" | string;
+  name: 'anthropic' | 'openai' | 'openrouter' | string;
   apiKey: string;
   baseURL?: string;
   defaultModel?: string;
@@ -55,7 +55,7 @@ export interface RunFlags {
   /** Override default temperature */
   temperature?: number;
   /** LLM provider to use */
-  provider?: "anthropic" | "openai" | "openrouter";
+  provider?: 'anthropic' | 'openai' | 'openrouter';
   /** Framework-specific configuration overrides */
   config?: Record<string, unknown>;
   /** Enable verbose debug logging */

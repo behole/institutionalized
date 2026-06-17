@@ -3,24 +3,31 @@
  * Rigorous proposal validation through doctoral examination
  */
 
-import { createProvider } from "@core/providers";
-import { getAPIKey } from "@core/config";
-import { parseJSON, FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider, RunFlags } from "@core/types";
-import type { Proposal, CommitteeMember, DefenseResult, PhDDefenseConfig, PhDDefenseOutput } from "./types";
-import { DEFAULT_CONFIG } from "./types";
+import { createProvider } from '@core/providers';
+import { getAPIKey } from '@core/config';
+import { parseJSON, FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider, RunFlags } from '@core/types';
+import type {
+  Proposal,
+  CommitteeMember,
+  DefenseResult,
+  PhDDefenseConfig,
+  PhDDefenseOutput,
+} from './types';
+import { DEFAULT_CONFIG } from './types';
 
 export async function run(
   input: Proposal | { content: string },
   flags: RunFlags = {}
 ): Promise<PhDDefenseOutput> {
-  const proposal: Proposal = "title" in input
-    ? input
-    : {
-        title: "Untitled Proposal",
-        abstract: "",
-        document: input.content || "",
-      };
+  const proposal: Proposal =
+    'title' in input
+      ? input
+      : {
+          title: 'Untitled Proposal',
+          abstract: '',
+          document: input.content || '',
+        };
 
   const config: PhDDefenseConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
   const cliFlags = flags as Record<string, unknown>;
@@ -28,18 +35,20 @@ export async function run(
     config.parameters.committeeSize = parseInt(String(cliFlags.committee), 10);
   }
   if (cliFlags.specialties) {
-    config.specialties = String(cliFlags.specialties).split(",");
+    config.specialties = String(cliFlags.specialties).split(',');
   }
 
-  const providerName = flags.provider || "anthropic";
+  const providerName = flags.provider || 'anthropic';
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
   const verbose = flags.debug ?? false;
 
-  if (verbose) console.log("\n🎓 PhD DEFENSE\n");
+  if (verbose) {
+    console.log('\n🎓 PhD DEFENSE\n');
+  }
 
-  const runner = new FrameworkRunner<Proposal, PhDDefenseOutput>("phd-defense", proposal);
+  const runner = new FrameworkRunner<Proposal, PhDDefenseOutput>('phd-defense', proposal);
 
   // Phase 1: Committee members examine proposal
   const committee = await examineProposal(proposal, config, provider, runner, verbose);
@@ -59,7 +68,7 @@ export async function run(
     metadata: { timestamp: new Date().toISOString(), config },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
 
   return {
     ...result,
@@ -74,15 +83,19 @@ async function examineProposal(
   runner: FrameworkRunner<Proposal, PhDDefenseOutput>,
   verbose: boolean
 ): Promise<CommitteeMember[]> {
-  if (verbose) console.log("Phase 1: Committee examination...\n");
+  if (verbose) {
+    console.log('Phase 1: Committee examination...\n');
+  }
 
   const specialties = config.specialties.slice(0, config.parameters.committeeSize);
 
   const responses = await runner.runParallel(
     specialties.map((specialty) => {
-      if (verbose) console.log(`  ${specialty} specialist examining...`);
+      if (verbose) {
+        console.log(`  ${specialty} specialist examining...`);
+      }
       return {
-        name: `committee-${specialty.toLowerCase().replace(/\s+/g, "-")}`,
+        name: `committee-${specialty.toLowerCase().replace(/\s+/g, '-')}`,
         provider,
         model: config.models.committee,
         prompt: `You are a PhD committee member with expertise in: ${specialty}
@@ -90,11 +103,11 @@ async function examineProposal(
 PROPOSAL TITLE: ${proposal.title}
 
 ABSTRACT:
-${proposal.abstract || "N/A"}
+${proposal.abstract || 'N/A'}
 
-${proposal.methodology ? `METHODOLOGY:\n${proposal.methodology}\n` : ""}
+${proposal.methodology ? `METHODOLOGY:\n${proposal.methodology}\n` : ''}
 
-${proposal.contributions ? `CONTRIBUTIONS:\n${proposal.contributions}\n` : ""}
+${proposal.contributions ? `CONTRIBUTIONS:\n${proposal.contributions}\n` : ''}
 
 FULL DOCUMENT:
 ${proposal.document}
@@ -125,14 +138,19 @@ async function renderDecision(
   runner: FrameworkRunner<Proposal, PhDDefenseOutput>,
   verbose: boolean
 ): Promise<DefenseResult> {
-  if (verbose) console.log("\nPhase 2: Chair rendering decision...\n");
+  if (verbose) {
+    console.log('\nPhase 2: Chair rendering decision...\n');
+  }
 
-  const committeeText = committee.map((member, idx) =>
-    `Committee Member ${idx + 1} (${member.specialty}):\nQuestions: ${member.questions.join(", ")}\nAssessment: ${member.assessment}\nConcerns: ${member.concerns.join(", ")}\n`
-  ).join("\n---\n\n");
+  const committeeText = committee
+    .map(
+      (member, idx) =>
+        `Committee Member ${idx + 1} (${member.specialty}):\nQuestions: ${member.questions.join(', ')}\nAssessment: ${member.assessment}\nConcerns: ${member.concerns.join(', ')}\n`
+    )
+    .join('\n---\n\n');
 
   const response = await runner.runAgent(
-    "chair",
+    'chair',
     provider,
     config.models.chair,
     `You are the PhD defense committee chair.
@@ -164,4 +182,4 @@ Standards:
   return parseJSON<DefenseResult>(response.content);
 }
 
-export * from "./types";
+export * from './types';

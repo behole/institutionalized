@@ -1,8 +1,23 @@
-import { FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
-import type { DialecticalProblem, HegelianResult, HegelianConfig, Thesis, Antithesis, Synthesis, DialecticalInsight } from "./types";
-import { DEFAULT_CONFIG } from "./types";
-import { buildThesisPrompt, parseThesisResponse, buildAntithesisPrompt, parseAntithesisResponse, buildSynthesisPrompt, parseSynthesisResponse } from "./dialectic";
+import { FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
+import type {
+  DialecticalProblem,
+  HegelianResult,
+  HegelianConfig,
+  Thesis,
+  Antithesis,
+  Synthesis,
+  DialecticalInsight,
+} from './types';
+import { DEFAULT_CONFIG } from './types';
+import {
+  buildThesisPrompt,
+  parseThesisResponse,
+  buildAntithesisPrompt,
+  parseAntithesisResponse,
+  buildSynthesisPrompt,
+  parseSynthesisResponse,
+} from './dialectic';
 
 export async function runDialectic(
   problem: DialecticalProblem,
@@ -11,20 +26,20 @@ export async function runDialectic(
 ): Promise<HegelianResult> {
   const startTime = Date.now();
 
-  console.log("\n" + "=".repeat(80));
-  console.log("⚖️  HEGELIAN DIALECTIC");
-  console.log("=".repeat(80));
+  console.log('\n' + '='.repeat(80));
+  console.log('⚖️  HEGELIAN DIALECTIC');
+  console.log('='.repeat(80));
   console.log(`\n📋 Context: ${problem.context}`);
   console.log(`   Initial Thesis: ${problem.thesis}`);
   console.log();
 
-  const runner = new FrameworkRunner<DialecticalProblem, HegelianResult>("hegelian", problem);
+  const runner = new FrameworkRunner<DialecticalProblem, HegelianResult>('hegelian', problem);
 
   // Step 1: Develop the Thesis
-  console.log("⚖️  Phase 1: Thesis");
+  console.log('⚖️  Phase 1: Thesis');
   const { system: thesisSystem, user: thesisUser } = buildThesisPrompt(problem, config);
   const thesisResponse = await runner.runAgent(
-    "thesis",
+    'thesis',
     provider,
     config.models.thesis,
     thesisUser,
@@ -38,10 +53,14 @@ export async function runDialectic(
   console.log(`      Arguments: ${thesis.supportingArguments.length}`);
 
   // Step 2: Generate genuine opposition (Antithesis)
-  console.log("\n⚖️  Phase 2: Antithesis");
-  const { system: antithesisSystem, user: antithesisUser } = buildAntithesisPrompt(problem, thesis, config);
+  console.log('\n⚖️  Phase 2: Antithesis');
+  const { system: antithesisSystem, user: antithesisUser } = buildAntithesisPrompt(
+    problem,
+    thesis,
+    config
+  );
   const antithesisResponse = await runner.runAgent(
-    "antithesis",
+    'antithesis',
     provider,
     config.models.antithesis,
     antithesisUser,
@@ -55,10 +74,15 @@ export async function runDialectic(
   console.log(`      Contradictions: ${antithesis.contradictionsIdentified.length}`);
 
   // Step 3: Synthesize into higher-order resolution
-  console.log("\n⚖️  Phase 3: Synthesis");
-  const { system: synthesisSystem, user: synthesisUser } = buildSynthesisPrompt(problem, thesis, antithesis, config);
+  console.log('\n⚖️  Phase 3: Synthesis');
+  const { system: synthesisSystem, user: synthesisUser } = buildSynthesisPrompt(
+    problem,
+    thesis,
+    antithesis,
+    config
+  );
   const synthesisResponse = await runner.runAgent(
-    "synthesis",
+    'synthesis',
     provider,
     config.models.synthesis,
     synthesisUser,
@@ -76,22 +100,22 @@ export async function runDialectic(
 
   const duration = Date.now() - startTime;
 
-  console.log("\n" + "=".repeat(80));
+  console.log('\n' + '='.repeat(80));
   console.log(`🎯 DIALECTIC COMPLETE`);
   console.log(`   Insights: ${insights.length}`);
   console.log(`\n⏱️  Duration: ${(duration / 1000).toFixed(1)}s`);
-  console.log("=".repeat(80) + "\n");
+  console.log('='.repeat(80) + '\n');
 
   // Display synthesis
-  console.log("📊 SYNTHESIS\n");
-  console.log("How it resolves the contradiction:");
+  console.log('📊 SYNTHESIS\n');
+  console.log('How it resolves the contradiction:');
   console.log(`  ${synthesis.howItResolves}\n`);
-  console.log("Preserves from Thesis:");
-  synthesis.preservesFromThesis.forEach(p => console.log(`  ✓ ${p}`));
-  console.log("\nPreserves from Antithesis:");
-  synthesis.preservesFromAntithesis.forEach(p => console.log(`  ✓ ${p}`));
-  console.log("\nTranscends Both (New Insights):");
-  synthesis.transcendsBoth.forEach(t => console.log(`  → ${t}`));
+  console.log('Preserves from Thesis:');
+  synthesis.preservesFromThesis.forEach((p) => console.log(`  ✓ ${p}`));
+  console.log('\nPreserves from Antithesis:');
+  synthesis.preservesFromAntithesis.forEach((p) => console.log(`  ✓ ${p}`));
+  console.log('\nTranscends Both (New Insights):');
+  synthesis.transcendsBoth.forEach((t) => console.log(`  → ${t}`));
   console.log();
 
   const result: HegelianResult = {
@@ -108,7 +132,7 @@ export async function runDialectic(
     },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
   result.metadata.costUSD = auditLog.metadata.totalCost;
 
   return result;
@@ -126,8 +150,8 @@ function extractInsights(
     if (i < 2) {
       insights.push({
         insight: arg,
-        source: "thesis",
-        application: "Valid consideration that synthesis preserves",
+        source: 'thesis',
+        application: 'Valid consideration that synthesis preserves',
       });
     }
   });
@@ -137,18 +161,18 @@ function extractInsights(
     if (i < 2) {
       insights.push({
         insight: arg,
-        source: "antithesis",
-        application: "Valid critique that synthesis addresses",
+        source: 'antithesis',
+        application: 'Valid critique that synthesis addresses',
       });
     }
   });
 
   // Extract insights from synthesis
-  synthesis.transcendsBoth.forEach(insight => {
+  synthesis.transcendsBoth.forEach((insight) => {
     insights.push({
       insight,
-      source: "synthesis",
-      application: "Higher-order understanding emerging from dialectic",
+      source: 'synthesis',
+      application: 'Higher-order understanding emerging from dialectic',
     });
   });
 

@@ -2,9 +2,9 @@
  * Orchestrator - coordinates the full peer review process
  */
 
-import { DEFAULT_MODELS } from "@core/config";
-import { FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import { DEFAULT_MODELS } from '@core/config';
+import { FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
 import type {
   Submission,
   Review,
@@ -12,10 +12,10 @@ import type {
   EditorDecision,
   PeerReviewConfig,
   PeerReviewResult,
-} from "./types";
-import { conductReview } from "./reviewer";
-import { createRebuttal } from "./author";
-import { makeDecision } from "./editor";
+} from './types';
+import { conductReview } from './reviewer';
+import { createRebuttal } from './author';
+import { makeDecision } from './editor';
 
 export async function runPeerReview(
   submission: Submission,
@@ -23,28 +23,27 @@ export async function runPeerReview(
   provider: LLMProvider,
   verbose: boolean = false
 ): Promise<PeerReviewResult> {
-  const runner = new FrameworkRunner<Submission, PeerReviewResult>("peer-review", submission);
+  const runner = new FrameworkRunner<Submission, PeerReviewResult>('peer-review', submission);
 
   if (verbose) {
-    console.log("\n🔬 PEER REVIEW PROCESS INITIATED");
+    console.log('\n🔬 PEER REVIEW PROCESS INITIATED');
     console.log(`Configuration:`);
     console.log(`  - Reviewers: ${config.parameters.numReviewers}`);
-    console.log(`  - Rebuttal: ${config.parameters.enableRebuttal ? "Enabled" : "Disabled"}`);
-    console.log(`  - Models: ${config.models.reviewers} (reviewers), ${config.models.editor} (editor)`);
-    console.log("\n");
+    console.log(`  - Rebuttal: ${config.parameters.enableRebuttal ? 'Enabled' : 'Disabled'}`);
+    console.log(
+      `  - Models: ${config.models.reviewers} (reviewers), ${config.models.editor} (editor)`
+    );
+    console.log('\n');
   }
 
   // Phase 1: Independent Reviews (parallel)
   if (verbose) {
-    console.log("📝 PHASE 1: INDEPENDENT REVIEWS");
-    console.log(
-      `Running ${config.parameters.numReviewers} reviewers in parallel...\n`
-    );
+    console.log('📝 PHASE 1: INDEPENDENT REVIEWS');
+    console.log(`Running ${config.parameters.numReviewers} reviewers in parallel...\n`);
   }
 
-  const reviewPromises = Array.from(
-    { length: config.parameters.numReviewers },
-    (_, i) => conductReview(i + 1, submission, config, provider)
+  const reviewPromises = Array.from({ length: config.parameters.numReviewers }, (_, i) =>
+    conductReview(i + 1, submission, config, provider)
   );
 
   const reviews = await Promise.all(reviewPromises);
@@ -67,34 +66,26 @@ export async function runPeerReview(
 
   if (config.parameters.enableRebuttal) {
     if (verbose) {
-      console.log("✍️  PHASE 2: AUTHOR REBUTTAL");
-      console.log("Author responding to reviews...\n");
+      console.log('✍️  PHASE 2: AUTHOR REBUTTAL');
+      console.log('Author responding to reviews...\n');
     }
 
     rebuttal = await createRebuttal(submission, reviews, config, provider);
 
     if (verbose) {
       console.log(`Rebuttal provided:`);
-      console.log(
-        `  Point-by-point responses: ${rebuttal.pointByPoint.length}`
-      );
+      console.log(`  Point-by-point responses: ${rebuttal.pointByPoint.length}`);
       console.log();
     }
   }
 
   // Phase 3: Editor Decision
   if (verbose) {
-    console.log("⚖️  PHASE 3: EDITORIAL DECISION");
-    console.log("Editor synthesizing all perspectives...\n");
+    console.log('⚖️  PHASE 3: EDITORIAL DECISION');
+    console.log('Editor synthesizing all perspectives...\n');
   }
 
-  const decision = await makeDecision(
-    submission,
-    reviews,
-    rebuttal,
-    config,
-    provider
-  );
+  const decision = await makeDecision(submission, reviews, rebuttal, config, provider);
 
   if (verbose) {
     console.log(`FINAL DECISION: ${decision.decision.toUpperCase()}`);
@@ -102,15 +93,10 @@ export async function runPeerReview(
     if (decision.requiredChanges && decision.requiredChanges.length > 0) {
       console.log(`Required changes: ${decision.requiredChanges.length}`);
     }
-    if (
-      decision.optionalSuggestions &&
-      decision.optionalSuggestions.length > 0
-    ) {
-      console.log(
-        `Optional suggestions: ${decision.optionalSuggestions.length}`
-      );
+    if (decision.optionalSuggestions && decision.optionalSuggestions.length > 0) {
+      console.log(`Optional suggestions: ${decision.optionalSuggestions.length}`);
     }
-    console.log("\n✅ PEER REVIEW COMPLETE\n");
+    console.log('\n✅ PEER REVIEW COMPLETE\n');
   }
 
   const result: PeerReviewResult = {
@@ -124,7 +110,7 @@ export async function runPeerReview(
     },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
 
   return {
     ...result,
@@ -152,9 +138,9 @@ export function getDefaultConfig(): PeerReviewConfig {
 }
 
 export function formatResult(result: PeerReviewResult): string {
-  let output = "\n" + "=".repeat(80) + "\n";
-  output += "PEER REVIEW RESULT\n";
-  output += "=".repeat(80) + "\n\n";
+  let output = '\n' + '='.repeat(80) + '\n';
+  output += 'PEER REVIEW RESULT\n';
+  output += '='.repeat(80) + '\n\n';
 
   // Decision summary
   output += `DECISION: ${result.decision.decision.toUpperCase()}\n`;
@@ -199,10 +185,7 @@ export function formatResult(result: PeerReviewResult): string {
   output += `${result.decision.reasoning}\n\n`;
 
   // Required changes
-  if (
-    result.decision.requiredChanges &&
-    result.decision.requiredChanges.length > 0
-  ) {
+  if (result.decision.requiredChanges && result.decision.requiredChanges.length > 0) {
     output += `REQUIRED CHANGES:\n`;
     result.decision.requiredChanges.forEach((change, i) => {
       output += `  ${i + 1}. ${change}\n`;
@@ -211,10 +194,7 @@ export function formatResult(result: PeerReviewResult): string {
   }
 
   // Optional suggestions
-  if (
-    result.decision.optionalSuggestions &&
-    result.decision.optionalSuggestions.length > 0
-  ) {
+  if (result.decision.optionalSuggestions && result.decision.optionalSuggestions.length > 0) {
     output += `OPTIONAL SUGGESTIONS:\n`;
     result.decision.optionalSuggestions.forEach((suggestion, i) => {
       output += `  ${i + 1}. ${suggestion}\n`;
@@ -222,7 +202,7 @@ export function formatResult(result: PeerReviewResult): string {
     output += `\n`;
   }
 
-  output += "=".repeat(80) + "\n";
+  output += '='.repeat(80) + '\n';
 
   return output;
 }

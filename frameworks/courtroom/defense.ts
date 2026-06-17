@@ -1,13 +1,13 @@
-import type { LLMProvider } from "@core/types";
-import { parseJSON } from "@core/orchestrator";
-import type { Case, Prosecution, Defense, CourtroomConfig } from "./types";
+import type { LLMProvider } from '@core/types';
+import { parseJSON } from '@core/orchestrator';
+import type { Case, Prosecution, Defense, CourtroomConfig } from './types';
 
 export function buildDefensePrompt(
   caseInput: Case,
   prosecution: Prosecution,
   _config: CourtroomConfig
 ): string {
-  const contextContent = caseInput.context.join("\n\n---\n\n");
+  const contextContent = caseInput.context.join('\n\n---\n\n');
 
   const exhibitsText = prosecution.exhibits
     .map(
@@ -18,7 +18,7 @@ export function buildDefensePrompt(
 - Alleged Harm: "${ex.harm}"
 `
     )
-    .join("\n");
+    .join('\n');
 
   return `You are a defense attorney in a courtroom evaluation system. The prosecution has built a case for "GUILTY" (take action). Your role is to mount a rebuttal arguing for "NOT GUILTY" (don't take action, or take different action).
 
@@ -80,10 +80,7 @@ Return valid JSON matching this structure:
 IMPORTANT: Return ONLY valid JSON, no markdown formatting, no code blocks.`;
 }
 
-export function parseDefenseResponse(
-  text: string,
-  prosecution: Prosecution
-): Defense {
+export function parseDefenseResponse(text: string, prosecution: Prosecution): Defense {
   const defense = parseJSON<Defense>(text);
   validateDefense(defense, prosecution);
   return defense;
@@ -101,7 +98,7 @@ export async function defend(
     model: config.models.defense,
     maxTokens: 4096,
     temperature: 0.7,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: 'user', content: prompt }],
   });
 
   return parseDefenseResponse(response.content, prosecution);
@@ -110,33 +107,28 @@ export async function defend(
 function validateDefense(defense: Defense, prosecution: Prosecution): void {
   // Check that counter-argument exists and is substantial
   if (!defense.counterArgument || defense.counterArgument.length < 50) {
-    throw new Error("Defense counter-argument too brief or missing");
+    throw new Error('Defense counter-argument too brief or missing');
   }
 
   // Check that there's at least one exhibit challenge
   if (defense.exhibitChallenges.length === 0) {
-    throw new Error("Defense must challenge at least one exhibit");
+    throw new Error('Defense must challenge at least one exhibit');
   }
 
   // Check that exhibit challenges reference valid exhibit numbers
   for (const challenge of defense.exhibitChallenges) {
-    if (
-      challenge.exhibit < 1 ||
-      challenge.exhibit > prosecution.exhibits.length
-    ) {
-      throw new Error(
-        `Invalid exhibit number in challenge: ${challenge.exhibit}`
-      );
+    if (challenge.exhibit < 1 || challenge.exhibit > prosecution.exhibits.length) {
+      throw new Error(`Invalid exhibit number in challenge: ${challenge.exhibit}`);
     }
   }
 
   // Check harm dispute exists
   if (!defense.harmDispute || defense.harmDispute.length < 50) {
-    throw new Error("Defense harm dispute too brief or missing");
+    throw new Error('Defense harm dispute too brief or missing');
   }
 
   // Check alternative explanation exists
   if (!defense.alternative || defense.alternative.length < 50) {
-    throw new Error("Defense alternative explanation too brief or missing");
+    throw new Error('Defense alternative explanation too brief or missing');
   }
 }

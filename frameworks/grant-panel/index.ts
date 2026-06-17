@@ -3,20 +3,25 @@
  * Comparative prioritization and resource allocation
  */
 
-import { createProvider } from "@core/providers";
-import { getAPIKey } from "@core/config";
-import { parseJSON, FrameworkRunner } from "@core/orchestrator";
-import type { LLMProvider, RunFlags } from "@core/types";
-import type { GrantProposal, ReviewerScore, PanelRanking, GrantPanelConfig, GrantPanelResult } from "./types";
-import { DEFAULT_CONFIG } from "./types";
+import { createProvider } from '@core/providers';
+import { getAPIKey } from '@core/config';
+import { parseJSON, FrameworkRunner } from '@core/orchestrator';
+import type { LLMProvider, RunFlags } from '@core/types';
+import type {
+  GrantProposal,
+  ReviewerScore,
+  PanelRanking,
+  GrantPanelConfig,
+  GrantPanelResult,
+} from './types';
+import { DEFAULT_CONFIG } from './types';
 
 export async function run(
   input: { proposals: GrantProposal[] } | { content: string },
   flags: RunFlags = {}
 ): Promise<GrantPanelResult> {
-  const proposals: GrantProposal[] = "proposals" in input
-    ? input.proposals
-    : parseProposalsFromContent(input.content || "");
+  const proposals: GrantProposal[] =
+    'proposals' in input ? input.proposals : parseProposalsFromContent(input.content || '');
 
   const config: GrantPanelConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
   const cliFlags = flags as Record<string, unknown>;
@@ -27,15 +32,20 @@ export async function run(
     config.parameters.reviewersPerProposal = parseInt(String(cliFlags.reviewers), 10);
   }
 
-  const providerName = flags.provider || "anthropic";
+  const providerName = flags.provider || 'anthropic';
   const apiKey = getAPIKey(providerName);
   const provider = createProvider({ name: providerName, apiKey });
 
   const verbose = flags.debug ?? false;
 
-  if (verbose) console.log("\n💰 GRANT REVIEW PANEL\n");
+  if (verbose) {
+    console.log('\n💰 GRANT REVIEW PANEL\n');
+  }
 
-  const runner = new FrameworkRunner<{ proposals: GrantProposal[] }, GrantPanelResult>("grant-panel", { proposals });
+  const runner = new FrameworkRunner<{ proposals: GrantProposal[] }, GrantPanelResult>(
+    'grant-panel',
+    { proposals }
+  );
 
   // Phase 1: Independent reviewer scoring
   const reviews = await scoreProposals(proposals, config, provider, runner, verbose);
@@ -46,7 +56,9 @@ export async function run(
   if (verbose) {
     console.log(`\nProposals Reviewed: ${proposals.length}`);
     console.log(`Recommended for Funding: ${ranking.allocations.length}`);
-    console.log(`Total Allocated: $${ranking.allocations.reduce((sum, a) => sum + a.amount, 0).toLocaleString()}\n`);
+    console.log(
+      `Total Allocated: $${ranking.allocations.reduce((sum, a) => sum + a.amount, 0).toLocaleString()}\n`
+    );
   }
 
   const result: GrantPanelResult = {
@@ -56,7 +68,7 @@ export async function run(
     metadata: { timestamp: new Date().toISOString(), config },
   };
 
-  const { auditLog } = await runner.finalize(result, "complete");
+  const { auditLog } = await runner.finalize(result, 'complete');
 
   return {
     ...result,
@@ -66,14 +78,16 @@ export async function run(
 
 function parseProposalsFromContent(content: string): GrantProposal[] {
   // Simple parser - in real use, this would be more sophisticated
-  return [{
-    id: "p1",
-    title: "Proposal from Content",
-    abstract: content.slice(0, 200),
-    requestedAmount: 100000,
-    duration: "12 months",
-    document: content,
-  }];
+  return [
+    {
+      id: 'p1',
+      title: 'Proposal from Content',
+      abstract: content.slice(0, 200),
+      requestedAmount: 100000,
+      duration: '12 months',
+      document: content,
+    },
+  ];
 }
 
 async function scoreProposals(
@@ -83,7 +97,9 @@ async function scoreProposals(
   runner: FrameworkRunner<{ proposals: GrantProposal[] }, GrantPanelResult>,
   verbose: boolean
 ): Promise<ReviewerScore[]> {
-  if (verbose) console.log("Phase 1: Independent reviewer scoring...\n");
+  if (verbose) {
+    console.log('Phase 1: Independent reviewer scoring...\n');
+  }
 
   const agentSpecs: Array<{
     name: string;
@@ -96,7 +112,9 @@ async function scoreProposals(
 
   for (const proposal of proposals) {
     for (let i = 0; i < config.parameters.reviewersPerProposal; i++) {
-      if (verbose) console.log(`  Reviewer ${i + 1} scoring "${proposal.title}"...`);
+      if (verbose) {
+        console.log(`  Reviewer ${i + 1} scoring "${proposal.title}"...`);
+      }
       agentSpecs.push({
         name: `reviewer-${proposal.id}-${i + 1}`,
         provider,
@@ -144,20 +162,24 @@ async function calibrateAndRank(
   runner: FrameworkRunner<{ proposals: GrantProposal[] }, GrantPanelResult>,
   verbose: boolean
 ): Promise<PanelRanking> {
-  if (verbose) console.log("\nPhase 2: Panel calibration and ranking...\n");
+  if (verbose) {
+    console.log('\nPhase 2: Panel calibration and ranking...\n');
+  }
 
   const reviewsByProposal = proposals.map((p) => ({
     proposal: p,
     reviews: reviews.filter((r) => r.proposalId === p.id),
   }));
 
-  const reviewsText = reviewsByProposal.map(({ proposal, reviews }) => {
-    const avgScore = reviews.reduce((sum, r) => sum + r.overallScore, 0) / reviews.length;
-    return `Proposal: ${proposal.title} (${proposal.id})\nRequested: $${proposal.requestedAmount.toLocaleString()}\nAverage Score: ${avgScore.toFixed(2)}\nReviews: ${reviews.map(r => `Score: ${r.overallScore}, Strengths: ${r.strengths.join(", ")}, Weaknesses: ${r.weaknesses.join(", ")}`).join(" | ")}\n`;
-  }).join("\n---\n\n");
+  const reviewsText = reviewsByProposal
+    .map(({ proposal, reviews }) => {
+      const avgScore = reviews.reduce((sum, r) => sum + r.overallScore, 0) / reviews.length;
+      return `Proposal: ${proposal.title} (${proposal.id})\nRequested: $${proposal.requestedAmount.toLocaleString()}\nAverage Score: ${avgScore.toFixed(2)}\nReviews: ${reviews.map((r) => `Score: ${r.overallScore}, Strengths: ${r.strengths.join(', ')}, Weaknesses: ${r.weaknesses.join(', ')}`).join(' | ')}\n`;
+    })
+    .join('\n---\n\n');
 
   const response = await runner.runAgent(
-    "panel-chair",
+    'panel-chair',
     provider,
     config.models.panel,
     `You are the grant review panel chair calibrating scores and making funding decisions.
@@ -196,4 +218,4 @@ Rank by quality, allocate budget to highest-ranked proposals until exhausted.`,
   return parseJSON<PanelRanking>(response.content);
 }
 
-export * from "./types";
+export * from './types';

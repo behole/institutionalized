@@ -1,6 +1,13 @@
-import type { Scenario, WarGamingConfig, ForceDeployment, Turn, GameOutcome, StrategicInsight } from "./types";
-import { parseJSON } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import type {
+  Scenario,
+  WarGamingConfig,
+  ForceDeployment,
+  Turn,
+  GameOutcome,
+  StrategicInsight,
+} from './types';
+import { parseJSON } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
 
 export function buildObserverPrompt(
   scenario: Scenario,
@@ -29,13 +36,14 @@ Respond with valid JSON matching this structure:
   ]
 }`;
 
-  const forcesInfo = forces.map(f =>
-    `${f.force.name}: ${f.force.strategy}`
-  ).join("\n");
+  const forcesInfo = forces.map((f) => `${f.force.name}: ${f.force.strategy}`).join('\n');
 
-  const turnsSummary = turns.map(t =>
-    `Turn ${t.turnNumber}: ${t.forceActions.map(a => a.action).join("; ")} | Assessment: ${t.controlAssessment}`
-  ).join("\n");
+  const turnsSummary = turns
+    .map(
+      (t) =>
+        `Turn ${t.turnNumber}: ${t.forceActions.map((a) => a.action).join('; ')} | Assessment: ${t.controlAssessment}`
+    )
+    .join('\n');
 
   const user = `SCENARIO: ${scenario.description}
 
@@ -45,10 +53,10 @@ ${forcesInfo}
 SIMULATION HISTORY:
 ${turnsSummary}
 
-OUTCOME: ${outcome.draw ? "Draw/Stalemate" : outcome.winner + " victory"}
+OUTCOME: ${outcome.draw ? 'Draw/Stalemate' : outcome.winner + ' victory'}
 FINAL STATE: ${outcome.finalState}
-KEY DECISIONS: ${outcome.keyDecisions.join("; ")}
-TURNING POINTS: ${outcome.turningPoints.join("; ")}
+KEY DECISIONS: ${outcome.keyDecisions.join('; ')}
+TURNING POINTS: ${outcome.turningPoints.join('; ')}
 
 Generate 3-5 strategic insights from this simulation. Each insight should include:
 1. The insight itself
@@ -63,11 +71,13 @@ export function parseObserverResponse(text: string): StrategicInsight[] {
     const result = parseJSON<{ insights: StrategicInsight[] }>(text);
     return result.insights;
   } catch {
-    return [{
-      insight: "Simulation completed successfully",
-      evidence: ["All turns executed without errors"],
-      applicability: "Framework is operational for strategic testing",
-    }];
+    return [
+      {
+        insight: 'Simulation completed successfully',
+        evidence: ['All turns executed without errors'],
+        applicability: 'Framework is operational for strategic testing',
+      },
+    ];
   }
 }
 
@@ -88,18 +98,20 @@ export async function generateInsights(
   try {
     const response = await provider.call({
       model: config.models.observer,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: 'user', content: user }],
       temperature: 0.6,
       systemPrompt: system,
       maxTokens: 4096,
     });
     return parseObserverResponse(response.content);
   } catch (error) {
-    console.warn("Failed to generate insights:", error);
-    return [{
-      insight: "Simulation completed successfully",
-      evidence: ["All turns executed without errors"],
-      applicability: "Framework is operational for strategic testing",
-    }];
+    console.warn('Failed to generate insights:', error);
+    return [
+      {
+        insight: 'Simulation completed successfully',
+        evidence: ['All turns executed without errors'],
+        applicability: 'Framework is operational for strategic testing',
+      },
+    ];
   }
 }
