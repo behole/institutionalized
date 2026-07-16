@@ -20,10 +20,7 @@ Add to your Claude Code MCP settings (`~/.config/claude-code/mcp_settings.json`)
   "mcpServers": {
     "institutional-reasoning": {
       "command": "bun",
-      "args": [
-        "run",
-        "/Users/jjoosshhmbpm1/institutionalized/mcp-server/index.ts"
-      ],
+      "args": ["run", "/absolute/path/to/institutionalized/mcp-server/index.ts"],
       "env": {
         "ANTHROPIC_API_KEY": "your-key-here"
       }
@@ -42,7 +39,7 @@ bun run build
 {
   "mcpServers": {
     "institutional-reasoning": {
-      "command": "/Users/jjoosshhmbpm1/institutionalized/mcp-server/institutional-reasoning-mcp",
+      "command": "/absolute/path/to/institutionalized/mcp-server/institutional-reasoning-mcp",
       "env": {
         "ANTHROPIC_API_KEY": "your-key-here"
       }
@@ -67,6 +64,7 @@ bun run build
 All 20 frameworks are exposed as MCP tools:
 
 ### Tier 1 - MVP
+
 - `courtroom` - Adversarial evaluation for binary decisions
 - `peer-review` - Academic-style validation with author rebuttal
 - `red-blue` - Military stress-testing for security
@@ -74,6 +72,7 @@ All 20 frameworks are exposed as MCP tools:
 - `studio` - Creative work evaluation with peer feedback
 
 ### Tier 2 - High Demand
+
 - `devils-advocate` - Formal challenge to proposals
 - `aar` - After-Action Review for learning from execution
 - `six-hats` - Multi-perspective analysis
@@ -81,6 +80,7 @@ All 20 frameworks are exposed as MCP tools:
 - `architecture-review` - System design validation
 
 ### Tier 3 - Specialized
+
 - `grant-panel` - Comparative prioritization under constraints
 - `intelligence-analysis` - Diagnostic reasoning via competing hypotheses
 - `delphi` - Expert consensus building
@@ -88,6 +88,7 @@ All 20 frameworks are exposed as MCP tools:
 - `consensus-circle` - Quaker-style consensus
 
 ### Tier 4 - Advanced
+
 - `differential-diagnosis` - Systematic diagnostic reasoning
 - `socratic` - Assumption testing through questioning
 - `swot` - Strategic situational assessment
@@ -115,6 +116,7 @@ Claude Code will apply all six thinking hats to the decision.
 Each framework has a specific input schema. Use `verbose: true` for detailed execution logs.
 
 Example courtroom input:
+
 ```json
 {
   "charge": "Should we migrate to microservices?",
@@ -131,6 +133,7 @@ Example courtroom input:
 ## Architecture
 
 The MCP server:
+
 1. Dynamically imports framework modules
 2. Validates input against schema
 3. Executes framework `run()` function

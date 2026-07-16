@@ -68,6 +68,10 @@ institutional-reasoning --help
 
 ## 📦 26 Frameworks Implemented
 
+> All 26 are available via the CLI. **20 of the 26 are currently exposed as MCP tools** —
+> `dissertation-committee`, `hegelian`, `regulatory-impact`, `talmudic`, `war-gaming`, and
+> `writers-workshop` are CLI-only for now.
+
 ### Tier 1 - MVP (5 frameworks)
 
 | Framework           | Use Case                           | Agents                                    |
