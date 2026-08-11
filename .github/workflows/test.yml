@@ -37,7 +37,7 @@ jobs:
     needs: setup
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
@@ -105,7 +105,7 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/lite'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
