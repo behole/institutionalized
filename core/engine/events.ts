@@ -23,6 +23,8 @@ export type EngineEvent =
       durationMs: number;
       cost: number;
       tokens: { input: number; output: number };
+      /** First slice of the response content — feeds "thinking moment" streams. */
+      excerpt?: string;
     }
   | { type: 'note'; framework: string; message: string }
   | {

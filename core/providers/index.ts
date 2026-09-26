@@ -6,12 +6,23 @@ import { OpenRouterProvider } from './openrouter';
 export { AnthropicProvider, OpenAIProvider, OpenRouterProvider };
 
 export function createProvider(config: ProviderConfig): LLMProvider {
+  // Env baseURL override (standard convention) beats config, so deployments
+  // can point at proxies (e.g. local omniroute) without code changes.
+  const envBaseURL =
+    config.name === 'openai'
+      ? process.env.OPENAI_BASE_URL
+      : config.name === 'anthropic'
+        ? process.env.ANTHROPIC_BASE_URL
+        : config.name === 'openrouter'
+          ? process.env.OPENROUTER_BASE_URL
+          : undefined;
+
   switch (config.name) {
     case 'anthropic':
       return new AnthropicProvider(config.apiKey);
 
     case 'openai':
-      return new OpenAIProvider(config.apiKey, config.baseURL);
+      return new OpenAIProvider(config.apiKey, envBaseURL ?? config.baseURL);
 
     case 'openrouter':
       return new OpenRouterProvider(config.apiKey);

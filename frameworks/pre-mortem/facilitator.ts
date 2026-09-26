@@ -18,7 +18,7 @@ export async function synthesizeRisks(
     model: config.models.facilitator,
     temperature: config.parameters.facilitatorTemperature,
     messages: [{ role: 'user', content: prompt }],
-    maxTokens: 4096,
+    maxTokens: 16384,
   });
 
   const assessment = parseJSON<RiskAssessment>(response.content);

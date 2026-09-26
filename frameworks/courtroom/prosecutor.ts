@@ -72,7 +72,7 @@ export async function prosecute(
 
   const response = await provider.call({
     model: config.models.prosecutor,
-    maxTokens: 4096,
+    maxTokens: 16384,
     temperature: 0.7,
     messages: [{ role: 'user', content: prompt }],
   });
@@ -80,17 +80,48 @@ export async function prosecute(
   return parseProsecutionResponse(response.content, contextContent, config);
 }
 
+/** Quote grounding: exact → normalized substring → ≥60% token overlap. */
+function isGroundedInContext(quote: string, context: string): boolean {
+  if (context.includes(quote)) {
+    return true;
+  }
+
+  const normalize = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[""''"']/g, '')
+      .replace(/[…]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  const normQuote = normalize(quote);
+  const normContext = normalize(context);
+  if (normContext.includes(normQuote)) {
+    return true;
+  }
+
+  const quoteWords = normQuote.split(' ').filter((w) => w.length > 2);
+  if (quoteWords.length === 0) {
+    return false;
+  }
+  const contextWords = new Set(normContext.split(' '));
+  const hits = quoteWords.filter((w) => contextWords.has(w)).length;
+  return hits / quoteWords.length >= 0.6;
+}
+
 function validateExhibits(exhibits: Exhibit[], context: string, config: CourtroomConfig): void {
   for (let i = 0; i < exhibits.length; i++) {
     const exhibit = exhibits[i];
 
-    // Check source quote exists in context
-    if (config.validation.requireExactQuotes) {
-      if (!context.includes(exhibit.sourceQuote)) {
-        throw new Error(
-          `Exhibit ${i + 1}: Source quote not found in context: "${exhibit.sourceQuote.substring(0, 100)}..."`
-        );
-      }
+    // Check source quote is grounded in context. Exact match first, then
+    // normalized match, then token overlap — LLMs paraphrase, use ellipsis,
+    // and shift punctuation, so strict substring match rejects valid exhibits.
+    if (
+      config.validation.requireExactQuotes &&
+      !isGroundedInContext(exhibit.sourceQuote, context)
+    ) {
+      throw new Error(
+        `Exhibit ${i + 1}: Source quote not found in context: "${exhibit.sourceQuote.substring(0, 100)}..."`
+      );
     }
 
     // Check harm is substantial

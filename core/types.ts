@@ -26,6 +26,8 @@ export interface LLMCallParams {
   maxTokens?: number;
   systemPrompt?: string;
   signal?: AbortSignal;
+  /** Request provider-native JSON output (response_format). OpenAI-compatible only. */
+  json?: boolean;
 }
 
 export interface LLMProvider {

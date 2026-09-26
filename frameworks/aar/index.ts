@@ -71,7 +71,7 @@ Provide comprehensive AAR in JSON:
   }
 }`,
       temperature: config.parameters.temperature,
-      maxTokens: 4096,
+      maxTokens: 16384,
     });
 
     const parsed = parseJSON<{

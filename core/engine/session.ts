@@ -7,7 +7,7 @@ import type { EngineEvent, EventSink } from './events';
 import type { ModelResolution, ModelRole } from './models';
 import type { LLMCallParams, LLMProvider, LLMResponse, RunFlags } from '../types';
 import type { AuditLog } from '../observability';
-import { FrameworkRunner } from '../orchestrator';
+import { FrameworkRunner, Semaphore } from '../orchestrator';
 import { sanitizeInput } from '../sanitize';
 
 export interface StepOptions {
@@ -18,6 +18,8 @@ export interface StepOptions {
   temperature?: number;
   maxTokens?: number;
   systemPrompt?: string;
+  /** Request provider-native JSON output. Default: true for framework agents. */
+  json?: boolean;
 }
 
 export interface AgentSpec extends StepOptions {
@@ -52,6 +54,8 @@ export class Session {
   readonly events: EngineEvent[] = [];
 
   private runner: FrameworkRunner<unknown, unknown>;
+  /** Gates every provider call (step + call) — one cap for the whole run. */
+  private sem: Semaphore;
   private sinks: EventSink[] = [];
   private startTime = Date.now();
   private _auditLog: AuditLog | null = null;
@@ -65,6 +69,7 @@ export class Session {
     private budget?: Budget
   ) {
     this.runner = new FrameworkRunner(framework, input, flags.concurrency ?? 5);
+    this.sem = new Semaphore(flags.concurrency ?? 5);
   }
 
   on(sink: EventSink): void {
@@ -112,15 +117,22 @@ export class Session {
     this.emit({ type: 'agent-start', agent: spec.name, model });
 
     const prompt = sanitizeInput(spec.prompt);
-    const response = await this.runner.runAgent(
-      spec.name,
-      this.provider,
-      model,
-      prompt,
-      spec.temperature ?? 0.7,
-      spec.maxTokens ?? 2048,
-      spec.systemPrompt !== undefined ? sanitizeInput(spec.systemPrompt) : undefined
-    );
+    await this.sem.acquire();
+    let response: LLMResponse;
+    try {
+      response = await this.runner.runAgent(
+        spec.name,
+        this.provider,
+        model,
+        prompt,
+        spec.temperature ?? 0.7,
+        spec.maxTokens ?? 16384,
+        spec.systemPrompt !== undefined ? sanitizeInput(spec.systemPrompt) : undefined,
+        spec.json !== false
+      );
+    } finally {
+      this.sem.release();
+    }
 
     const durationMs = Date.now() - started;
     const cost = this.provider.calculateCost(response.usage, model);
@@ -134,6 +146,7 @@ export class Session {
         input: response.usage.inputTokens,
         output: response.usage.outputTokens,
       },
+      excerpt: response.content.slice(0, 400),
     });
     return { content: response.content, response, agent: spec.name };
   }
@@ -178,11 +191,18 @@ export class Session {
     const started = Date.now();
     this.emit({ type: 'agent-start', agent: name, model });
 
-    const response = await this.provider.call({
-      ...params,
-      model,
-      messages: params.messages,
-    });
+    await this.sem.acquire();
+    let response: LLMResponse;
+    try {
+      response = await this.provider.call({
+        ...params,
+        model,
+        messages: params.messages,
+        json: params.json ?? true,
+      });
+    } finally {
+      this.sem.release();
+    }
 
     const durationMs = Date.now() - started;
     const cost = this.provider.calculateCost(response.usage, model);
@@ -196,6 +216,7 @@ export class Session {
         input: response.usage.inputTokens,
         output: response.usage.outputTokens,
       },
+      excerpt: response.content.slice(0, 400),
     });
     this.runner
       .getAuditTrail()

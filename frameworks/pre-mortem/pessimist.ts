@@ -18,7 +18,7 @@ export async function imagineFailure(
     model: config.models.pessimists,
     temperature: config.parameters.pessimistTemperature,
     messages: [{ role: 'user', content: prompt }],
-    maxTokens: 2048,
+    maxTokens: 8192,
   });
 
   const parsed = parseJSON<Omit<FailureScenario, 'pessimist'>>(response.content);

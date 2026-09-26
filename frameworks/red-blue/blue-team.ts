@@ -17,7 +17,7 @@ export async function proposeSystem(
     model: config.models.blueTeam,
     temperature: config.parameters.blueTemperature,
     messages: [{ role: 'user', content: prompt }],
-    maxTokens: 4096,
+    maxTokens: 16384,
   });
 
   const proposal = parseJSON<BlueTeamProposal>(response.content);

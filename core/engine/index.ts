@@ -13,3 +13,13 @@ export type { FrameworkDefinition, FrameworkRunOutput } from './define';
 export { MODEL_REGISTRY, createModelResolution } from './models';
 export type { ModelRole, RoleMap, ModelResolution } from './models';
 export { prettyReporter, jsonReporter } from './reporters';
+export { runPipeline } from './pipeline';
+export type {
+  PipelineEvent,
+  PipelineSink,
+  PipelineStage,
+  PipelineDefinition,
+  PipelineRunOutput,
+  FrameworkStageRunner,
+} from './pipeline';
+export { PIPELINES, routePipeline, getPipeline } from './pipelines';

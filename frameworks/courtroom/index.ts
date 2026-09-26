@@ -108,7 +108,7 @@ export const courtroom = defineFramework<Case | { content: string }, CourtroomRe
         name: 'judge',
         prompt: buildVerdictPrompt(caseData, prosecution, defense, jury, config),
         temperature: config.parameters.judgeTemperature,
-        maxTokens: 4096,
+        maxTokens: 16384,
       });
       verdict = parseVerdictResponse(verdictStep.content);
     } else {

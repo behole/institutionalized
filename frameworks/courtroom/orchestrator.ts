@@ -60,7 +60,7 @@ export async function runCourtroom(
     model: config.models.jury,
     prompt: buildJurorPrompt(caseInput, prosecution, defense, config, i + 1),
     temperature: config.parameters.juryTemperature,
-    maxTokens: 2048,
+    maxTokens: 8192,
   }));
 
   const jurorResponses = await runner.runParallel(jurorAgents);
