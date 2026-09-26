@@ -11,8 +11,7 @@
   },
   "workspaces": [
     "frameworks/*",
-    "core",
-    "mcp-server"
+    "core"
   ],
   "files": [
     "dist",

@@ -60,6 +60,7 @@ export interface PreMortemResult {
     numPessimists: number;
     config: PreMortemConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

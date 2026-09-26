@@ -75,6 +75,7 @@ export interface RegulatoryImpactResult {
     modelUsage: {
       [analyst: string]: string;
     };
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

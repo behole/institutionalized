@@ -65,6 +65,7 @@ export interface GrantPanelResult {
     timestamp: string;
     config: GrantPanelConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

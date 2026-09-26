@@ -1,12 +1,13 @@
 /**
- * Differential Diagnosis Framework
- * Systematic elimination and diagnostic reasoning
+ * Differential Diagnosis Framework — engine port.
+ *
+ * Flow: differential generation → diagnostic test recommendation → specialist
+ * synthesis. All provider/model/audit/logging concerns owned by the engine.
  */
-
-import { createProvider } from '@core/providers';
-import { getAPIKey } from '@core/config';
-import { parseJSON, FrameworkRunner } from '@core/orchestrator';
-import type { LLMProvider, RunFlags } from '@core/types';
+import type { EventSink } from '@core/engine';
+import { defineFramework, Session } from '@core/engine';
+import { parseJSON } from '@core/orchestrator';
+import type { RunFlags } from '@core/types';
 import type {
   Symptoms,
   Diagnosis,
@@ -17,92 +18,81 @@ import type {
 } from './types';
 import { DEFAULT_CONFIG } from './types';
 
-export async function run(
-  input: Symptoms | { content: string },
-  flags: RunFlags = {}
-): Promise<DifferentialDiagnosisResult> {
-  const symptoms: Symptoms =
-    'presenting' in input ? input : { presenting: input.content || '', symptoms: [] };
+export const differentialDiagnosis = defineFramework<
+  Symptoms | { content: string },
+  DifferentialDiagnosisResult
+>({
+  name: 'differential-diagnosis',
+  description:
+    'Systematic elimination and diagnostic reasoning: differentials, tests, final diagnosis',
+  normalize(raw) {
+    if (typeof raw === 'object' && raw !== null && 'presenting' in raw) {
+      return raw as Symptoms;
+    }
+    const content = (raw as { content?: string })?.content ?? '';
+    return { presenting: content, symptoms: [] };
+  },
+  async run(rawInput, session) {
+    const symptoms = rawInput as Symptoms;
+    const config: DifferentialDiagnosisConfig = {
+      ...DEFAULT_CONFIG,
+      ...(session.flags.config as Partial<DifferentialDiagnosisConfig> | undefined),
+    };
+    const explicitModel = session.models.override;
+    if (explicitModel) {
+      config.models = {
+        diagnostician: explicitModel,
+        specialist: explicitModel,
+      };
+    }
 
-  const config: DifferentialDiagnosisConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
+    // Phase 1: Generate differential diagnoses
+    session.phase(
+      'Differential Generation',
+      `up to ${config.parameters.maxDifferentials} diagnoses`
+    );
+    const differentials = await generateDifferentials(symptoms, config, session);
 
-  const providerName = flags.provider || 'anthropic';
-  const apiKey = getAPIKey(providerName);
-  const provider = createProvider({ name: providerName, apiKey });
+    // Phase 2: Recommend diagnostic tests
+    session.phase('Diagnostic Tests');
+    const recommendedTests = await recommendTests(symptoms, differentials, config, session);
 
-  const verbose = flags.debug ?? false;
+    // Phase 3: Synthesize final diagnosis
+    session.phase('Final Diagnosis');
+    const finalDiagnosis = await synthesizeDiagnosis(
+      symptoms,
+      differentials,
+      recommendedTests,
+      config,
+      session
+    );
 
-  if (verbose) {
-    console.log('\n🩺 DIFFERENTIAL DIAGNOSIS\n');
-  }
+    session.note(
+      `Differentials: ${differentials.length} | Most likely: ${finalDiagnosis.mostLikely} | Confidence: ${finalDiagnosis.confidence}`
+    );
 
-  const runner = new FrameworkRunner<Symptoms, DifferentialDiagnosisResult>(
-    'differential-diagnosis',
-    symptoms
-  );
-
-  // Phase 1: Generate differential diagnoses
-  const differentials = await generateDifferentials(symptoms, config, provider, runner, verbose);
-
-  // Phase 2: Recommend diagnostic tests
-  const recommendedTests = await recommendTests(
-    symptoms,
-    differentials,
-    config,
-    provider,
-    runner,
-    verbose
-  );
-
-  // Phase 3: Synthesize final diagnosis
-  const finalDiagnosis = await synthesizeDiagnosis(
-    symptoms,
-    differentials,
-    recommendedTests,
-    config,
-    provider,
-    runner,
-    verbose
-  );
-
-  if (verbose) {
-    console.log(`\nDifferentials Generated: ${differentials.length}`);
-    console.log(`Most Likely: ${finalDiagnosis.mostLikely}`);
-    console.log(`Confidence: ${finalDiagnosis.confidence}\n`);
-  }
-
-  const result: DifferentialDiagnosisResult = {
-    symptoms,
-    differentials,
-    recommendedTests,
-    finalDiagnosis,
-    metadata: { timestamp: new Date().toISOString(), config },
-  };
-
-  const { auditLog } = await runner.finalize(result, 'complete');
-
-  return {
-    ...result,
-    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
-  };
-}
+    return {
+      symptoms,
+      differentials,
+      recommendedTests,
+      finalDiagnosis,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        config,
+        decision: 'unclear',
+      },
+    };
+  },
+});
 
 async function generateDifferentials(
   symptoms: Symptoms,
   config: DifferentialDiagnosisConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Symptoms, DifferentialDiagnosisResult>,
-  verbose: boolean
+  session: Session
 ): Promise<Diagnosis[]> {
-  if (verbose) {
-    console.log('Phase 1: Generating differential diagnoses...\n');
-  }
-
-  const response = await runner.runAgent(
-    'diagnostician-differential',
-    provider,
-    config.models.diagnostician,
-    `You are a diagnostician using systematic differential diagnosis.
+  const response = await session.step({
+    name: 'diagnostician-differential',
+    prompt: `You are a diagnostician using systematic differential diagnosis.
 
 PRESENTING PROBLEM:
 ${symptoms.presenting}
@@ -127,9 +117,9 @@ Generate up to ${config.parameters.maxDifferentials} differential diagnoses, ord
     ...
   ]
 }`,
-    config.parameters.temperature,
-    3072
-  );
+    temperature: config.parameters.temperature,
+    maxTokens: 3072,
+  });
 
   const parsed = parseJSON<{ diagnoses: Diagnosis[] }>(response.content);
   return parsed.diagnoses;
@@ -139,23 +129,15 @@ async function recommendTests(
   symptoms: Symptoms,
   differentials: Diagnosis[],
   config: DifferentialDiagnosisConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Symptoms, DifferentialDiagnosisResult>,
-  verbose: boolean
+  session: Session
 ): Promise<DiagnosticTest[]> {
-  if (verbose) {
-    console.log('\nPhase 2: Recommending diagnostic tests...\n');
-  }
-
   const differentialsText = differentials
     .map((d) => `${d.diagnosis} (${d.likelihood}%): ${d.reasoning}`)
     .join('\n');
 
-  const response = await runner.runAgent(
-    'diagnostician-tests',
-    provider,
-    config.models.diagnostician,
-    `Recommend diagnostic tests to distinguish between these differentials.
+  const response = await session.step({
+    name: 'diagnostician-tests',
+    prompt: `Recommend diagnostic tests to distinguish between these differentials.
 
 PRESENTING: ${symptoms.presenting}
 
@@ -176,9 +158,9 @@ Recommend tests with high discriminating power in JSON:
 }
 
 Prioritize tests that help rule in/out multiple differentials.`,
-    config.parameters.temperature,
-    2048
-  );
+    temperature: config.parameters.temperature,
+    maxTokens: 2048,
+  });
 
   const parsed = parseJSON<{ tests: DiagnosticTest[] }>(response.content);
   return parsed.tests;
@@ -189,14 +171,8 @@ async function synthesizeDiagnosis(
   differentials: Diagnosis[],
   tests: DiagnosticTest[],
   config: DifferentialDiagnosisConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Symptoms, DifferentialDiagnosisResult>,
-  verbose: boolean
+  session: Session
 ): Promise<FinalDiagnosis> {
-  if (verbose) {
-    console.log('\nPhase 3: Synthesizing final diagnosis...\n');
-  }
-
   const differentialsText = differentials
     .map(
       (d) =>
@@ -208,11 +184,9 @@ async function synthesizeDiagnosis(
     .map((t) => `${t.test}: ${t.purpose} (discriminating power: ${t.discriminatingPower})`)
     .join('\n');
 
-  const response = await runner.runAgent(
-    'specialist-synthesis',
-    provider,
-    config.models.specialist,
-    `Synthesize the diagnostic workup.
+  const response = await session.step({
+    name: 'specialist-synthesis',
+    prompt: `Synthesize the diagnostic workup.
 
 PRESENTING: ${symptoms.presenting}
 
@@ -234,11 +208,22 @@ Provide final assessment in JSON:
   "treatmentRecommendations": ["recommendation 1", ...],
   "monitoringPlan": ["monitor 1", ...]
 }`,
-    config.parameters.temperature,
-    2048
-  );
+    temperature: config.parameters.temperature,
+    maxTokens: 2048,
+  });
 
   return parseJSON<FinalDiagnosis>(response.content);
+}
+
+/** Backward-compatible entry returning the bare result. */
+export async function run(
+  input: Symptoms | { content: string },
+  flags: RunFlags = {},
+  sinks: EventSink[] = []
+): Promise<DifferentialDiagnosisResult> {
+  const { result, auditLog } = await differentialDiagnosis(input, flags, sinks);
+  result.metadata.costUSD = auditLog.metadata.totalCost;
+  return result;
 }
 
 export * from './types';

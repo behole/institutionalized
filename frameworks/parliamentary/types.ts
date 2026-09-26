@@ -54,6 +54,7 @@ export interface ParliamentaryResult {
     timestamp: string;
     config: ParliamentaryConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

@@ -34,6 +34,7 @@ export interface SocraticResult {
     timestamp: string;
     config: SocraticConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

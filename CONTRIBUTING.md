@@ -9,6 +9,7 @@ Thanks for your interest in contributing! This project aims to implement decisio
 See `frameworks-catalog.md` for the full list of 26 cataloged frameworks. 6+ frameworks remain unimplemented:
 
 **Tier 3-4**:
+
 - War Gaming
 - Writers' Workshop
 - Regulatory Impact Assessment
@@ -19,6 +20,7 @@ See `frameworks-catalog.md` for the full list of 26 cataloged frameworks. 6+ fra
 **How to add a framework**:
 
 1. Create framework directory:
+
 ```bash
 mkdir -p frameworks/your-framework
 ```
@@ -26,6 +28,7 @@ mkdir -p frameworks/your-framework
 2. Create required files following the pattern:
 
 **types.ts** - TypeScript interfaces:
+
 ```typescript
 export interface YourFrameworkInput {
   // Input parameters
@@ -44,11 +47,12 @@ export const DEFAULT_CONFIG: YourFrameworkConfig = { ... };
 ```
 
 **index.ts** - Main orchestration:
+
 ```typescript
-import { createProvider } from "@core/providers";
-import { getAPIKey } from "@core/config";
-import { parseJSON, executeParallel } from "@core/orchestrator";
-import type { LLMProvider } from "@core/types";
+import { createProvider } from '@core/providers';
+import { getAPIKey } from '@core/config';
+import { parseJSON, executeParallel } from '@core/orchestrator';
+import type { LLMProvider } from '@core/types';
 
 export async function run(
   input: YourFrameworkInput | { content: string },
@@ -61,10 +65,11 @@ export async function run(
   // 5. Return structured output
 }
 
-export * from "./types";
+export * from './types';
 ```
 
 **package.json**:
+
 ```json
 {
   "name": "@institutional-reasoning/your-framework",
@@ -79,18 +84,18 @@ export * from "./types";
 ```
 
 3. Add to CLI in `cli.ts`:
+
 ```typescript
 const FRAMEWORKS = {
   // ...existing frameworks
-  "your-framework": "Brief description",
-}
+  'your-framework': 'Brief description',
+};
 ```
-
-4. Add to MCP server in `mcp-server/index.ts` (follow existing pattern)
 
 5. Create example in `examples/your-framework/`
 
 6. Test:
+
 ```bash
 bun cli.ts your-framework examples/your-framework/example.json --verbose
 ```
@@ -117,6 +122,7 @@ We need comprehensive testing! See `test/` (to be created).
 ### 5. Core Infrastructure
 
 Improvements to shared code:
+
 - Better observability
 - Additional providers
 - Enhanced orchestration patterns
@@ -135,9 +141,8 @@ bun install
 # Run examples
 bun cli.ts courtroom examples/courtroom/merge-pr.json --verbose
 
-# Test MCP server
-cd mcp-server
-bun run dev
+# Run the test suite
+bun test test/core
 ```
 
 ## Framework Design Principles
@@ -161,6 +166,7 @@ bun run dev
 ## Research Sources
 
 When implementing a framework, cite sources:
+
 - Academic papers on the institution
 - Practitioner handbooks
 - Example transcripts/protocols

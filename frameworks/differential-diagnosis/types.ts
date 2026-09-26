@@ -61,6 +61,7 @@ export interface DifferentialDiagnosisResult {
     timestamp: string;
     config: DifferentialDiagnosisConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

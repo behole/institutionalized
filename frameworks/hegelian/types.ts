@@ -53,6 +53,7 @@ export interface HegelianResult {
       antithesis: string;
       synthesis: string;
     };
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

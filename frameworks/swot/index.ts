@@ -1,12 +1,13 @@
 /**
- * SWOT Analysis Framework
- * Strategic situational assessment
+ * SWOT Analysis Framework — engine port.
+ *
+ * Flow: internal analysis → external analysis → strategic synthesis.
+ * All provider/model/audit/logging concerns owned by the engine.
  */
-
-import { createProvider } from '@core/providers';
-import { getAPIKey } from '@core/config';
-import { parseJSON, FrameworkRunner } from '@core/orchestrator';
-import type { LLMProvider, RunFlags } from '@core/types';
+import type { EventSink } from '@core/engine';
+import { defineFramework } from '@core/engine';
+import { parseJSON } from '@core/orchestrator';
+import type { RunFlags } from '@core/types';
 import type {
   Situation,
   InternalAnalysis,
@@ -17,84 +18,37 @@ import type {
 } from './types';
 import { DEFAULT_CONFIG } from './types';
 
-export async function run(
-  input: Situation | { content: string },
-  flags: RunFlags = {}
-): Promise<SWOTResult> {
-  const situation: Situation =
-    'entity' in input ? input : { entity: 'Unnamed Entity', description: input.content || '' };
+export const swot = defineFramework<Situation | { content: string }, SWOTResult>({
+  name: 'swot',
+  description:
+    'Strategic situational assessment: internal strengths/weaknesses, external opportunities/threats, strategies',
+  normalize(raw) {
+    if (typeof raw === 'object' && raw !== null && 'entity' in raw) {
+      return raw as Situation;
+    }
+    const content = (raw as { content?: string })?.content ?? '';
+    return { entity: 'Unnamed Entity', description: content };
+  },
+  async run(rawSituation, session) {
+    const situation = rawSituation as Situation;
+    const config: SWOTConfig = {
+      ...DEFAULT_CONFIG,
+      ...(session.flags.config as Partial<SWOTConfig> | undefined),
+    };
+    const explicitModel = session.models.override;
+    if (explicitModel) {
+      config.models = {
+        internalAnalyst: explicitModel,
+        externalAnalyst: explicitModel,
+        strategist: explicitModel,
+      };
+    }
 
-  const config: SWOTConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-
-  const providerName = flags.provider || 'anthropic';
-  const apiKey = getAPIKey(providerName);
-  const provider = createProvider({ name: providerName, apiKey });
-
-  const verbose = flags.debug ?? false;
-
-  if (verbose) {
-    console.log('\n📊 SWOT ANALYSIS\n');
-  }
-
-  const runner = new FrameworkRunner<Situation, SWOTResult>('swot', situation);
-
-  // Phase 1: Internal analysis (Strengths & Weaknesses)
-  const internal = await analyzeInternal(situation, config, provider, runner, verbose);
-
-  // Phase 2: External analysis (Opportunities & Threats)
-  const external = await analyzeExternal(situation, config, provider, runner, verbose);
-
-  // Phase 3: Strategic synthesis
-  const strategies = await synthesizeStrategies(
-    situation,
-    internal,
-    external,
-    config,
-    provider,
-    runner,
-    verbose
-  );
-
-  if (verbose) {
-    console.log(`\nStrengths: ${internal.strengths.length}`);
-    console.log(`Weaknesses: ${internal.weaknesses.length}`);
-    console.log(`Opportunities: ${external.opportunities.length}`);
-    console.log(`Threats: ${external.threats.length}`);
-    console.log(`Strategic Priorities: ${strategies.priorities.length}\n`);
-  }
-
-  const result: SWOTResult = {
-    situation,
-    internal,
-    external,
-    strategies,
-    metadata: { timestamp: new Date().toISOString(), config },
-  };
-
-  const { auditLog } = await runner.finalize(result, 'complete');
-
-  return {
-    ...result,
-    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
-  };
-}
-
-async function analyzeInternal(
-  situation: Situation,
-  config: SWOTConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Situation, SWOTResult>,
-  verbose: boolean
-): Promise<InternalAnalysis> {
-  if (verbose) {
-    console.log('Phase 1: Internal analysis (Strengths & Weaknesses)...\n');
-  }
-
-  const response = await runner.runAgent(
-    'internal-analyst',
-    provider,
-    config.models.internalAnalyst,
-    `You are an internal analyst conducting a SWOT analysis.
+    // Phase 1: Internal analysis (Strengths & Weaknesses)
+    session.phase('Internal Analysis', 'Strengths & Weaknesses');
+    const internalResponse = await session.step({
+      name: 'internal-analyst',
+      prompt: `You are an internal analyst conducting a SWOT analysis.
 
 ENTITY: ${situation.entity}
 
@@ -108,35 +62,21 @@ Analyze internal factors in JSON:
 {
   "strengths": ["strength 1", ...],
   "weaknesses": ["weakness 1", ...],
-  "internalFactors": ["factor 1", ...],
-  "coreCompetencies": ["competency 1", ...],
-  "gaps": ["gap 1", ...]
+  "capabilities": ["capability 1", ...],
+  "limitations": ["limitation 1", ...],
+  "resources": ["resource 1", ...]
 }
 
-Focus on controllable, internal attributes of the entity.`,
-    config.parameters.temperature,
-    2048
-  );
+Focus on internal capabilities, resources, and limitations.`,
+      temperature: config.parameters.temperature,
+    });
+    const internal = parseJSON<InternalAnalysis>(internalResponse.content);
 
-  return parseJSON<InternalAnalysis>(response.content);
-}
-
-async function analyzeExternal(
-  situation: Situation,
-  config: SWOTConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Situation, SWOTResult>,
-  verbose: boolean
-): Promise<ExternalAnalysis> {
-  if (verbose) {
-    console.log('\nPhase 2: External analysis (Opportunities & Threats)...\n');
-  }
-
-  const response = await runner.runAgent(
-    'external-analyst',
-    provider,
-    config.models.externalAnalyst,
-    `You are an external analyst conducting a SWOT analysis.
+    // Phase 2: External analysis (Opportunities & Threats)
+    session.phase('External Analysis', 'Opportunities & Threats');
+    const externalResponse = await session.step({
+      name: 'external-analyst',
+      prompt: `You are an external analyst conducting a SWOT analysis.
 
 ENTITY: ${situation.entity}
 
@@ -156,69 +96,66 @@ Analyze external factors in JSON:
 }
 
 Focus on external environment, market, competition, and uncontrollable factors.`,
-    config.parameters.temperature,
-    2048
-  );
+      temperature: config.parameters.temperature,
+    });
+    const external = parseJSON<ExternalAnalysis>(externalResponse.content);
 
-  return parseJSON<ExternalAnalysis>(response.content);
-}
-
-async function synthesizeStrategies(
-  situation: Situation,
-  internal: InternalAnalysis,
-  external: ExternalAnalysis,
-  config: SWOTConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Situation, SWOTResult>,
-  verbose: boolean
-): Promise<StrategicRecommendations> {
-  if (verbose) {
-    console.log('\nPhase 3: Strategic synthesis...\n');
-  }
-
-  const response = await runner.runAgent(
-    'strategist',
-    provider,
-    config.models.strategist,
-    `You are a strategist synthesizing SWOT analysis.
+    // Phase 3: Strategic synthesis
+    session.phase('Strategic Synthesis');
+    const strategyResponse = await session.step({
+      name: 'strategist',
+      prompt: `You are a strategy consultant synthesizing a SWOT analysis.
 
 ENTITY: ${situation.entity}
 
-STRENGTHS:
-${internal.strengths.map((s) => `- ${s}`).join('\n')}
+INTERNAL ANALYSIS:
+Strengths: ${internal.strengths.join(', ')}
+Weaknesses: ${internal.weaknesses.join(', ')}
 
-WEAKNESSES:
-${internal.weaknesses.map((w) => `- ${w}`).join('\n')}
+EXTERNAL ANALYSIS:
+Opportunities: ${external.opportunities.join(', ')}
+Threats: ${external.threats.join(', ')}
 
-OPPORTUNITIES:
-${external.opportunities.map((o) => `- ${o}`).join('\n')}
-
-THREATS:
-${external.threats.map((t) => `- ${t}`).join('\n')}
-
-Develop strategies in JSON:
+Formulate strategies in JSON:
 {
-  "soStrategies": ["strategy leveraging strength + opportunity", ...],
-  "woStrategies": ["strategy overcoming weakness to capture opportunity", ...],
-  "stStrategies": ["strategy using strength to mitigate threat", ...],
-  "wtStrategies": ["defensive strategy for weakness + threat", ...],
-  "priorities": [
-    {
-      "strategy": "...",
-      "priority": "critical" | "high" | "medium" | "low",
-      "rationale": "why this priority"
-    },
-    ...
-  ],
-  "actionPlan": ["concrete action 1", ...]
+  "soStrategies": ["aggressive strategy 1", ...],
+  "woStrategies": ["turnaround strategy 1", ...],
+  "stStrategies": ["defensive strategy 1", ...],
+  "wtStrategies": ["survival strategy 1", ...],
+  "recommendation": "overall strategic recommendation"
 }
 
-Use the SWOT matrix to develop comprehensive strategies.`,
-    config.parameters.temperature,
-    2048
-  );
+Cross-reference internal and external factors to derive actionable strategies.`,
+      temperature: config.parameters.temperature,
+    });
+    const strategies = parseJSON<StrategicRecommendations>(strategyResponse.content);
 
-  return parseJSON<StrategicRecommendations>(response.content);
+    session.note(
+      `Strengths: ${internal.strengths.length} | Weaknesses: ${internal.weaknesses.length} | Opportunities: ${external.opportunities.length} | Threats: ${external.threats.length}`
+    );
+
+    return {
+      situation,
+      internal,
+      external,
+      strategies,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        config,
+      },
+    };
+  },
+});
+
+/** Backward-compatible entry returning the bare result. */
+export async function run(
+  input: Situation | { content: string },
+  flags: RunFlags = {},
+  sinks: EventSink[] = []
+): Promise<SWOTResult> {
+  const { result, auditLog } = await swot(input, flags, sinks);
+  result.metadata.costUSD = auditLog.metadata.totalCost;
+  return result;
 }
 
 export * from './types';

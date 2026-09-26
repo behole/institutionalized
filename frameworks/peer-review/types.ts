@@ -59,5 +59,6 @@ export interface PeerReviewResult {
     timestamp: string;
     config: PeerReviewConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }

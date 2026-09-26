@@ -1,12 +1,14 @@
 /**
- * Architecture Review Board Framework
- * Multi-domain system design validation
+ * Architecture Review Board Framework — engine port.
+ *
+ * Flow: parallel domain specialist reviews → board chair synthesizes the
+ * decision. Prompts are byte-identical to the original implementation.
+ * Provider/model/audit/logging concerns are owned by the engine.
  */
-
-import { createProvider } from '@core/providers';
-import { getAPIKey } from '@core/config';
-import { parseJSON, FrameworkRunner } from '@core/orchestrator';
-import type { LLMProvider, RunFlags } from '@core/types';
+import type { EventSink } from '@core/engine';
+import { defineFramework } from '@core/engine';
+import { parseJSON } from '@core/orchestrator';
+import type { RunFlags } from '@core/types';
 import type {
   ArchitectureProposal,
   SpecialistReview,
@@ -16,87 +18,41 @@ import type {
 } from './types';
 import { DEFAULT_CONFIG } from './types';
 
-export async function run(
-  input: ArchitectureProposal | { content: string },
-  flags: RunFlags = {}
-): Promise<ArchitectureReviewResult> {
-  const proposal: ArchitectureProposal =
-    'title' in input
-      ? input
-      : {
-          title: 'Untitled Architecture',
-          summary: '',
-          design: input.content || '',
-        };
+export const architectureReview = defineFramework<
+  ArchitectureProposal | { content: string },
+  ArchitectureReviewResult
+>({
+  name: 'architecture-review',
+  description:
+    'Architecture Review Board: multi-domain system design validation from specialist perspectives',
+  normalize(raw) {
+    if (typeof raw === 'object' && raw !== null && 'title' in raw) {
+      return raw as ArchitectureProposal;
+    }
+    const content = (raw as { content?: string })?.content ?? '';
+    return { title: 'Untitled Architecture', summary: '', design: content };
+  },
+  async run(proposalInput, session) {
+    const proposal = proposalInput as ArchitectureProposal;
+    const config: ArchitectureReviewConfig = {
+      ...DEFAULT_CONFIG,
+      ...(session.flags.config as Partial<ArchitectureReviewConfig> | undefined),
+    };
+    const cliFlags = session.flags as Record<string, unknown>;
+    if (cliFlags.domains) {
+      config.domains = String(cliFlags.domains).split(',');
+    }
+    // Engine-level model override wins over legacy per-role config models.
+    const explicitModel = session.models.override;
+    if (explicitModel) {
+      config.models = { specialist: explicitModel, chair: explicitModel };
+    }
 
-  const config: ArchitectureReviewConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  const cliFlags = flags as Record<string, unknown>;
-  if (cliFlags.domains) {
-    config.domains = String(cliFlags.domains).split(',');
-  }
-
-  const providerName = flags.provider || 'anthropic';
-  const apiKey = getAPIKey(providerName);
-  const provider = createProvider({ name: providerName, apiKey });
-
-  const verbose = flags.debug ?? false;
-
-  if (verbose) {
-    console.log('\n🏛️  ARCHITECTURE REVIEW BOARD\n');
-  }
-
-  const runner = new FrameworkRunner<ArchitectureProposal, ArchitectureReviewResult>(
-    'architecture-review',
-    proposal
-  );
-
-  // Phase 1: Domain specialists review
-  const reviews = await conductReviews(proposal, config, provider, runner, verbose);
-
-  // Phase 2: Board chair synthesizes decision
-  const decision = await synthesizeDecision(proposal, reviews, config, provider, runner, verbose);
-
-  if (verbose) {
-    console.log(`\nDecision: ${decision.decision.toUpperCase()}`);
-    console.log(`Critical Issues: ${decision.criticalIssues.length}`);
-    console.log(`Required Changes: ${decision.requiredChanges.length}\n`);
-  }
-
-  const result: ArchitectureReviewResult = {
-    proposal,
-    reviews,
-    decision,
-    metadata: { timestamp: new Date().toISOString(), config },
-  };
-
-  const { auditLog } = await runner.finalize(result, 'complete');
-
-  return {
-    ...result,
-    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
-  };
-}
-
-async function conductReviews(
-  proposal: ArchitectureProposal,
-  config: ArchitectureReviewConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<ArchitectureProposal, ArchitectureReviewResult>,
-  verbose: boolean
-): Promise<SpecialistReview[]> {
-  if (verbose) {
-    console.log('Phase 1: Domain specialist reviews...\n');
-  }
-
-  const responses = await runner.runParallel(
-    config.domains.map((domain) => {
-      if (verbose) {
-        console.log(`  ${domain} specialist reviewing...`);
-      }
-      return {
+    // Phase 1: Domain specialists review (parallel)
+    session.phase('Domain Specialist Reviews', `${config.domains.length} domains`);
+    const reviewSteps = await session.parallel(
+      config.domains.map((domain) => ({
         name: `specialist-${domain.toLowerCase().replace(/\s+/g, '-')}`,
-        provider,
-        model: config.models.specialist,
         prompt: `You are an Architecture Review Board member specializing in: ${domain}
 
 ARCHITECTURE PROPOSAL: ${proposal.title}
@@ -124,37 +80,23 @@ Review this architecture from your domain perspective (${domain}) and provide as
 Be thorough and identify potential issues specific to your domain.`,
         temperature: config.parameters.temperature,
         maxTokens: 2048,
-      };
-    })
-  );
+      }))
+    );
+    const reviews = reviewSteps.map((s) => parseJSON<SpecialistReview>(s.content));
+    session.note(`${reviews.length} specialist reviews received`);
 
-  return responses.map((response) => parseJSON<SpecialistReview>(response.content));
-}
+    // Phase 2: Board chair synthesizes decision
+    session.phase('Board Decision');
+    const reviewsText = reviews
+      .map(
+        (review) =>
+          `${review.domain}:\nVerdict: ${review.verdict}\nRisk Level: ${review.riskLevel}\nConcerns: ${review.concerns.join(', ')}\nRecommendations: ${review.recommendations.join(', ')}\nRationale: ${review.rationale}\n`
+      )
+      .join('\n---\n\n');
 
-async function synthesizeDecision(
-  proposal: ArchitectureProposal,
-  reviews: SpecialistReview[],
-  config: ArchitectureReviewConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<ArchitectureProposal, ArchitectureReviewResult>,
-  verbose: boolean
-): Promise<BoardDecision> {
-  if (verbose) {
-    console.log('\nPhase 2: Board chair synthesizing decision...\n');
-  }
-
-  const reviewsText = reviews
-    .map(
-      (review) =>
-        `${review.domain}:\nVerdict: ${review.verdict}\nRisk Level: ${review.riskLevel}\nConcerns: ${review.concerns.join(', ')}\nRecommendations: ${review.recommendations.join(', ')}\nRationale: ${review.rationale}\n`
-    )
-    .join('\n---\n\n');
-
-  const response = await runner.runAgent(
-    'chair',
-    provider,
-    config.models.chair,
-    `You are the Architecture Review Board chair.
+    const decisionStep = await session.step({
+      name: 'chair',
+      prompt: `You are the Architecture Review Board chair.
 
 PROPOSAL: ${proposal.title}
 
@@ -176,11 +118,44 @@ Decision criteria:
 - "approved_with_conditions": Minor issues, can proceed with documented conditions
 - "major_revisions": Significant concerns requiring redesign and re-review
 - "rejected": Fundamental flaws, not viable approach`,
-    config.parameters.temperature,
-    2048
-  );
+      temperature: config.parameters.temperature,
+      maxTokens: 2048,
+    });
+    const decision = parseJSON<BoardDecision>(decisionStep.content);
+    session.note(
+      `Decision: ${decision.decision.toUpperCase()} | Critical issues: ${decision.criticalIssues.length} | Required changes: ${decision.requiredChanges.length}`
+    );
 
-  return parseJSON<BoardDecision>(response.content);
+    return {
+      proposal,
+      reviews,
+      decision,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        config,
+        decision:
+          decision.decision === 'approved'
+            ? 'approve'
+            : decision.decision === 'approved_with_conditions'
+              ? 'delay'
+              : 'reject',
+      },
+    };
+  },
+});
+
+/**
+ * Backward-compatible entry: runs the framework, patches cost from
+ * the audit log, returns the bare result (legacy contract).
+ */
+export async function run(
+  input: ArchitectureProposal | { content: string },
+  flags: RunFlags = {},
+  sinks: EventSink[] = []
+): Promise<ArchitectureReviewResult> {
+  const { result, auditLog } = await architectureReview(input, flags, sinks);
+  result.metadata.costUSD = auditLog.metadata.totalCost;
+  return result;
 }
 
 export * from './types';

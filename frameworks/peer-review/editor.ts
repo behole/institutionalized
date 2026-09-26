@@ -50,7 +50,7 @@ OUTPUT FORMAT:
 You must respond with a JSON object containing:
 {
   "decision": "accept" | "revise" | "reject",
-  "reasoning": "Multi-paragraph synthesis explaining your decision",
+  "reasoning": "Multi-paragraph synthesis explaining your decision. You MUST reference reviewers by name (e.g. 'Reviewer 1 noted...', 'Reviewer 3 disagreed...').",
   "requiredChanges": ["change 1", "change 2", ...],  // Only if revise
   "optionalSuggestions": ["suggestion 1", ...],      // Nice-to-haves
   "rationale": "One-sentence summary of decision"

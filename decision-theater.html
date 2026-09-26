@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Institutionalized - Decision Theater</title>
+    <style>
+        :root {
+            --agent-size: 100px;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+            color: var(--foreground, #1a1a1a);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .stage {
+            flex: 1;
+            background: var(--card, #fff);
+            border: 1px solid var(--border, #ddd);
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 500px;
+            position: relative;
+            overflow: hidden;
+        }
+        .stage-header {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 10;
+        }
+        .stage-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .stage-subtitle {
+            font-size: 11px;
+            color: var(--muted-foreground, #666);
+        }
+        .agent-node {
+            width: var(--agent-size);
+            height: var(--agent-size);
+            border-radius: 50%;
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 5;
+        }
+        .agent-node:hover {
+            transform: scale(1.1);
+            z-index: 20;
+        }
+        .agent-node.active {
+            animation: pulse 1s infinite;
+        }
+        .agent-node.processing {
+            animation: spin 2s linear infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.4); }
+            50% { box-shadow: 0 0 0 15px rgba(0, 123, 255, 0); }
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg) scale(1.1); }
+            to { transform: rotate(360deg) scale(1.1); }
+        }
+        .agent-icon {
+            font-size: 16px;
+            margin-bottom: 2px;
+        }
+        .agent-name {
+            font-size: 10px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .connection {
+            position: absolute;
+            height: 2px;
+            background: #ddd;
+            transform-origin: left center;
+            pointer-events: none;
+        }
+        .connection.active {
+            background: var(--accent, #007bff);
+            animation: flow 1s linear infinite;
+        }
+        @keyframes flow {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        .output {
+            width: 300px;
+            background: var(--card, #fff);
+            border: 1px solid var(--border, #ddd);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        .output-header {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            color: var(--muted-foreground, #666);
+        }
+        .output-content {
+            font-size: 12px;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .output-entry {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border, #eee);
+        }
+        .output-entry:last-child {
+            border-bottom: none;
+        }
+        .output-actor {
+            font-weight: 600;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+        .output-text {
+            color: var(--muted-foreground, #666);
+        }
+        .controls {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+        }
+        .control-btn {
+            background: var(--card, #fff);
+            border: 1px solid var(--border, #ddd);
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .control-btn:hover {
+            border-color: var(--accent, #007bff);
+        }
+    </style>
+</head>
+<body>
+    <h1>⚡ Live Decision Theater</h1>
+
+    <div class="container">
+        <div class="stage" id="stage">
+            <div class="stage-header">
+                <div class="stage-title">Courtroom Framework</div>
+                <div class="stage-subtitle">Adversarial decision simulation</div>
+            </div>
+            <div class="controls">
+                <button class="control-btn" onclick="startSimulation()">▶ Run Simulation</button>
+                <button class="control-btn" onclick="resetSimulation()">↺ Reset</button>
+            </div>
+        </div>
+
+        <div class="output">
+            <div class="output-header">📝 Decision Log</div>
+            <div class="output-content" id="outputLog"></div>
+        </div>
+    </div>
+
+    <script>
+        const stage = document.getElementById('stage');
+        const outputLog = document.getElementById('outputLog');
+
+        const agents = [
+            { id: 'judge', name: 'Judge', icon: '⚖️', x: 50, y: 20, color: '#2c3e50' },
+            { id: 'prosecutor', name: 'Prosecutor', icon: '👨‍⚖️', x: 20, y: 40, color: '#c0392b' },
+            { id: 'defense', name: 'Defense', icon: '👨‍⚖️', x: 80, y: 40, color: '#27ae60' },
+            { id: 'jury1', name: 'Juror 1', icon: '👤', x: 20, y: 70, color: '#3498db' },
+            { id: 'jury2', name: 'Juror 2', icon: '👤', x: 40, y: 75, color: '#3498db' },
+            { id: 'jury3', name: 'Juror 3', icon: '👤', x: 60, y: 75, color: '#3498db' },
+            { id: 'jury4', name: 'Juror 4', icon: '👤', x: 70, y: 70, color: '#3498db' },
+            { id: 'jury5', name: 'Juror 5', icon: '👤', x: 60, y: 50, color: '#3498db' }
+        ];
+
+        let connections = [];
+
+        function createAgents() {
+            agents.forEach(agent => {
+                const node = document.createElement('div');
+                node.className = 'agent-node';
+                node.id = agent.id;
+                node.style.left = agent.x + '%';
+                node.style.top = agent.y + '%';
+                node.style.background = agent.color;
+                node.style.color = '#fff';
+
+                node.innerHTML = `
+                    <span class="agent-icon">${agent.icon}</span>
+                    <span class="agent-name">${agent.name}</span>
+                `;
+
+                stage.appendChild(node);
+            });
+        }
+
+        function createConnection(from, to, id) {
+            const fromAgent = agents.find(a => a.id === from);
+            const toAgent = agents.find(a => a.id === to);
+
+            const line = document.createElement('div');
+            line.className = 'connection';
+            line.id = 'conn-' + id;
+
+            const fromEl = document.getElementById(from);
+            const toEl = document.getElementById(to);
+
+            const rect1 = fromEl.getBoundingClientRect();
+            const rect2 = toEl.getBoundingClientRect();
+            const stageRect = stage.getBoundingClientRect();
+
+            const x1 = rect1.left - stageRect.left + rect1.width / 2;
+            const y1 = rect1.top - stageRect.top + rect1.height / 2;
+            const x2 = rect2.left - stageRect.left + rect2.width / 2;
+            const y2 = rect2.top - stageRect.top + rect2.height / 2;
+
+            const length = Math.sqrt((x2-x1)**2 + **(y2-y1)**2);
+            const angle = Math.atan2(y2-y1, x2-x1) * 180 / Math.PI;
+
+            line.style.left = x1 + 'px';
+            line.style.top = y1 + 'px';
+            line.style.width = length + 'px';
+            line.style.transform = `rotate(${angle}deg)`;
+
+            stage.appendChild(line);
+            connections.push(line);
+        }
+
+        function addLogEntry(actor, text) {
+            const entry = document.createElement('div');
+            entry.className = 'output-entry';
+            entry.innerHTML = `
+                <div class="output-actor">${actor}</div>
+                <div class="output-text">${text}</div>
+            `;
+            outputLog.appendChild(entry);
+            outputLog.scrollTop = outputLog.scrollHeight;
+        }
+
+        function setActiveAgent(id, active) {
+            const node = document.getElementById(id);
+            if (node) {
+                if (active) node.classList.add('active');
+                else node.classList.remove('active');
+            }
+        }
+
+        function setProcessingAgent(id, processing) {
+            const node = document.getElementById(id);
+            if (node) {
+                if (processing) node.classList.add('processing');
+                else node.classList.remove('processing');
+            }
+        }
+
+        function setActiveConnection(id, active) {
+            const line = document.getElementById('conn-' + id);
+            if (line) {
+                if (active) line.classList.add('active');
+                else line.classList.remove('active');
+            }
+        }
+
+        function startSimulation() {
+            resetSimulation();
+            
+            addLogEntry('System', 'Initializing courtroom framework...');
+
+            // Opening statements
+            setTimeout(() => {
+                setActiveAgent('prosecutor', true);
+                addLogEntry('Prosecutor', 'The prosecution presents evidence A-1: The commit hash matches the branch.');
+            }, 500);
+
+            setTimeout(() => {
+                setActiveAgent('prosecutor', false);
+                setActiveAgent('defense', true);
+                addLogEntry('Defense', 'The defense argues intent: The author intended good-faith collaboration.');
+            }, 2000);
+
+            setTimeout(() => {
+                setActiveAgent('defense', false);
+                setActiveAgent('jury1', true);
+                addLogEntry('Juror 1', 'Motion to admit evidence as factual record.');
+            }, 3500);
+
+            setTimeout(() => {
+                setActiveAgent('jury1', false);
+                setActiveAgent('jury2', true);
+                addLogEntry('Juror 2', 'Seconded. Evidence chain of custody verified.');
+            }, 5000);
+
+            setTimeout(() => {
+                setActiveAgent('jury2', false);
+                setActiveAgent('judge', true);
+                addLogEntry('Judge', 'Evidence admitted. Proceed to deliberation.');
+            }, 6500);
+
+            // Voting
+            setTimeout(() => {
+                setActiveAgent('jury3', true);
+                addLogEntry('Juror 3', 'Vote: Approve');
+            }, 8000);
+
+            setTimeout(() => {
+                setActiveAgent('jury3', false);
+                setActiveAgent('jury4', true);
+                addLogEntry('Juror 4', 'Vote: Approve');
+            }, 9500);
+
+            setTimeout(() => {
+                setActiveAgent('jury4', false);
+                setActiveAgent('jury5', true);
+                addLogEntry('Juror 5', 'Vote: Approve');
+            }, 11000);
+
+            // Final
+            setTimeout(() => {
+                setActiveAgent('jury5', false);
+                setActiveAgent('judge', true);
+                addLogEntry('Judge', 'Verdict: Merge approved. Decision logged.');
+                setActiveAgent('judge', false);
+                addLogEntry('System', 'Framework execution complete.');
+            }, 12500);
+        }
+
+        function resetSimulation() {
+            outputLog.innerHTML = '';
+            connections.forEach(conn => conn.remove());
+            agents.forEach(a => {
+                const node = document.getElementById(a.id);
+                if (node) {
+                    node.classList.remove('active');
+                    node.classList.remove('processing');
+                }
+            });
+            
+            // Create connections after reset
+            setTimeout(() => {
+                createConnection('prosecutor', 'jury1', '0');
+                createConnection('defense', 'jury1', '1');
+                createConnection('jury1', 'jury2', '2');
+                createConnection('jury2', 'judge', '3');
+            }, 100);
+        }
+
+        createAgents();
+        resetSimulation();
+    </script>
+</body>
+</html>
