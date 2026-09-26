@@ -9,24 +9,126 @@
  *   OPENAI_BASE_URL, OPENAI_API_KEY, OPENAI_EXTRA_HEADERS
  */
 import { runPipeline, routePipeline, getPipeline, PIPELINES } from '../core/engine';
-import type { PipelineDefinition } from '../core/engine';
+import type { PipelineDefinition, EventSink } from '../core/engine';
 import { run as runCourtroom } from '../frameworks/courtroom';
 import { run as runPreMortem } from '../frameworks/pre-mortem';
 import { run as runAar } from '../frameworks/aar';
 import { run as runRedBlue } from '../frameworks/red-blue';
 import { run as runPeerReview } from '../frameworks/peer-review';
+import { run as runSixHats } from '../frameworks/six-hats';
+import { run as runPhdDefense } from '../frameworks/phd-defense';
+import { run as runGrantPanel } from '../frameworks/grant-panel';
+import { run as runIntelligenceAnalysis } from '../frameworks/intelligence-analysis';
+import { run as runDesignCritique } from '../frameworks/design-critique';
+import { run as runConsensusCircle } from '../frameworks/consensus-circle';
+import { run as runDifferentialDiagnosis } from '../frameworks/differential-diagnosis';
+import { run as runTumorBoard } from '../frameworks/tumor-board';
+import { run as runWarGaming } from '../frameworks/war-gaming';
+import { run as runWritersWorkshop } from '../frameworks/writers-workshop';
+import { run as runRegulatoryImpact } from '../frameworks/regulatory-impact';
+import { run as runDevilsAdvocate } from '../frameworks/devils-advocate';
+import { run as runDelphi } from '../frameworks/delphi';
+import { run as runHegelian } from '../frameworks/hegelian';
+import { run as runParliamentary } from '../frameworks/parliamentary';
+import { run as runSocratic } from '../frameworks/socratic';
+import { run as runStudio } from '../frameworks/studio';
+import { run as runSwot } from '../frameworks/swot';
+import { run as runTalmudic } from '../frameworks/talmudic';
+import { run as runDissertationCommittee } from '../frameworks/dissertation-committee';
+import { run as runArchitectureReview } from '../frameworks/architecture-review';
+import { courtroom } from '../frameworks/courtroom';
+import { preMortem } from '../frameworks/pre-mortem';
+import { aar } from '../frameworks/aar';
+import { redBlue } from '../frameworks/red-blue';
+import { peerReview } from '../frameworks/peer-review';
+import { sixHats } from '../frameworks/six-hats';
+import { phdDefense } from '../frameworks/phd-defense';
+import { grantPanel } from '../frameworks/grant-panel';
+import { intelligenceAnalysis } from '../frameworks/intelligence-analysis';
+import { designCritique } from '../frameworks/design-critique';
+import { consensusCircle } from '../frameworks/consensus-circle';
+import { differentialDiagnosis } from '../frameworks/differential-diagnosis';
+import { tumorBoard } from '../frameworks/tumor-board';
+import { warGaming } from '../frameworks/war-gaming';
+import { writersWorkshop } from '../frameworks/writers-workshop';
+import { regulatoryImpact } from '../frameworks/regulatory-impact';
+import { devilsAdvocate } from '../frameworks/devils-advocate';
+import { delphi } from '../frameworks/delphi';
+import { hegelian } from '../frameworks/hegelian';
+import { parliamentary } from '../frameworks/parliamentary';
+import { socratic } from '../frameworks/socratic';
+import { studio } from '../frameworks/studio';
+import { swot } from '../frameworks/swot';
+import { talmudic } from '../frameworks/talmudic';
+import { dissertationCommittee } from '../frameworks/dissertation-committee';
+import { architectureReview } from '../frameworks/architecture-review';
 
 const PORT = Number(process.env.PORT ?? 7788);
 const MODEL = process.env.DEMO_MODEL ?? 'space-bunny-free';
 const MOMENT_MODEL = process.env.DEMO_MOMENT_MODEL ?? MODEL;
 
-const RUNNERS = {
+/** Framework execution registry: run() wrappers (patch costUSD, return bare result). */
+const RUNNERS: Record<
+  string,
+  (raw: unknown, flags?: Record<string, unknown>, sinks?: unknown[]) => Promise<unknown>
+> = {
   courtroom: runCourtroom,
   'pre-mortem': runPreMortem,
   aar: runAar,
   'red-blue': runRedBlue,
   'peer-review': runPeerReview,
-} as const;
+  'six-hats': runSixHats,
+  'phd-defense': runPhdDefense,
+  'grant-panel': runGrantPanel,
+  'intelligence-analysis': runIntelligenceAnalysis,
+  'design-critique': runDesignCritique,
+  'consensus-circle': runConsensusCircle,
+  'differential-diagnosis': runDifferentialDiagnosis,
+  'tumor-board': runTumorBoard,
+  'war-gaming': runWarGaming,
+  'writers-workshop': runWritersWorkshop,
+  'regulatory-impact': runRegulatoryImpact,
+  'devils-advocate': runDevilsAdvocate,
+  delphi: runDelphi,
+  hegelian: runHegelian,
+  parliamentary: runParliamentary,
+  socratic: runSocratic,
+  studio: runStudio,
+  swot: runSwot,
+  talmudic: runTalmudic,
+  'dissertation-committee': runDissertationCommittee,
+  'architecture-review': runArchitectureReview,
+};
+
+/** Framework metadata from the engine definitions (single source of truth). */
+const FRAMEWORK_DEFS: Record<string, { description: string }> = {
+  courtroom,
+  'pre-mortem': preMortem,
+  aar,
+  'red-blue': redBlue,
+  'peer-review': peerReview,
+  'six-hats': sixHats,
+  'phd-defense': phdDefense,
+  'grant-panel': grantPanel,
+  'intelligence-analysis': intelligenceAnalysis,
+  'design-critique': designCritique,
+  'consensus-circle': consensusCircle,
+  'differential-diagnosis': differentialDiagnosis,
+  'tumor-board': tumorBoard,
+  'war-gaming': warGaming,
+  'writers-workshop': writersWorkshop,
+  'regulatory-impact': regulatoryImpact,
+  'devils-advocate': devilsAdvocate,
+  delphi,
+  hegelian,
+  parliamentary,
+  socratic,
+  studio,
+  swot,
+  talmudic,
+  'dissertation-committee': dissertationCommittee,
+  'architecture-review': architectureReview,
+};
 
 interface StreamUpdate {
   t: string;
@@ -118,6 +220,85 @@ function extraHeaders(): Record<string, string> {
   } catch {
     return {};
   }
+}
+
+/** Kick off a single-framework run through the same event plumbing. */
+function startSingleFrameworkRun(run: Run, framework: string): void {
+  const def = FRAMEWORK_DEFS[framework];
+  push(run, {
+    t: 'pipeline-start',
+    pipeline: framework,
+    label: framework,
+    stages: [def.description.slice(0, 60)],
+  });
+
+  const runner = RUNNERS[framework] as (
+    raw: unknown,
+    flags?: Record<string, unknown>,
+    sinks?: EventSink[]
+  ) => Promise<unknown>;
+  const stageStart = Date.now();
+
+  const taggedSink: EventSink = (e) => {
+    const tagged = { ...e, stageIndex: 0 } as StreamUpdate;
+    // Map engine events onto the wire protocol the client already speaks
+    switch (tagged.type) {
+      case 'agent-start':
+        push(run, { t: 'agent-start', stageIndex: 0, agent: tagged.agent });
+        break;
+      case 'agent-end':
+        push(run, { t: 'agent-end', stageIndex: 0, agent: tagged.agent, cost: tagged.cost });
+        if (tagged.excerpt) {
+          generateMoment(run, 0, tagged.agent ?? 'agent', tagged.excerpt);
+        }
+        break;
+      case 'phase':
+        push(run, { t: 'phase', stageIndex: 0, name: tagged.name, detail: tagged.detail });
+        break;
+      case 'note':
+        push(run, { t: 'note', stageIndex: 0, text: tagged.message });
+        break;
+      default:
+        break;
+    }
+  };
+
+  runner(run.issue, { provider: 'openai', model: MODEL }, [taggedSink])
+    .then((result) => {
+      const r = result as { metadata?: { decision?: string; costUSD?: number } };
+      const decision = r?.metadata?.decision ?? 'unclear';
+      const cost = r?.metadata?.costUSD ?? 0;
+      push(run, {
+        t: 'stage-end',
+        stageIndex: 0,
+        framework,
+        decision,
+        cost,
+        durationMs: Date.now() - stageStart,
+      });
+      push(run, {
+        t: 'pipeline-end',
+        decision,
+        stageDecisions: [decision],
+        cost,
+        durationMs: Date.now() - stageStart,
+        summary: `${framework} completed.`,
+      });
+      run.done = true;
+      for (const sub of run.subscribers) {
+        sub({ t: 'done' });
+      }
+      run.subscribers.clear();
+    })
+    .catch((error) => {
+      run.error = error instanceof Error ? error.message : String(error);
+      push(run, { t: 'pipeline-error', error: run.error });
+      run.done = true;
+      for (const sub of run.subscribers) {
+        sub({ t: 'done' });
+      }
+      run.subscribers.clear();
+    });
 }
 
 /** Kick off the pipeline in the background, pushing updates into the run. */
@@ -260,6 +441,63 @@ function sseStream(run: Run): Response {
   });
 }
 
+/** LLM-based routing: classify the issue into a framework or pipeline. */
+async function llmRoute(
+  issue: string
+): Promise<{ kind: 'framework' | 'pipeline'; name: string; reason: string } | null> {
+  const catalog = Object.entries(FRAMEWORK_DEFS)
+    .map(([name, def]) => `- ${name}: ${def.description}`)
+    .join('\n');
+  const pipelines = PIPELINES.map((p) => `- ${p.name}: ${p.description}`).join('\n');
+
+  try {
+    const response = await fetch(`${process.env.OPENAI_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        ...extraHeaders(),
+      },
+      body: JSON.stringify({
+        model: MOMENT_MODEL,
+        temperature: 0.2,
+        max_tokens: 400,
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'user',
+            content:
+              `Classify this issue into the single best deliberation format.\n\n` +
+              `ISSUE: ${issue.slice(0, 1000)}\n\n` +
+              `FRAMEWORKS:\n${catalog}\n\nPIPELINES:\n${pipelines}\n\n` +
+              `Prefer a pipeline when the issue involves a real decision with risks (plan-hardening, security-review, proposal-review); a single framework when one focused lens is enough. ` +
+              `Respond ONLY JSON: {"kind": "framework"|"pipeline", "name": "<exact name>", "reason": "<one sentence, max 100 chars>"}`,
+          },
+        ],
+      }),
+    });
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string | null } }>;
+    };
+    const raw = data.choices?.[0]?.message?.content ?? '';
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) {
+      return null;
+    }
+    const parsed = JSON.parse(match[0]) as { kind?: string; name?: string; reason?: string };
+    const kind = parsed.kind === 'pipeline' ? 'pipeline' : 'framework';
+    if (kind === 'framework' && !RUNNERS[parsed.name ?? '']) {
+      return null;
+    }
+    if (kind === 'pipeline' && !getPipeline(parsed.name ?? '')) {
+      return null;
+    }
+    return { kind, name: parsed.name!, reason: (parsed.reason ?? '').slice(0, 160) };
+  } catch {
+    return null; // router is best-effort; keyword fallback covers it
+  }
+}
+
 const server = Bun.serve({
   port: PORT,
   async fetch(req) {
@@ -276,8 +514,17 @@ const server = Bun.serve({
       );
     }
 
+    if (url.pathname === '/api/frameworks') {
+      return Response.json(
+        Object.entries(FRAMEWORK_DEFS).map(([name, def]) => ({
+          name,
+          description: def.description,
+        }))
+      );
+    }
+
     if (url.pathname === '/api/run' && req.method === 'POST') {
-      const body = (await req.json()) as { issue?: string; pipeline?: string };
+      const body = (await req.json()) as { issue?: string; pipeline?: string; framework?: string };
       const issue = (body.issue ?? '').trim();
       if (issue.length < 10) {
         return Response.json(
@@ -285,23 +532,73 @@ const server = Bun.serve({
           { status: 400 }
         );
       }
-      const def = body.pipeline ? getPipeline(body.pipeline) : routePipeline(issue);
-      if (!def) {
-        return Response.json({ error: 'Unknown pipeline' }, { status: 400 });
+
+      const makeRun = (): Run => {
+        const id = crypto.randomUUID();
+        const run: Run = {
+          id,
+          pipeline: '',
+          issue,
+          updates: [],
+          subscribers: new Set(),
+          done: false,
+        };
+        runs.set(id, run);
+        return run;
+      };
+
+      // Explicit framework selection → single-framework run
+      if (body.framework) {
+        if (!RUNNERS[body.framework]) {
+          return Response.json({ error: `Unknown framework: ${body.framework}` }, { status: 400 });
+        }
+        const run = makeRun();
+        run.pipeline = body.framework;
+        startSingleFrameworkRun(run, body.framework);
+        return Response.json({ id: run.id, routed: body.framework, label: body.framework });
       }
 
-      const id = crypto.randomUUID();
-      const run: Run = {
-        id,
-        pipeline: def.name,
-        issue,
-        updates: [],
-        subscribers: new Set(),
-        done: false,
-      };
-      runs.set(id, run);
-      startRun(run, def);
-      return Response.json({ id, routed: def.name, label: def.label });
+      // Explicit pipeline selection
+      if (body.pipeline) {
+        const def = getPipeline(body.pipeline);
+        if (!def) {
+          return Response.json({ error: 'Unknown pipeline' }, { status: 400 });
+        }
+        const run = makeRun();
+        run.pipeline = def.name;
+        startRun(run, def);
+        return Response.json({ id: run.id, routed: def.name, label: def.label });
+      }
+
+      // Auto-route: LLM classification of the issue, keyword fallback
+      const routed =
+        (await llmRoute(issue)) ??
+        (() => {
+          const def = routePipeline(issue);
+          return { kind: 'pipeline' as const, name: def.name, reason: 'keyword match' };
+        })();
+
+      const run = makeRun();
+      run.pipeline = routed.name;
+      push(run, { t: 'routed', kind: routed.kind, name: routed.name, reason: routed.reason });
+
+      if (routed.kind === 'pipeline') {
+        const def = getPipeline(routed.name)!;
+        startRun(run, def);
+        return Response.json({
+          id: run.id,
+          routed: routed.name,
+          label: def.label,
+          routeReason: routed.reason,
+        });
+      }
+      startSingleFrameworkRun(run, routed.name);
+      return Response.json({
+        id: run.id,
+        routed: routed.name,
+        label: routed.name,
+        routeReason: routed.reason,
+      });
     }
 
     const streamMatch = url.pathname.match(/^\/api\/stream\/([a-f0-9-]+)$/);

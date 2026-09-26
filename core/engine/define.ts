@@ -40,7 +40,7 @@ export interface FrameworkRunOutput<TOutput> {
 export function defineFramework<TInput, TOutput>(
   def: FrameworkDefinition<TInput, TOutput>
 ): (raw: unknown, flags?: RunFlags, sinks?: EventSink[]) => Promise<FrameworkRunOutput<TOutput>> {
-  return async (raw: unknown, flags: RunFlags = {}, sinks: EventSink[] = []) => {
+  const runner = async (raw: unknown, flags: RunFlags = {}, sinks: EventSink[] = []) => {
     const input = def.normalize ? def.normalize(raw) : (raw as TInput);
 
     const providerName = flags.provider;
@@ -74,4 +74,12 @@ export function defineFramework<TInput, TOutput>(
       throw error;
     }
   };
+
+  // Expose definition metadata (registry listings, /api/frameworks, routing).
+  // 'name' would collide with the function's readonly own property.
+  return Object.assign(runner, {
+    frameworkName: def.name,
+    description: def.description,
+    roles: def.roles,
+  });
 }

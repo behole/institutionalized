@@ -53,6 +53,18 @@
   }
   textarea:focus { outline: 1px solid var(--led-blue); }
   .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+  .mode-row { display: flex; gap: 6px; margin-top: 10px; }
+  .mode-chip {
+    flex: 1; padding: 6px 4px; border-radius: 6px; font-size: 10px; cursor: pointer;
+    border: 1px solid var(--panel-edge); color: var(--dim); background: transparent;
+  }
+  .mode-chip.selected { color: #0b0e14; background: var(--led-blue); border-color: var(--led-blue); font-weight: 700; }
+  #framework-select {
+    width: 100%; margin-bottom: 12px; padding: 8px; display: none;
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--panel-edge); border-radius: 8px; font: inherit; font-size: 12px;
+  }
+  #framework-select:disabled { opacity: 0.4; }
   .chip {
     padding: 5px 10px; border-radius: 999px; font-size: 11px; cursor: pointer;
     border: 1px solid var(--panel-edge); color: var(--dim); background: transparent;
@@ -139,7 +151,13 @@
 <div class="layout">
   <div class="panel">
     <textarea id="issue" placeholder="Describe your issue… e.g. Should we launch the mobile app Feb 1 with 4 devs and no on-call rotation?"></textarea>
+    <div class="mode-row">
+      <button class="mode-chip selected" data-mode="auto">auto-route</button>
+      <button class="mode-chip" data-mode="pipeline">pipeline</button>
+      <button class="mode-chip" data-mode="framework">single framework</button>
+    </div>
     <div class="chip-row" id="pipeline-chips"></div>
+    <select id="framework-select" disabled></select>
     <button id="run-btn" disabled>RUN DELIBERATION</button>
     <div id="routed-note"></div>
   </div>
@@ -156,34 +174,54 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-let selectedPipeline = null;   // null = auto-route
+let selectedPipeline = null;
+let mode = 'auto';             // auto | pipeline | framework
 let currentSource = null;
 let timer = null;
 
 const DECISION_COLORS = { approve: 'done-ok', reject: 'done-no', delay: 'done-mid', unclear: '' };
 
+// --- mode switching ---
+document.querySelectorAll('.mode-chip').forEach((chip) => {
+  chip.onclick = () => {
+    mode = chip.dataset.mode;
+    document.querySelectorAll('.mode-chip').forEach((c) => c.classList.toggle('selected', c === chip));
+    $('pipeline-chips').style.display = mode === 'pipeline' ? 'flex' : 'none';
+    const sel = $('framework-select');
+    sel.style.display = mode === 'framework' ? 'block' : 'none';
+    sel.disabled = mode !== 'framework';
+    updateRunBtn();
+  };
+});
+
+// --- framework picker (all 26) ---
+fetch('/api/frameworks').then(r => r.json()).then(frameworks => {
+  const sel = $('framework-select');
+  for (const f of frameworks) {
+    const opt = document.createElement('option');
+    opt.value = f.name;
+    opt.textContent = f.name;
+    opt.title = f.description;
+    sel.appendChild(opt);
+  }
+  updateRunBtn();
+});
+
 // --- pipeline chips ---
 fetch('/api/pipelines').then(r => r.json()).then(pipelines => {
-  const auto = document.createElement('button');
-  auto.className = 'chip selected';
-  auto.textContent = 'auto-route';
-  auto.onclick = () => select(null, [auto]);
-  $('pipeline-chips').appendChild(auto);
   for (const p of pipelines) {
     const b = document.createElement('button');
     b.className = 'chip';
     b.textContent = p.label;
     b.title = p.description;
-    b.onclick = () => select(p.name, [auto, ...document.querySelectorAll('.chip')]);
     b.dataset.name = p.name;
+    b.onclick = () => {
+      selectedPipeline = p.name;
+      document.querySelectorAll('#pipeline-chips .chip').forEach(c => c.classList.toggle('selected', c === b));
+    };
     $('pipeline-chips').appendChild(b);
   }
-  function select(name, chips) {
-    selectedPipeline = name;
-    chips.forEach(c => c.classList.remove('selected'));
-    name === null ? auto.classList.add('selected') : [...document.querySelectorAll('.chip')].find(c => c.dataset.name === name)?.classList.add('selected');
-  }
-  $('run-btn').disabled = false;
+  updateRunBtn();
 });
 
 // --- build stage columns from pipeline-start ---
@@ -240,13 +278,17 @@ $('run-btn').onclick = () => {
   clearInterval(timer);
   timer = setInterval(() => { $('elapsed').textContent = ((Date.now() - t0) / 1000).toFixed(1) + 's'; }, 100);
 
+  const payload = mode === 'framework'
+    ? { issue, framework: $('framework-select').value }
+    : { issue, pipeline: mode === 'pipeline' ? selectedPipeline : undefined };
   fetch('/api/run', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ issue, pipeline: selectedPipeline }),
-  }).then(r => r.json()).then(({ id, routed, label, error }) => {
+    body: JSON.stringify(payload),
+  }).then(r => r.json()).then(({ id, routed, label, routeReason, error }) => {
     if (error) { $('routed-note').textContent = error; $('run-btn').disabled = false; return; }
-    $('routed-note').innerHTML = `routed to <b>${label}</b>${selectedPipeline ? ' (manual)' : ' (auto)'}`;
+    const manual = mode !== 'auto';
+    $('routed-note').innerHTML = `routed to <b>${label}</b>${manual ? ' (manual)' : ' (auto)'}${routeReason ? ` — ${routeReason}` : ''}`;
     listen(id, t0);
   });
 };
@@ -261,6 +303,9 @@ function listen(runId, t0) {
     const stageTag = u.stageIndex !== undefined ? `stage ${u.stageIndex + 1}` : '';
 
     switch (u.t) {
+      case 'routed':
+        feedItem('phase', 'router', `→ ${u.name}${u.reason ? `: ${u.reason}` : ''}`);
+        break;
       case 'pipeline-start':
         buildBoard(u.stages);
         feedItem('phase', '', `▶ pipeline: ${u.label} — ${u.stages.join(' → ')}`);
@@ -324,6 +369,11 @@ function listen(runId, t0) {
     }
   };
 }
+
+function updateRunBtn() {
+  $('run-btn').disabled = mode === 'framework' && !$('framework-select').value;
+}
+$('framework-select').addEventListener('change', updateRunBtn);
 
 // Pre-fill a demo issue
 $('issue').value = 'Should we launch the mobile app Feb 1 with 4 developers and no on-call rotation?';
