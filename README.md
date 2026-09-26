@@ -92,9 +92,9 @@ Each case runs the framework AND a single-call baseline on identical inputs, the
 
 Current status: 4 flagship frameworks instrumented, 4 seed cases, first positive signals (see header). **n is small** — treat as promising, not proven. The harness exists; more cases and seeds are the path to credible numbers.
 
-## 🤖 Claude Code Skill
+## 🤖 Harness Skill
 
-Install as a skill so Claude Code can orchestrate frameworks on demand: see `skills/institutional-reasoning/SKILL.md`.
+Install as a skill so your harness can orchestrate frameworks on demand: see `skills/institutional-reasoning/SKILL.md`.
 
 ## 🤝 Contributing
 
