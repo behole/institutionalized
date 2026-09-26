@@ -59,6 +59,7 @@ export interface DissertationCommitteeResult {
     modelUsage: {
       [member: string]: string;
     };
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

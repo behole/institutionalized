@@ -16,16 +16,12 @@
 
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+import { readFile, writeFile } from 'node:fs/promises';
+import { prettyReporter } from './core/engine/reporters';
+import type { EventSink } from './core/engine/events';
 
-// Determine the package root directory synchronously
-// When bundled (dist/cli.js), __dirname ends with /dist
-// When running from source (cli.ts), __dirname is repo root
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const isBundled = __dirname.endsWith('/dist') || __dirname.endsWith('\\dist');
-const PKG_ROOT = isBundled ? resolve(__dirname, '..') : __dirname;
-
+// Framework metadata for --list and interactive mode
 interface FrameworkMetadata {
   description: string;
   tier: string;
@@ -547,35 +543,6 @@ type FrameworkName = keyof typeof FRAMEWORKS;
 
 const FRAMEWORK_NAMES = Object.keys(FRAMEWORKS);
 
-// Framework name to directory mapping (handles hyphens)
-const FRAMEWORK_DIRS: Record<FrameworkName, string> = {
-  'peer-review': 'peer-review',
-  'red-blue': 'red-blue',
-  'six-hats': 'six-hats',
-  'phd-defense': 'phd-defense',
-  'grant-panel': 'grant-panel',
-  'intelligence-analysis': 'intelligence-analysis',
-  'design-critique': 'design-critique',
-  'consensus-circle': 'consensus-circle',
-  'differential-diagnosis': 'differential-diagnosis',
-  'tumor-board': 'tumor-board',
-  'war-gaming': 'war-gaming',
-  'writers-workshop': 'writers-workshop',
-  'regulatory-impact': 'regulatory-impact',
-  'devils-advocate': 'devils-advocate',
-  aar: 'aar',
-  courtroom: 'courtroom',
-  delphi: 'delphi',
-  hegelian: 'hegelian',
-  parliamentary: 'parliamentary',
-  'pre-mortem': 'pre-mortem',
-  socratic: 'socratic',
-  studio: 'studio',
-  swot: 'swot',
-  talmudic: 'talmudic',
-  'dissertation-committee': 'dissertation-committee',
-} as const;
-
 // Auto-detection patterns: map file patterns to frameworks
 const AUTO_DETECT_PATTERNS: Record<string, FrameworkName> = {
   courtroom: 'courtroom',
@@ -758,10 +725,8 @@ async function detectFrameworkFromFile(filepath: string): Promise<FrameworkName 
   // Try to detect from file content
   try {
     const resolvedPath = filepath.startsWith('/') ? filepath : resolve(process.cwd(), filepath);
-    const file = Bun.file(resolvedPath);
-    const exists = await file.exists();
-    if (exists) {
-      const content = await file.text().catch(() => '');
+    const content = await readFile(resolvedPath, 'utf8').catch(() => '');
+    if (content) {
       const lowerContent = content.toLowerCase();
       for (const [pattern, framework] of Object.entries(AUTO_DETECT_PATTERNS)) {
         if (lowerContent.includes(pattern.toLowerCase())) {
@@ -776,15 +741,64 @@ async function detectFrameworkFromFile(filepath: string): Promise<FrameworkName 
   return undefined;
 }
 
+// Static framework registry: engine-ported run() functions.
+// No dynamic import / path resolution — single source of truth.
+const FRAMEWORK_RUNNERS: Record<
+  string,
+  (input: unknown, flags?: Record<string, unknown>) => Promise<unknown>
+> = {};
+const FRAMEWORK_REGISTRY = {
+  'peer-review': () => import('./frameworks/peer-review'),
+  'red-blue': () => import('./frameworks/red-blue'),
+  'six-hats': () => import('./frameworks/six-hats'),
+  'phd-defense': () => import('./frameworks/phd-defense'),
+  'grant-panel': () => import('./frameworks/grant-panel'),
+  'intelligence-analysis': () => import('./frameworks/intelligence-analysis'),
+  'design-critique': () => import('./frameworks/design-critique'),
+  'consensus-circle': () => import('./frameworks/consensus-circle'),
+  'differential-diagnosis': () => import('./frameworks/differential-diagnosis'),
+  'tumor-board': () => import('./frameworks/tumor-board'),
+  'war-gaming': () => import('./frameworks/war-gaming'),
+  'writers-workshop': () => import('./frameworks/writers-workshop'),
+  'regulatory-impact': () => import('./frameworks/regulatory-impact'),
+  'devils-advocate': () => import('./frameworks/devils-advocate'),
+  aar: () => import('./frameworks/aar'),
+  courtroom: () => import('./frameworks/courtroom'),
+  delphi: () => import('./frameworks/delphi'),
+  hegelian: () => import('./frameworks/hegelian'),
+  parliamentary: () => import('./frameworks/parliamentary'),
+  'pre-mortem': () => import('./frameworks/pre-mortem'),
+  socratic: () => import('./frameworks/socratic'),
+  studio: () => import('./frameworks/studio'),
+  swot: () => import('./frameworks/swot'),
+  talmudic: () => import('./frameworks/talmudic'),
+  'dissertation-committee': () => import('./frameworks/dissertation-committee'),
+  'architecture-review': () => import('./frameworks/architecture-review'),
+} as const;
+
+/** Exit codes from a normalized decision, applied uniformly across frameworks. */
+function exitCodeForDecision(decision: unknown): number {
+  // 0 = affirmative (approve/accept/pass), 1 = negative (reject/fail),
+  // 3 = indeterminate (delay/dismissed/unknown)
+  const d = String(decision ?? '').toLowerCase();
+  if (['approve', 'accept', 'pass', 'ready', 'guilty'].includes(d)) {
+    return 0;
+  }
+  if (['reject', 'fail', 'not_guilty'].includes(d)) {
+    return 1;
+  }
+  return 3;
+}
+
 async function runFramework(framework: FrameworkName, inputFile: string, flags: Flags) {
-  const dir = FRAMEWORK_DIRS[framework];
-  const frameworkPath = resolve(PKG_ROOT, 'frameworks', dir, 'index.ts');
+  const loader = FRAMEWORK_REGISTRY[framework as keyof typeof FRAMEWORK_REGISTRY];
+  if (!loader) {
+    console.error(`\n❌ Framework '${framework}' not implemented`);
+    process.exit(2);
+  }
 
   try {
-    // Dynamic import using absolute path
-    // When running from npm: /node_modules/institutional-reasoning/frameworks/...
-    // When running from source: /repo/frameworks/...
-    const module = await import(`file://${frameworkPath}`);
+    const module = await loader();
 
     if (!module.run) {
       throw new Error(`Framework ${framework} does not export a 'run' function`);
@@ -793,38 +807,51 @@ async function runFramework(framework: FrameworkName, inputFile: string, flags: 
     // Load input file
     const input = await loadInput(inputFile);
 
-    if (flags.verbose) {
-      console.log(`\n📂 Input file: ${inputFile}`);
-      console.log(`🎯 Framework: ${framework}`);
-      console.log(`⚙️  Flags: ${JSON.stringify(flags, null, 2)}\n`);
+    // Build engine flags: CLI flags → RunFlags
+    const runFlags: Record<string, unknown> = {
+      debug: flags.verbose,
+      provider: flags.provider,
+      model: flags.model,
+      maxCostUSD: flags['max-cost'] ? Number(flags['max-cost']) : undefined,
+      config: flags['config-json'] ? JSON.parse(String(flags['config-json'])) : undefined,
+    };
+
+    // Wire reporter: pretty by default, silent in JSON mode
+    if (flags['output-json']) {
+      // JSON mode: silent (no reporter), structured output printed once.
+      // Wrappers return the bare result; run the underlying definition to get session/audit.
+      const result = (await module.run(input, runFlags)) as unknown as Record<string, unknown>;
+      if (flags.output) {
+        await writeFile(flags.output, JSON.stringify(result, null, 2), 'utf8');
+        console.log(`\n💾 Results saved to: ${flags.output}`);
+      } else {
+        console.log(JSON.stringify(result, null, 2));
+      }
+      const decision =
+        (result?.metadata as { decision?: string } | undefined)?.decision ??
+        (result?.verdict as { decision?: string } | undefined)?.decision;
+      process.exit(exitCodeForDecision(decision));
     }
 
-    // Run the framework
-    const result = await module.run(input, flags);
+    const sinks: EventSink[] = [prettyReporter(flags.verbose ?? false)];
+
+    const result = (await module.run(input, runFlags, sinks)) as unknown as {
+      metadata?: { decision?: string };
+      verdict?: { decision?: string };
+    };
 
     // Handle output
     if (flags.output) {
-      await Bun.write(flags.output, JSON.stringify(result, null, 2));
+      await writeFile(flags.output, JSON.stringify(result, null, 2), 'utf8');
       console.log(`\n💾 Results saved to: ${flags.output}`);
     }
 
-    // Exit code based on decision
-    if (result.verdict) {
-      const decision = result.verdict.decision || result.decision;
-      if (decision === 'guilty' || decision === 'accept' || decision === 'pass') {
-        process.exit(0);
-      } else if (decision === 'not_guilty' || decision === 'reject' || decision === 'fail') {
-        process.exit(1);
-      } else {
-        process.exit(3); // Indeterminate
-      }
-    }
-
-    process.exit(0);
+    // Exit code: normalized metadata.decision, falling back to legacy verdict shape
+    const decision = result?.metadata?.decision ?? result?.verdict?.decision;
+    process.exit(exitCodeForDecision(decision));
   } catch (error) {
     if (error instanceof Error && error.message.includes('Cannot find module')) {
-      console.error(`\n❌ Framework '${framework}' not yet implemented`);
-      console.error(`   Expected module at: ${frameworkPath}`);
+      console.error(`\n❌ Framework '${framework}' failed to load: ${error.message}`);
       process.exit(2);
     }
     throw error;
@@ -836,27 +863,24 @@ async function loadInput(filepath: string): Promise<any> {
   // If absolute, use as-is
   const resolvedPath = filepath.startsWith('/') ? filepath : resolve(process.cwd(), filepath);
 
-  const file = Bun.file(resolvedPath);
-  const exists = await file.exists();
-
-  if (!exists) {
+  let raw: string;
+  try {
+    raw = await readFile(resolvedPath, 'utf8');
+  } catch {
     throw new Error(`Input file not found: ${filepath}`);
   }
 
   // Try to parse as JSON first
   if (filepath.endsWith('.json')) {
-    return file.json();
+    return JSON.parse(raw);
   }
-
-  // Otherwise treat as text
-  const text = await file.text();
 
   // Try to parse as JSON anyway
   try {
-    return JSON.parse(text);
+    return JSON.parse(raw);
   } catch {
     // Return as plain text
-    return { content: text };
+    return { content: raw };
   }
 }
 
@@ -955,9 +979,9 @@ async function interactiveMode() {
   const inputFile = await askString(rl, `\n📄 Input file path`);
 
   // Verify file exists
-  const file = Bun.file(inputFile);
-  const exists = await file.exists();
-  if (!exists) {
+  try {
+    await readFile(inputFile, 'utf8');
+  } catch {
     console.error(`\n❌ File not found: ${inputFile}`);
     rl.close();
     process.exit(1);
@@ -1204,9 +1228,13 @@ async function recommendFramework() {
 }
 
 async function showHelp() {
-  const pkg = Bun.file('package.json');
-  const exists = await pkg.exists();
-  const version = exists ? (await pkg.json()).version : 'unknown';
+  let version = 'unknown';
+  try {
+    const pkg = JSON.parse(await readFile(new URL('./package.json', import.meta.url), 'utf8'));
+    version = pkg.version;
+  } catch {
+    // keep 'unknown'
+  }
 
   console.log(`
 🏛️  Institutional Reasoning v${version}
@@ -1249,10 +1277,13 @@ async function showHelp() {
   console.log(`  institutional-reasoning six-hats decision.txt`);
 
   console.log(`\n\nOptions:`);
-  console.log(`  --verbose, -v     Show detailed execution logs`);
-  console.log(`  --output FILE    Save results to JSON file`);
-  console.log(`  --config FILE    Load custom configuration`);
-  console.log(`  --dry-run        Show prompts without calling LLMs`);
+  console.log(`  --verbose, -v     Stream per-agent progress, cost, timing`);
+  console.log(`  --output FILE    Save result JSON to file`);
+  console.log(`  --output-json    Print full result JSON to stdout (machine-readable)`);
+  console.log(`  --provider NAME  LLM provider: anthropic | openai | openrouter`);
+  console.log(`  --model ID       Model override (e.g. openai/gpt-4o-mini)`);
+  console.log(`  --max-cost USD   Hard cost ceiling for the run`);
+  console.log(`  --config-json J  Framework config overrides (JSON string)`);
   console.log(`  --list, -l       List all available frameworks`);
   console.log(`  --interactive, -i Interactive mode`);
   console.log(`  --which          Framework recommender (interactive)`);
@@ -1261,10 +1292,10 @@ async function showHelp() {
   console.log(`  --version        Show version number\n`);
 
   console.log(`Exit Codes:`);
-  console.log(`  0  Positive decision (guilty, accept, pass)`);
-  console.log(`  1  Negative decision (not guilty, reject, fail)`);
+  console.log(`  0  Affirmative decision (approve/accept/ready)`);
+  console.log(`  1  Negative decision (reject/fail)`);
   console.log(`  2  Error occurred`);
-  console.log(`  3  Indeterminate (dismissed, abstain)\n`);
+  console.log(`  3  Indeterminate (delay/dismissed/analysis-only)\n`);
 
   console.log(`Documentation: https://github.com/behole/institutionalized\n`);
 }

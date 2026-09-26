@@ -13,12 +13,18 @@ Each human decision-making system (courtroom, peer review, red team, etc.) becom
 
 ## Shared Core
 
-All frameworks share:
-- **Multi-agent orchestration** (parallel and sequential)
-- **Validation** (programmatic checks on agent outputs)
-- **Observability** (audit trails, cost tracking)
-- **Configuration** (model selection, parameters)
-- **CLI interface** (consistent UX)
+All frameworks share the **engine** (`core/engine/`):
+
+- **`defineFramework`** — standard wrapper owning provider resolution, config merge, budget guardrails, audit finalization
+- **`Session`** — per-run context: `step()` (single agent), `parallel()` (semaphore-gated fan-out), `phase()`/`note()` progress events
+- **Events, not logs** — frameworks emit `EngineEvent`s; the CLI subscribes a pretty reporter, `--output-json` exposes the raw stream, library consumers get silence
+- **Model registry** — role aliases (`reasoning`/`fast`/`cheap`/`judge`) resolved in one place (`core/engine/models.ts`)
+- **Audit trail** — per-agent prompts, responses, tokens, cost; saved to file on request
+- **Budget guardrails** — `maxCostUSD` / `maxTokens` abort a run when reached
+
+Lower-level primitives (`core/orchestrator.ts`: `FrameworkRunner`, `parseJSON`,
+`executeParallel`; `core/retry.ts`; `core/circuit-breaker.ts`) remain from v0.1
+and sit under the engine.
 
 ## Framework Structure
 
@@ -27,37 +33,42 @@ Each framework is a directory:
 ```
 institutional-reasoning/
 ├── core/                    # Shared infrastructure
-│   ├── orchestrator.ts      # Agent coordination primitives
+│   ├── engine/              # THE engine: defineFramework, Session, events,
+│   │   │                    #   model registry, reporters
+│   │   ├── define.ts
+│   │   ├── session.ts
+│   │   ├── events.ts
+│   │   ├── models.ts
+│   │   └── reporters.ts
+│   ├── orchestrator.ts      # FrameworkRunner, parseJSON (under the engine)
+│   ├── providers/           # anthropic | openai | openrouter | mock
 │   ├── validators.ts        # Common validation patterns
-│   ├── models.ts           # Multi-provider LLM interface
-│   └── cli-base.ts         # Shared CLI logic
+│   └── observability.ts     # Audit trails
 ├── frameworks/
 │   ├── courtroom/
 │   │   ├── types.ts
-│   │   ├── prosecutor.ts
+│   │   ├── prosecutor.ts    # prompt-builder + parser (content, not code)
 │   │   ├── defense.ts
 │   │   ├── jury.ts
 │   │   ├── judge.ts
-│   │   └── index.ts        # Framework entry point
+│   │   ├── orchestrator.ts  # legacy, kept for re-export
+│   │   └── index.ts         # defineFramework port: the framework body
 │   ├── peer-review/
 │   │   ├── types.ts
 │   │   ├── reviewer.ts
 │   │   ├── author.ts
 │   │   ├── editor.ts
 │   │   └── index.ts
-│   ├── red-blue-team/
-│   ├── pre-mortem/
-│   └── studio-critique/
-├── cli.ts                   # Unified CLI for all frameworks
+│   └── ... (26 total)
+├── eval/                    # Validity harness: framework vs single-call baseline
+├── cli.ts                   # Unified CLI (static registry, reporter wiring)
 └── examples/
-    ├── courtroom/
-    ├── peer-review/
-    └── ...
 ```
 
 ## Agent Orchestration Patterns
 
 ### Parallel Execution
+
 ```typescript
 const agents = Array.from({ length: N }, (_, i) => runAgent(i, ...));
 const results = await Promise.all(agents);
@@ -66,6 +77,7 @@ const results = await Promise.all(agents);
 Used for: Jury members, multiple reviewers, multiple pessimists (pre-mortem)
 
 ### Sequential Pipeline
+
 ```typescript
 const step1 = await runAgent1(...);
 const step2 = await runAgent2(step1, ...);
@@ -75,6 +87,7 @@ const step3 = await runAgent3(step2, ...);
 Used for: Prosecutor → Defense → Judge; Paper → Reviews → Rebuttal → Editor
 
 ### Iterative Refinement
+
 ```typescript
 let result = await runAgent(...);
 for (let round = 0; round < maxRounds; round++) {
@@ -89,6 +102,7 @@ Used for: Delphi method, multi-round debate
 ## Validation Patterns
 
 ### Quote Verification
+
 ```typescript
 function validateQuote(quote: string, source: string): void {
   if (!source.includes(quote)) {
@@ -98,6 +112,7 @@ function validateQuote(quote: string, source: string): void {
 ```
 
 ### Substantive Response
+
 ```typescript
 function validateSubstantive(text: string, minWords: number): void {
   const wordCount = text.split(/\s+/).length;
@@ -108,6 +123,7 @@ function validateSubstantive(text: string, minWords: number): void {
 ```
 
 ### Structured Output
+
 ```typescript
 function validateStructure<T>(data: unknown, schema: Schema<T>): T {
   // JSON schema validation or Zod
@@ -118,6 +134,7 @@ function validateStructure<T>(data: unknown, schema: Schema<T>): T {
 ## Model Selection Strategy
 
 ### Role-Based Models
+
 - **Heavyweight reasoning:** Judge, Editor, Synthesis roles
   - Model: Claude 3.7 Sonnet (or Opus when available)
   - Temperature: Low (0.2-0.3)
@@ -134,6 +151,7 @@ function validateStructure<T>(data: unknown, schema: Schema<T>): T {
   - Max tokens: Medium (2K-4K)
 
 ### Cost Optimization
+
 - Use lighter models for parallel agents (cost scales linearly)
 - Use heavier models only for final synthesis
 - Stream responses when possible
@@ -142,6 +160,7 @@ function validateStructure<T>(data: unknown, schema: Schema<T>): T {
 ## CLI Design
 
 ### Unified Interface
+
 ```bash
 # Generic pattern
 institutional-reasoning <framework> <input> [options]
@@ -154,6 +173,7 @@ institutional-reasoning pre-mortem plan.md --pessimists 10
 ```
 
 ### Common Flags
+
 - `--verbose` - Full transcript
 - `--output FILE` - Save structured results
 - `--config FILE` - Custom configuration
@@ -161,6 +181,7 @@ institutional-reasoning pre-mortem plan.md --pessimists 10
 - `--no-validate` - Skip validation (faster, less safe)
 
 ### Exit Codes
+
 - `0` - Positive decision (accept, guilty, pass)
 - `1` - Negative decision (reject, not guilty, fail)
 - `2` - Error occurred
@@ -169,6 +190,7 @@ institutional-reasoning pre-mortem plan.md --pessimists 10
 ## Observability
 
 ### Audit Trail
+
 ```typescript
 interface AuditLog {
   framework: string;
@@ -193,12 +215,14 @@ interface AuditLog {
 ```
 
 ### Cost Tracking
+
 - Track tokens per agent call
 - Calculate costs using current pricing
 - Report total cost at end
 - Warn if cost exceeds threshold
 
 ### Replay
+
 - Save full audit log to JSON
 - Can replay any decision for debugging
 - Can modify prompts and re-run
@@ -207,21 +231,25 @@ interface AuditLog {
 ## Testing Strategy
 
 ### Unit Tests
+
 - Individual agent prompts produce valid JSON
 - Validation catches malformed outputs
 - Model interface works for all providers
 
 ### Integration Tests
+
 - Full framework runs end-to-end
 - Handles errors gracefully
 - Produces expected output structure
 
 ### Accuracy Tests
+
 - Compare framework decisions to human expert panels
 - Measure: accuracy, consistency, reasoning quality
 - Track: false positives, false negatives, edge cases
 
 ### Benchmark Suite
+
 ```typescript
 interface Benchmark {
   framework: string;
@@ -239,10 +267,10 @@ Institutional Reasoning supports multiple LLM providers with intelligent routing
 
 ### Supported Providers
 
-| Provider | Best For | Key Models |
-|----------|----------|------------|
-| **Anthropic** | Heavyweight reasoning (Judge, Editor) | Claude 3.7 Sonnet, Claude 3 Opus |
-| **OpenAI** | Parallel agents, diverse perspectives | GPT-5, GPT-4o, GPT-4o Mini |
+| Provider       | Best For                                 | Key Models                          |
+| -------------- | ---------------------------------------- | ----------------------------------- |
+| **Anthropic**  | Heavyweight reasoning (Judge, Editor)    | Claude 3.7 Sonnet, Claude 3 Opus    |
+| **OpenAI**     | Parallel agents, diverse perspectives    | GPT-5, GPT-4o, GPT-4o Mini          |
 | **OpenRouter** | Cost optimization, model experimentation | 100+ models from multiple providers |
 
 ### Environment Setup
@@ -256,6 +284,7 @@ export OPENROUTER_API_KEY="sk-or-..."
 The system auto-detects available providers. First available is used as default.
 
 ### Provider Interface
+
 ```typescript
 interface LLMProvider {
   name: string;
@@ -265,7 +294,7 @@ interface LLMProvider {
     temperature: number;
     maxTokens: number;
   }): Promise<LLMResponse>;
-  
+
   calculateCost(usage: { inputTokens: number; outputTokens: number }, model: string): number;
 }
 ```
@@ -274,34 +303,47 @@ interface LLMProvider {
 
 **Scenario: Courtroom with 5 jurors**
 
-| Approach | Cost | Savings |
-|----------|------|---------|
-| All Claude 3.7 Sonnet | ~$0.40 | - |
+| Approach                           | Cost       | Savings |
+| ---------------------------------- | ---------- | ------- |
+| All Claude 3.7 Sonnet              | ~$0.40     | -       |
 | **Optimized (jury = GPT-4o Mini)** | **~$0.17** | **57%** |
 
 **Role-Based Selection:**
+
 - **Heavyweight (Judge, Editor):** Claude 3.7 Sonnet, GPT-5 Pro
 - **Parallel diversity (Jury, Reviewers):** GPT-4o Mini (cheaper at scale)
 - **Evidence building (Prosecutor):** Claude 3.7 Sonnet
 
-### Per-Role Provider Mixing
+### Model Routing (v0.2)
 
-```typescript
-const result = await runCourtroom(caseInput, {
-  models: {
-    prosecutor: "claude-3-7-sonnet-20250219",  // Anthropic
-    defense: "gpt-5",                           // OpenAI
-    jury: "gpt-4o-mini",                        // Cheaper for parallel
-    judge: "claude-3-7-sonnet-20250219"
-  }
+Frameworks request **roles**, not model IDs. One registry (`core/engine/models.ts`) owns the mapping — a new model drop is a one-line change:
+
+```ts
+export const MODEL_REGISTRY = {
+  reasoning: 'claude-sonnet-4-5-20250929',
+  fast: 'claude-haiku-4-5-20251001',
+  cheap: 'claude-haiku-4-5-20251001',
+  judge: 'claude-sonnet-4-5-20250929',
+};
+```
+
+Override per run, by explicit ID or per role:
+
+```ts
+const result = await run(input, {
+  model: 'openai/gpt-4o-mini', // explicit ID wins over everything
+  // or per-role: roleModels: { judge: 'claude-opus-4-...' }
+  provider: 'openrouter',
 });
 ```
 
-Mixing providers improves decision quality through diverse reasoning patterns.
+Framework-level `config.models` (per-role IDs) still works for back-compat; the
+engine override takes precedence.
 
 ## OSS Release Plan
 
 ### Phase 1: Core + 5 Frameworks
+
 - Courtroom ✅
 - Peer Review
 - Red/Blue Team
@@ -309,12 +351,14 @@ Mixing providers improves decision quality through diverse reasoning patterns.
 - Studio Critique
 
 ### Phase 2: Documentation
+
 - README with examples
 - Architecture docs
 - Contributing guide
 - Framework developer guide
 
 ### Phase 3: Community
+
 - MIT License
 - GitHub repo
 - Issue templates
@@ -322,6 +366,7 @@ Mixing providers improves decision quality through diverse reasoning patterns.
 - Code of conduct
 
 ### Phase 4: Validation
+
 - Benchmark suite
 - Accuracy measurements
 - User testimonials

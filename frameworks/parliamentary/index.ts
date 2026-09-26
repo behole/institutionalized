@@ -1,12 +1,14 @@
 /**
- * Parliamentary Debate Framework
- * Structured adversarial policy discussion
+ * Parliamentary Debate Framework — engine port.
+ *
+ * Flow: opening government → opening opposition → parallel backbenchers →
+ * closing opposition → closing government → speaker vote → summary. Speech
+ * order is preserved. All provider/audit/logging concerns owned by the engine.
  */
-
-import { createProvider } from '@core/providers';
-import { getAPIKey } from '@core/config';
-import { parseJSON, FrameworkRunner } from '@core/orchestrator';
-import type { LLMProvider, RunFlags } from '@core/types';
+import type { EventSink } from '@core/engine';
+import { defineFramework, Session } from '@core/engine';
+import { parseJSON } from '@core/orchestrator';
+import type { RunFlags } from '@core/types';
 import type {
   Motion,
   Speech,
@@ -17,75 +19,74 @@ import type {
 } from './types';
 import { DEFAULT_CONFIG } from './types';
 
-export async function run(
-  input: Motion | { content: string },
-  flags: RunFlags = {}
-): Promise<ParliamentaryResult> {
-  const motion: Motion = 'motion' in input ? input : { motion: input.content || '', context: '' };
+export const parliamentary = defineFramework<Motion | { content: string }, ParliamentaryResult>({
+  name: 'parliamentary',
+  description:
+    'Structured adversarial policy debate: government/opposition speeches, backbenchers, speaker vote and summary',
+  normalize(raw) {
+    if (typeof raw === 'object' && raw !== null && 'motion' in raw) {
+      return raw as Motion;
+    }
+    const content = (raw as { content?: string })?.content ?? '';
+    return { motion: content, context: '' };
+  },
+  async run(rawMotion, session) {
+    const motion = rawMotion as Motion;
+    const config: ParliamentaryConfig = {
+      ...DEFAULT_CONFIG,
+      ...(session.flags.config as Partial<ParliamentaryConfig> | undefined),
+    };
+    const cliFlags = session.flags as Record<string, unknown>;
+    if (cliFlags.backbenchers) {
+      config.parameters.backbenchCount = parseInt(String(cliFlags.backbenchers), 10);
+    }
 
-  const config: ParliamentaryConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  const cliFlags = flags as Record<string, unknown>;
-  if (cliFlags.backbenchers) {
-    config.parameters.backbenchCount = parseInt(String(cliFlags.backbenchers), 10);
-  }
+    // Engine model override wins over legacy per-role config models.
+    const explicitModel = session.models.override;
+    if (explicitModel) {
+      config.models = {
+        speaker: explicitModel,
+        debater: explicitModel,
+      };
+    }
 
-  const providerName = flags.provider || 'anthropic';
-  const apiKey = getAPIKey(providerName);
-  const provider = createProvider({ name: providerName, apiKey });
+    // Phase 1: Debate
+    session.phase('Debate', `${config.parameters.backbenchCount} backbenchers`);
+    const debate = await conductDebate(motion, config, session);
 
-  const verbose = flags.debug ?? false;
+    // Phase 2: Vote
+    session.phase('Division');
+    const vote = await countVotes(motion, debate, config, session);
 
-  if (verbose) {
-    console.log('\n🏛️  PARLIAMENTARY DEBATE\n');
-  }
+    // Phase 3: Summary
+    session.phase('Summary');
+    const summary = await summarizeDebate(motion, vote, config, session);
 
-  const runner = new FrameworkRunner<Motion, ParliamentaryResult>('parliamentary', motion);
+    session.note(
+      `Vote: ${vote.voteCounts.ayes} Ayes, ${vote.voteCounts.noes} Noes — ${vote.outcome}`
+    );
 
-  // Conduct debate
-  const debate = await conductDebate(motion, config, provider, runner, verbose);
-
-  // Count votes
-  const vote = await countVotes(motion, debate, config, provider, runner, verbose);
-
-  // Summarize
-  const summary = await summarizeDebate(motion, debate, vote, config, provider, runner, verbose);
-
-  if (verbose) {
-    console.log(`\nVote: ${vote.voteCounts.ayes} Ayes, ${vote.voteCounts.noes} Noes`);
-    console.log(`Outcome: ${vote.outcome}\n`);
-  }
-
-  const result: ParliamentaryResult = {
-    motion,
-    debate,
-    vote,
-    summary,
-    metadata: { timestamp: new Date().toISOString(), config },
-  };
-
-  const { auditLog } = await runner.finalize(result, 'complete');
-
-  return {
-    ...result,
-    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
-  };
-}
+    return {
+      motion,
+      debate,
+      vote,
+      summary,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        config,
+        decision: vote.outcome === 'motion_passed' ? 'approve' : 'reject',
+      },
+    };
+  },
+});
 
 async function conductDebate(
   motion: Motion,
   config: ParliamentaryConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Motion, ParliamentaryResult>,
-  verbose: boolean
+  session: Session
 ): Promise<DebateRecord> {
-  if (verbose) {
-    console.log('Conducting parliamentary debate...\n');
-  }
-
   // Opening Government
-  if (verbose) {
-    console.log('  Opening Government...');
-  }
+  session.phase('Opening Government');
   const openingGov = await deliverSpeech(
     'Opening Government',
     'government',
@@ -93,14 +94,11 @@ async function conductDebate(
     motion,
     [],
     config,
-    provider,
-    runner
+    session
   );
 
   // Opening Opposition
-  if (verbose) {
-    console.log('  Opening Opposition...');
-  }
+  session.phase('Opening Opposition');
   const openingOpp = await deliverSpeech(
     'Opening Opposition',
     'opposition',
@@ -108,15 +106,12 @@ async function conductDebate(
     motion,
     [openingGov],
     config,
-    provider,
-    runner
+    session
   );
 
   // Backbench contributions (parallel)
-  if (verbose) {
-    console.log('  Backbench contributions...');
-  }
-  const backbenchResponses = await runner.runParallel(
+  session.phase('Backbench Contributions', `${config.parameters.backbenchCount} in parallel`);
+  const backbenchResponses = await session.parallel(
     Array.from({ length: config.parameters.backbenchCount }, (_, i) => {
       const position = i % 2 === 0 ? 'for' : 'against';
       const previousSpeeches = [openingGov, openingOpp];
@@ -124,8 +119,6 @@ async function conductDebate(
 
       return {
         name: `backbencher-${i + 1}`,
-        provider,
-        model: config.models.debater,
         prompt: `You are Backbencher ${i + 1} in a Parliamentary debate.
 
 MOTION: ${motion.motion}
@@ -162,9 +155,7 @@ Follow parliamentary conventions: address counterarguments, cite evidence, be pe
   });
 
   // Closing Opposition
-  if (verbose) {
-    console.log('  Closing Opposition...');
-  }
+  session.phase('Closing Opposition');
   const closingOpp = await deliverSpeech(
     'Closing Opposition',
     'opposition',
@@ -172,14 +163,11 @@ Follow parliamentary conventions: address counterarguments, cite evidence, be pe
     motion,
     [openingGov, openingOpp, ...backbenchContributions],
     config,
-    provider,
-    runner
+    session
   );
 
   // Closing Government
-  if (verbose) {
-    console.log('  Closing Government...');
-  }
+  session.phase('Closing Government');
   const closingGov = await deliverSpeech(
     'Closing Government',
     'government',
@@ -187,8 +175,7 @@ Follow parliamentary conventions: address counterarguments, cite evidence, be pe
     motion,
     [openingGov, openingOpp, ...backbenchContributions, closingOpp],
     config,
-    provider,
-    runner
+    session
   );
 
   return {
@@ -207,19 +194,16 @@ async function deliverSpeech(
   motion: Motion,
   previousSpeeches: Speech[],
   config: ParliamentaryConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Motion, ParliamentaryResult>
+  session: Session
 ): Promise<Speech> {
   const previousDebate =
     previousSpeeches.length > 0
       ? `\n\nPREVIOUS SPEECHES:\n${previousSpeeches.map((s) => `${s.speaker} (${s.position}): ${s.keyPoints.join(', ')}`).join('\n')}`
       : '';
 
-  const response = await runner.runAgent(
-    `speaker-${speaker.toLowerCase().replace(/\s+/g, '-')}`,
-    provider,
-    config.models.debater,
-    `You are ${speaker} in a Parliamentary debate.
+  const response = await session.step({
+    name: `speaker-${speaker.toLowerCase().replace(/\s+/g, '-')}`,
+    prompt: `You are ${speaker} in a Parliamentary debate.
 
 MOTION: ${motion.motion}
 
@@ -237,9 +221,9 @@ Deliver your speech in JSON:
 }
 
 Follow parliamentary conventions: address counterarguments, cite evidence, be persuasive.`,
-    config.parameters.temperature,
-    1536
-  );
+    temperature: config.parameters.temperature,
+    maxTokens: 1536,
+  });
 
   const parsed = parseJSON<Omit<Speech, 'speaker' | 'role' | 'position'>>(response.content);
   return {
@@ -254,14 +238,8 @@ async function countVotes(
   motion: Motion,
   debate: DebateRecord,
   config: ParliamentaryConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Motion, ParliamentaryResult>,
-  verbose: boolean
+  session: Session
 ): Promise<Vote> {
-  if (verbose) {
-    console.log('\nCounting votes...\n');
-  }
-
   const debateText = [
     debate.openingGovernment,
     debate.openingOpposition,
@@ -272,11 +250,9 @@ async function countVotes(
     .map((s) => `${s.speaker} (${s.position}): ${s.speech}`)
     .join('\n\n');
 
-  const response = await runner.runAgent(
-    'speaker-vote',
-    provider,
-    config.models.speaker,
-    `You are the Speaker presiding over the division (vote).
+  const response = await session.step({
+    name: 'speaker-vote',
+    prompt: `You are the Speaker presiding over the division (vote).
 
 MOTION: ${motion.motion}
 
@@ -294,27 +270,22 @@ Count the votes based on the quality and persuasiveness of arguments in JSON:
   "majority": "description of majority",
   "outcome": "motion_passed" | "motion_defeated"
 }`,
-    config.parameters.temperature,
-    512
-  );
+    temperature: config.parameters.temperature,
+    maxTokens: 512,
+  });
 
   return parseJSON<Vote>(response.content);
 }
 
 async function summarizeDebate(
   motion: Motion,
-  debate: DebateRecord,
   vote: Vote,
   config: ParliamentaryConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Motion, ParliamentaryResult>,
-  verbose: boolean
+  session: Session
 ): Promise<ParliamentaryResult['summary']> {
-  const response = await runner.runAgent(
-    'speaker-summary',
-    provider,
-    config.models.speaker,
-    `Summarize the parliamentary debate.
+  const response = await session.step({
+    name: 'speaker-summary',
+    prompt: `Summarize the parliamentary debate.
 
 MOTION: ${motion.motion}
 OUTCOME: ${vote.outcome}
@@ -328,11 +299,22 @@ Provide summary in JSON:
   "keyContentions": ["contention 1", ...],
   "outcome": "summary of what was decided"
 }`,
-    config.parameters.temperature,
-    1024
-  );
+    temperature: config.parameters.temperature,
+    maxTokens: 1024,
+  });
 
   return parseJSON<ParliamentaryResult['summary']>(response.content);
+}
+
+/** Backward-compatible entry returning the bare result. */
+export async function run(
+  input: Motion | { content: string },
+  flags: RunFlags = {},
+  sinks: EventSink[] = []
+): Promise<ParliamentaryResult> {
+  const { result, auditLog } = await parliamentary(input, flags, sinks);
+  result.metadata.costUSD = auditLog.metadata.totalCost;
+  return result;
 }
 
 export * from './types';
