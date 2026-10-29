@@ -36,7 +36,7 @@ export function parseRetryAfterMs(header: string | null | undefined): number | n
 
 /** Determine if an error status code should trigger a retry. */
 function isRetryableStatus(status: number): boolean {
-  return status === 429 || status === 500 || status === 503;
+  return status === 429 || status === 500 || status === 502 || status === 503;
 }
 
 /** Extract HTTP status code from various error shapes. */
@@ -114,9 +114,9 @@ export async function withRetry<T>(
   options: WithRetryOptions = {}
 ): Promise<T> {
   const {
-    maxAttempts = 3,
-    timeoutMs = 120_000,
-    baseDelayMs = 1_000,
+    maxAttempts = Number(process.env.RETRY_MAX_ATTEMPTS ?? 3),
+    timeoutMs = Number(process.env.RETRY_TIMEOUT_MS ?? 120_000),
+    baseDelayMs = Number(process.env.RETRY_BASE_DELAY_MS ?? 1_000),
     retryOn,
     context = {},
   } = options;
@@ -176,8 +176,9 @@ export async function withRetry<T>(
     }
   }
 
-  // All attempts exhausted — throw ProviderError
-  throw new ProviderError('Max retries exceeded', {
+  // All attempts exhausted — throw ProviderError with the underlying cause
+  const lastMsg = lastError instanceof Error ? lastError.message : String(lastError);
+  throw new ProviderError(`Max retries exceeded: ${lastMsg.slice(0, 300)}`, {
     code: ErrorCode.PROVIDER_RATE_LIMITED,
     context,
     cause: lastError,

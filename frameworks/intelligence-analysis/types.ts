@@ -64,6 +64,7 @@ export interface IntelligenceAnalysisResult {
     timestamp: string;
     config: IntelligenceAnalysisConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

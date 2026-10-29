@@ -72,6 +72,7 @@ export interface WarGamingResult {
     modelUsage: {
       [forceName: string]: string;
     };
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

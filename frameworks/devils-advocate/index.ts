@@ -1,12 +1,13 @@
 /**
- * Devil's Advocate Framework
- * Formal challenge to test proposals
+ * Devil's Advocate Framework — engine port.
+ *
+ * Flow: opposition challenge → proposer rebuttal → arbiter verdict.
+ * All provider/model/audit/logging concerns owned by the engine.
  */
-
-import { createProvider } from '@core/providers';
-import { getAPIKey } from '@core/config';
-import { parseJSON, FrameworkRunner } from '@core/orchestrator';
-import type { LLMProvider, RunFlags } from '@core/types';
+import type { EventSink } from '@core/engine';
+import { defineFramework } from '@core/engine';
+import { parseJSON } from '@core/orchestrator';
+import type { RunFlags } from '@core/types';
 import type {
   Proposal,
   DevilsAdvocateConfig,
@@ -17,78 +18,37 @@ import type {
 } from './types';
 import { DEFAULT_CONFIG } from './types';
 
-export async function run(
-  input: Proposal | { content: string },
-  flags: RunFlags = {}
-): Promise<DevilsAdvocateResult> {
-  const proposal: Proposal =
-    'description' in input
-      ? input
-      : { description: input.content || '', rationale: [], benefits: [] };
+export const devilsAdvocate = defineFramework<Proposal | { content: string }, DevilsAdvocateResult>(
+  {
+    name: 'devils-advocate',
+    description: 'Formal challenge to test proposals: opposition, rebuttal, arbiter verdict',
+    normalize(raw) {
+      if (typeof raw === 'object' && raw !== null && 'description' in raw) {
+        return raw as Proposal;
+      }
+      const content = (raw as { content?: string })?.content ?? '';
+      return { description: content, rationale: [], benefits: [] };
+    },
+    async run(rawInput, session) {
+      const proposal = rawInput as Proposal;
+      const config: DevilsAdvocateConfig = {
+        ...DEFAULT_CONFIG,
+        ...(session.flags.config as Partial<DevilsAdvocateConfig> | undefined),
+      };
+      const explicitModel = session.models.override;
+      if (explicitModel) {
+        config.models = {
+          advocate: explicitModel,
+          proposer: explicitModel,
+          arbiter: explicitModel,
+        };
+      }
 
-  const config: DevilsAdvocateConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  const providerName = flags.provider || 'anthropic';
-  const apiKey = getAPIKey(providerName);
-  const provider = createProvider({ name: providerName, apiKey });
-
-  const verbose = flags.debug ?? false;
-
-  if (verbose) {
-    console.log("\n😈 DEVIL'S ADVOCATE\n");
-  }
-
-  const runner = new FrameworkRunner<Proposal, DevilsAdvocateResult>('devils-advocate', proposal);
-
-  // Phase 1: Opposition
-  if (verbose) {
-    console.log('Phase 1: Challenging the proposal...');
-  }
-  const opposition = await challengeProposal(proposal, config, provider, runner);
-
-  // Phase 2: Rebuttal
-  if (verbose) {
-    console.log('Phase 2: Proposer responds...');
-  }
-  const rebuttal = await rebut(proposal, opposition, config, provider, runner);
-
-  // Phase 3: Verdict
-  if (verbose) {
-    console.log('Phase 3: Arbiter decides...\n');
-  }
-  const verdict = await decide(proposal, opposition, rebuttal, config, provider, runner);
-
-  if (verbose) {
-    console.log(`Decision: ${verdict.decision.toUpperCase()}`);
-    console.log(`Verdict: ${verdict.verdict}\n`);
-  }
-
-  const result: DevilsAdvocateResult = {
-    proposal,
-    opposition,
-    rebuttal,
-    verdict,
-    metadata: { timestamp: new Date().toISOString(), config },
-  };
-
-  const { auditLog } = await runner.finalize(result, 'complete');
-
-  return {
-    ...result,
-    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
-  };
-}
-
-async function challengeProposal(
-  proposal: Proposal,
-  config: DevilsAdvocateConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Proposal, DevilsAdvocateResult>
-): Promise<Opposition> {
-  const response = await runner.runAgent(
-    'advocate',
-    provider,
-    config.models.advocate,
-    `You are the Devil's Advocate. Challenge this proposal:
+      // Phase 1: Opposition
+      session.phase('Opposition', "Devil's advocate challenges the proposal");
+      const oppositionStep = await session.step({
+        name: 'advocate',
+        prompt: `You are the Devil's Advocate. Challenge this proposal:
 
 ${proposal.description}
 
@@ -102,25 +62,16 @@ Provide JSON:
   "alternativeProposals": ["alternative 1", ...],
   "questionsNotAnswered": ["question 1", ...]
 }`,
-    config.parameters.advocateTemperature,
-    2048
-  );
+        temperature: config.parameters.advocateTemperature,
+        maxTokens: 2048,
+      });
+      const opposition = parseJSON<Opposition>(oppositionStep.content);
 
-  return parseJSON<Opposition>(response.content);
-}
-
-async function rebut(
-  proposal: Proposal,
-  opposition: Opposition,
-  config: DevilsAdvocateConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Proposal, DevilsAdvocateResult>
-): Promise<Rebuttal> {
-  const response = await runner.runAgent(
-    'proposer',
-    provider,
-    config.models.proposer,
-    `Respond to these objections to your proposal:
+      // Phase 2: Rebuttal
+      session.phase('Rebuttal', 'Proposer responds to objections');
+      const rebuttalStep = await session.step({
+        name: 'proposer',
+        prompt: `Respond to these objections to your proposal:
 
 PROPOSAL: ${proposal.description}
 
@@ -133,26 +84,16 @@ Provide JSON:
   "strengthenedCase": "...",
   "concessions": ["concession 1", ...]
 }`,
-    0.6,
-    2048
-  );
+        temperature: 0.6,
+        maxTokens: 2048,
+      });
+      const rebuttal = parseJSON<Rebuttal>(rebuttalStep.content);
 
-  return parseJSON<Rebuttal>(response.content);
-}
-
-async function decide(
-  proposal: Proposal,
-  opposition: Opposition,
-  rebuttal: Rebuttal,
-  config: DevilsAdvocateConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Proposal, DevilsAdvocateResult>
-): Promise<Verdict> {
-  const response = await runner.runAgent(
-    'arbiter',
-    provider,
-    config.models.arbiter,
-    `As arbiter, decide on this proposal after seeing opposition and rebuttal.
+      // Phase 3: Verdict
+      session.phase('Verdict', 'Arbiter decides');
+      const verdictStep = await session.step({
+        name: 'arbiter',
+        prompt: `As arbiter, decide on this proposal after seeing opposition and rebuttal.
 
 PROPOSAL: ${proposal.description}
 OBJECTIONS: ${opposition.objections.length}
@@ -165,11 +106,42 @@ Provide JSON:
   "conditions": ["condition 1", ...],
   "verdict": "one sentence summary"
 }`,
-    config.parameters.arbiterTemperature,
-    2048
-  );
+        temperature: config.parameters.arbiterTemperature,
+        maxTokens: 2048,
+      });
+      const verdict = parseJSON<Verdict>(verdictStep.content);
 
-  return parseJSON<Verdict>(response.content);
+      session.note(`Decision: ${verdict.decision.toUpperCase()} | Verdict: ${verdict.verdict}`);
+
+      return {
+        proposal,
+        opposition,
+        rebuttal,
+        verdict,
+        metadata: {
+          timestamp: new Date().toISOString(),
+          config,
+          decision:
+            verdict.decision === 'approved'
+              ? 'approve'
+              : verdict.decision === 'approved-with-conditions'
+                ? 'delay'
+                : 'reject',
+        },
+      };
+    },
+  }
+);
+
+/** Backward-compatible entry returning the bare result. */
+export async function run(
+  input: Proposal | { content: string },
+  flags: RunFlags = {},
+  sinks: EventSink[] = []
+): Promise<DevilsAdvocateResult> {
+  const { result, auditLog } = await devilsAdvocate(input, flags, sinks);
+  result.metadata.costUSD = auditLog.metadata.totalCost;
+  return result;
 }
 
 export * from './types';

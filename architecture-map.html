@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Institutionalized - Architecture Map</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+            color: var(--foreground, #1a1a1a);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 13px;
+            color: var(--muted-foreground, #666);
+            margin-bottom: 20px;
+        }
+        .map-container {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+        }
+        .framework-map {
+            background: var(--card, #fff);
+            border: 1px solid var(--border, #ddd);
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            min-height: 400px;
+        }
+        .framework-node {
+            position: absolute;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 5;
+        }
+        .framework-node:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        .tier-1 { background: #e3f2fd; color: #1565c0; border: 2px solid #2196f3; }
+        .tier-2 { background: #f3e5f5; color: #7b1fa2; border: 2px solid #9c27b0; }
+        .tier-3 { background: #e8f5e9; color: #2e7d32; border: 2px solid #4caf50; }
+        .framework-node.mcp::after {
+            content: ' MCP';
+            font-size: 10px;
+            margin-left: 6px;
+            opacity: 0.7;
+        }
+        .flow-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .flow-line {
+            position: absolute;
+            height: 2px;
+            background: #ddd;
+            transform-origin: left center;
+        }
+        .legend {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+        .details-panel {
+            background: var(--card, #fff);
+            border: 1px solid var(--border, #ddd);
+            border-radius: 8px;
+            padding: 15px;
+            height: fit-content;
+        }
+        .details-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border, #eee);
+        }
+        .details-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        .details-label {
+            color: var(--muted-foreground, #666);
+        }
+        .details-value {
+            font-weight: 500;
+        }
+        .agent-list {
+            margin-top: 12px;
+        }
+        .agent-item {
+            padding: 6px 0;
+            font-size: 12px;
+            border-bottom: 1px solid var(--border, #eee);
+        }
+        .agent-item:last-child {
+            border-bottom: none;
+        }
+        .agent-icon {
+            margin-right: 6px;
+        }
+        .interaction-hint {
+            font-size: 11px;
+            color: var(--muted-foreground, #666);
+            margin-top: 15px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>🗺️ Architecture Map</h1>
+    <p class="subtitle">Visualize framework relationships and agent flows</p>
+
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background:#e3f2fd;border:2px solid #2196f3"></div>
+            <span>Tier 1 (MVP)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background:#f3e5f5;border:2px solid #9c27b0"></div>
+            <span>Tier 2 (Core)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background:#e8f5e9;border:2px solid #4caf50"></div>
+            <span>Tier 3 (Extended)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background:#fff;border:1px solid #999"></div>
+            <span>MCP Tool</span>
+        </div>
+    </div>
+
+    <div class="map-container">
+        <div class="framework-map" id="map">
+            <svg class="flow-lines" id="flowLines"></svg>
+        </div>
+
+        <div class="details-panel">
+            <div class="details-title" id="detailsTitle">Select a framework</div>
+            <div class="details-row">
+                <span class="details-label">Tier</span>
+                <span class="details-value" id="detailsTier">—</span>
+            </div>
+            <div class="details-row">
+                <span class="details-label">Agents</span>
+                <span class="details-value" id="detailsAgents">—</span>
+            </div>
+            <div class="details-row">
+                <span class="details-label">MCP</span>
+                <span class="details-value" id="detailsMcp">—</span>
+            </div>
+            <div class="agent-list" id="agentList"></div>
+            <p class="interaction-hint" id="hint">Click any node to see details</p>
+        </div>
+    </div>
+
+    <script>
+        const frameworks = [
+            { id: 'courtroom', name: 'Courtroom', tier: 1, mcp: true, x: 50, y: 15, agents: ['Prosecutor', 'Defense', '5 Jurors', 'Judge'], color: '#2196f3' },
+            { id: 'peer-review', name: 'Peer Review', tier: 1, mcp: true, x: 25, y: 35, agents: ['3 Reviewers', 'Author', 'Editor'], color: '#2196f3' },
+            { id: 'talmudic', name: 'Talmudic', tier: 1, mcp: true, x: 75, y: 35, agents: ['5 Judges', 'Scribe', 'Parties'], color: '#2196f3' },
+            { id: 'six-hats', name: 'Six Hats', tier: 2, mcp: true, x: 50, y: 55, agents: ['6 Cognitive Modes'], color: '#9c27b0' },
+            { id: 'red-team', name: 'Red Team', tier: 2, mcp: true, x: 25, y: 70, agents: ['Attacker', 'Defender', 'Evaluator'], color: '#9c27b0' },
+            { id: 'design-studio', name: 'Design Studio', tier: 2, mcp: true, x: 75, y: 70, agents: ['Designer', 'PM', 'Engineer', 'User Researcher'], color: '#9c27b0' },
+            { id: 'ethics-board', name: 'Ethics Board', tier: 3, mcp: true, x: 15, y: 20, agents: ['2 Ethicists', 'Engineer', 'User Advocate'], color: '#4caf50' },
+            { id: 'tech-review', name: 'Tech Review', tier: 3, mcp: true, x: 85, y: 20, agents: ['2 Architects', 'Dev', 'Ops', 'Security'], color: '#4caf50' },
+            { id: 'investment', name: 'Investment', tier: 3, mcp: true, x: 50, y: 85, agents: ['Investor', 'Analyst', 'Risk Officer', 'CFO'], color: '#4caf50' },
+            { id: 'hegelian', name: 'Hegelian', tier: 1, mcp: false, x: 35, y: 55, agents: ['Thesis', 'Antithesis', 'Synthesis'], color: '#2196f3' },
+            { id: 'jury', name: 'Jury', tier: 3, mcp: true, x: 65, y: 55, agents: ['12 Jurors', 'Foreperson'], color: '#4caf50' }
+        ];
+
+        const map = document.getElementById('map');
+        const flowLines = document.getElementById('flowLines');
+        const detailsTitle = document.getElementById('detailsTitle');
+        const detailsTier = document.getElementById('detailsTier');
+        const detailsAgents = document.getElementById('detailsAgents');
+        const detailsMcp = document.getElementById('detailsMcp');
+        const agentList = document.getElementById('agentList');
+        const hint = document.getElementById('hint');
+
+        const connections = [
+            ['courtroom', 'jury'], ['courtroom', 'six-hats'], ['peer-review', 'hegelian'],
+            ['talmudic', 'courtroom'], ['red-team', 'ethics-board'], ['design-studio', 'tech-review'],
+            ['investment', 'board'], ['hegelian', 'six-hats']
+        ];
+
+        function drawConnections() {
+            flowLines.innerHTML = '';
+            connections.forEach(([from, to]) => {
+                const fromNode = frameworks.find(f => f.id === from);
+                const toNode = frameworks.find(f => f.id === to);
+                if (!fromNode || !toNode) return;
+
+                const line = document.createElement('div');
+                line.className = 'flow-line';
+
+                const x1 = fromNode.x;
+                const y1 = fromNode.y;
+                const x2 = toNode.x;
+                const y2 = toNode.y;
+
+                const length = Math.sqrt((x2-x1)**2 + (y2-y1)**2);
+                const angle = Math.atan2(y2-y1, x2-x1) * 180 / Math.PI;
+
+                line.style.left = x1 + '%';
+                line.style.top = y1 + '%';
+                line.style.width = length + '%';
+                line.style.transform = `rotate(${angle}deg)`;
+                line.style.opacity = 0.6;
+
+                flowLines.appendChild(line);
+            });
+        }
+
+        function renderNodes() {
+            frameworks.forEach(fw => {
+                const node = document.createElement('div');
+                node.className = `framework-node tier-${fw.tier}${fw.mcp ? ' mcp' : ''}`;
+                node.id = fw.id;
+                node.style.left = fw.x + '%';
+                node.style.top = fw.y + '%';
+                node.textContent = fw.name;
+
+                node.addEventListener('click', () => showDetails(fw));
+                map.appendChild(node);
+            });
+        }
+
+        function showDetails(fw) {
+            detailsTitle.textContent = fw.name;
+            detailsTier.textContent = 'Tier ' + fw.tier;
+            detailsAgents.textContent = fw.agents.length;
+            detailsMcp.textContent = fw.mcp ? '✓ Yes' : '✗ No';
+
+            agentList.innerHTML = fw.agents.map(agent => 
+                `<div class="agent-item">👤 ${agent}</div>`
+            ).join('');
+
+            hint.textContent = '🎯 Run this framework via CLI or MCP';
+        }
+
+        renderNodes();
+        drawConnections();
+    </script>
+</body>
+</html>

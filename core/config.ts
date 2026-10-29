@@ -38,7 +38,7 @@ export function loadConfig<T extends BaseFrameworkConfig>(defaults: T, overrides
  */
 export function getAPIKey(provider: string): string {
   const envVar = `${provider.toUpperCase()}_API_KEY`;
-  const key = process.env[envVar] || Bun.env[envVar];
+  const key = process.env[envVar];
 
   if (!key) {
     throw new Error(`Missing API key: Set ${envVar} environment variable`);

@@ -1,12 +1,14 @@
 /**
- * Tumor Board / MDT Framework
- * Multi-disciplinary consensus for complex decisions
+ * Tumor Board / MDT Framework — engine port.
+ *
+ * Flow: parallel specialist inputs → chair-led team discussion → consensus
+ * recommendation. All provider/model/audit/logging concerns owned by the
+ * engine.
  */
-
-import { createProvider } from '@core/providers';
-import { getAPIKey } from '@core/config';
-import { parseJSON, FrameworkRunner } from '@core/orchestrator';
-import type { LLMProvider, RunFlags } from '@core/types';
+import type { EventSink } from '@core/engine';
+import { defineFramework } from '@core/engine';
+import { parseJSON } from '@core/orchestrator';
+import type { RunFlags } from '@core/types';
 import type {
   Case,
   SpecialistInput,
@@ -17,108 +19,42 @@ import type {
 } from './types';
 import { DEFAULT_CONFIG } from './types';
 
-export async function run(
-  input: Case | { content: string },
-  flags: RunFlags = {}
-): Promise<TumorBoardResult> {
-  const caseData: Case =
-    'caseId' in input
-      ? input
-      : {
-          caseId: 'case-1',
-          summary: input.content || '',
-        };
+export const tumorBoard = defineFramework<Case | { content: string }, TumorBoardResult>({
+  name: 'tumor-board',
+  description:
+    'Multidisciplinary team (MDT) consensus: parallel specialist inputs, chair discussion, recommendation',
+  normalize(raw) {
+    if (typeof raw === 'object' && raw !== null && 'caseId' in raw) {
+      return raw as Case;
+    }
+    const content = (raw as { content?: string })?.content ?? '';
+    return { caseId: 'case-1', summary: content };
+  },
+  async run(caseInput, session) {
+    const caseData = caseInput as Case;
+    const config: TumorBoardConfig = {
+      ...DEFAULT_CONFIG,
+      ...(session.flags.config as Partial<TumorBoardConfig> | undefined),
+    };
+    const cliFlags = session.flags as Record<string, unknown>;
+    if (cliFlags.specialties) {
+      config.specialties = String(cliFlags.specialties).split(',');
+    }
 
-  const config: TumorBoardConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  const cliFlags = flags as Record<string, unknown>;
-  if (cliFlags.specialties) {
-    config.specialties = String(cliFlags.specialties).split(',');
-  }
+    // Engine model override wins over legacy per-role config models.
+    const explicitModel = session.models.override;
+    if (explicitModel) {
+      config.models = {
+        specialist: explicitModel,
+        chair: explicitModel,
+      };
+    }
 
-  const providerName = flags.provider || 'anthropic';
-  const apiKey = getAPIKey(providerName);
-  const provider = createProvider({ name: providerName, apiKey });
-
-  const verbose = flags.debug ?? false;
-
-  if (verbose) {
-    console.log('\n🏥 MULTIDISCIPLINARY TEAM BOARD\n');
-  }
-
-  const runner = new FrameworkRunner<Case, TumorBoardResult>('tumor-board', caseData);
-
-  // Phase 1: Specialist inputs
-  const specialistInputs = await gatherSpecialistInputs(
-    caseData,
-    config,
-    provider,
-    runner,
-    verbose
-  );
-
-  // Phase 2: Team discussion
-  const discussion = await facilitateDiscussion(
-    caseData,
-    specialistInputs,
-    config,
-    provider,
-    runner,
-    verbose
-  );
-
-  // Phase 3: Consensus recommendation
-  const recommendation = await formulateRecommendation(
-    caseData,
-    specialistInputs,
-    discussion,
-    config,
-    provider,
-    runner,
-    verbose
-  );
-
-  if (verbose) {
-    console.log(`\nSpecialists Consulted: ${specialistInputs.length}`);
-    console.log(`Consensus Points: ${discussion.consensusPoints.length}`);
-    console.log(`Primary Recommendation: ${recommendation.primaryRecommendation}\n`);
-  }
-
-  const result: TumorBoardResult = {
-    case: caseData,
-    specialistInputs,
-    discussion,
-    recommendation,
-    metadata: { timestamp: new Date().toISOString(), config },
-  };
-
-  const { auditLog } = await runner.finalize(result, 'complete');
-
-  return {
-    ...result,
-    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
-  };
-}
-
-async function gatherSpecialistInputs(
-  caseData: Case,
-  config: TumorBoardConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Case, TumorBoardResult>,
-  verbose: boolean
-): Promise<SpecialistInput[]> {
-  if (verbose) {
-    console.log('Phase 1: Gathering specialist inputs...\n');
-  }
-
-  const responses = await runner.runParallel(
-    config.specialties.map((specialty) => {
-      if (verbose) {
-        console.log(`  ${specialty} reviewing...`);
-      }
-      return {
+    // Phase 1: Specialist inputs (parallel)
+    session.phase('Specialist Inputs', `${config.specialties.length} specialists in parallel`);
+    const specialistResponses = await session.parallel(
+      config.specialties.map((specialty) => ({
         name: `specialist-${specialty.toLowerCase().replace(/\s+/g, '-')}`,
-        provider,
-        model: config.models.specialist,
         prompt: `You are a ${specialty} specialist in a multidisciplinary team meeting.
 
 CASE: ${caseData.caseId}
@@ -140,37 +76,25 @@ Provide your specialist input in JSON:
 }`,
         temperature: config.parameters.temperature,
         maxTokens: 1536,
-      };
-    })
-  );
+      }))
+    );
+    const specialistInputs = specialistResponses.map((response) =>
+      parseJSON<SpecialistInput>(response.content)
+    );
+    session.note(`Specialists consulted: ${specialistInputs.length}`);
 
-  return responses.map((response) => parseJSON<SpecialistInput>(response.content));
-}
+    // Phase 2: Team discussion
+    session.phase('Team Discussion');
+    const inputsText = specialistInputs
+      .map(
+        (input) =>
+          `${input.specialty}:\nAssessment: ${input.assessment}\nRecommendations: ${input.recommendations.join(', ')}\nConcerns: ${input.concerns.join(', ')}`
+      )
+      .join('\n\n');
 
-async function facilitateDiscussion(
-  caseData: Case,
-  specialistInputs: SpecialistInput[],
-  config: TumorBoardConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Case, TumorBoardResult>,
-  verbose: boolean
-): Promise<TeamDiscussion> {
-  if (verbose) {
-    console.log('\nPhase 2: Facilitating team discussion...\n');
-  }
-
-  const inputsText = specialistInputs
-    .map(
-      (input) =>
-        `${input.specialty}:\nAssessment: ${input.assessment}\nRecommendations: ${input.recommendations.join(', ')}\nConcerns: ${input.concerns.join(', ')}`
-    )
-    .join('\n\n');
-
-  const response = await runner.runAgent(
-    'chair-discussion',
-    provider,
-    config.models.chair,
-    `You are chairing a multidisciplinary team discussion.
+    const discussionResponse = await session.step({
+      name: 'chair-discussion',
+      prompt: `You are chairing a multidisciplinary team discussion.
 
 CASE: ${caseData.caseId}
 
@@ -189,35 +113,20 @@ Synthesize the team discussion in JSON:
   ],
   "criticalFactors": ["critical factor 1", ...]
 }`,
-    config.parameters.temperature,
-    1536
-  );
+      temperature: config.parameters.temperature,
+      maxTokens: 1536,
+    });
+    const discussion = parseJSON<TeamDiscussion>(discussionResponse.content);
 
-  return parseJSON<TeamDiscussion>(response.content);
-}
+    // Phase 3: Consensus recommendation
+    session.phase('Consensus Recommendation');
+    const recommendationsText = specialistInputs
+      .map((input) => `${input.specialty}: ${input.recommendations.join(', ')}`)
+      .join('\n');
 
-async function formulateRecommendation(
-  caseData: Case,
-  specialistInputs: SpecialistInput[],
-  discussion: TeamDiscussion,
-  config: TumorBoardConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Case, TumorBoardResult>,
-  verbose: boolean
-): Promise<Recommendation> {
-  if (verbose) {
-    console.log('\nPhase 3: Formulating consensus recommendation...\n');
-  }
-
-  const inputsText = specialistInputs
-    .map((input) => `${input.specialty}: ${input.recommendations.join(', ')}`)
-    .join('\n');
-
-  const response = await runner.runAgent(
-    'chair-recommendation',
-    provider,
-    config.models.chair,
-    `Formulate the multidisciplinary team's consensus recommendation.
+    const recommendationResponse = await session.step({
+      name: 'chair-recommendation',
+      prompt: `Formulate the multidisciplinary team's consensus recommendation.
 
 CASE: ${caseData.caseId}
 
@@ -228,7 +137,7 @@ DISAGREEMENTS:
 ${discussion.disagreements.map((d) => `${d.point}: ${d.perspectives.join(', ')}`).join('\n')}
 
 SPECIALIST RECOMMENDATIONS:
-${inputsText}
+${recommendationsText}
 
 Provide consensus recommendation in JSON:
 {
@@ -240,11 +149,42 @@ Provide consensus recommendation in JSON:
   "followUpPlan": ["follow-up step 1", ...],
   "contingencies": ["if X happens, then Y", ...]
 }`,
-    config.parameters.temperature,
-    2048
-  );
+      temperature: config.parameters.temperature,
+      maxTokens: 2048,
+    });
+    const recommendation = parseJSON<Recommendation>(recommendationResponse.content);
 
-  return parseJSON<Recommendation>(response.content);
+    session.note(
+      `Consensus points: ${discussion.consensusPoints.length} | Primary recommendation: ${recommendation.primaryRecommendation}`
+    );
+
+    return {
+      case: caseData,
+      specialistInputs,
+      discussion,
+      recommendation,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        config,
+        decision:
+          discussion.criticalFactors.length > 0 ||
+          specialistInputs.some((s) => s.contraindications.length > 0)
+            ? 'delay'
+            : 'approve',
+      },
+    };
+  },
+});
+
+/** Backward-compatible entry returning the bare result. */
+export async function run(
+  input: Case | { content: string },
+  flags: RunFlags = {},
+  sinks: EventSink[] = []
+): Promise<TumorBoardResult> {
+  const { result, auditLog } = await tumorBoard(input, flags, sinks);
+  result.metadata.costUSD = auditLog.metadata.totalCost;
+  return result;
 }
 
 export * from './types';

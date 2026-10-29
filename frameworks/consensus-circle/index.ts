@@ -1,12 +1,14 @@
 /**
- * Consensus Circle Framework
- * Quaker-inspired consensus building without voting
+ * Consensus Circle Framework — engine port.
+ *
+ * Flow: Quaker-style rounds — parallel participant voices → clerk synthesis
+ * → repeat until no blocking concerns → final decision. All provider/model/
+ * audit/logging concerns owned by the engine.
  */
-
-import { createProvider } from '@core/providers';
-import { getAPIKey } from '@core/config';
-import { parseJSON, FrameworkRunner } from '@core/orchestrator';
-import type { LLMProvider, RunFlags } from '@core/types';
+import type { EventSink } from '@core/engine';
+import { defineFramework, Session } from '@core/engine';
+import { parseJSON } from '@core/orchestrator';
+import type { RunFlags } from '@core/types';
 import type {
   Proposal,
   ParticipantVoice,
@@ -17,97 +19,80 @@ import type {
 } from './types';
 import { DEFAULT_CONFIG } from './types';
 
-export async function run(
-  input: Proposal | { content: string },
-  flags: RunFlags = {}
-): Promise<ConsensusCircleResult> {
-  const proposal: Proposal =
-    'question' in input ? input : { question: input.content || '', context: '' };
-
-  const config: ConsensusCircleConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  const cliFlags = flags as Record<string, unknown>;
-  if (cliFlags.participants) {
-    config.parameters.participantCount = parseInt(String(cliFlags.participants), 10);
-  }
-
-  const providerName = flags.provider || 'anthropic';
-  const apiKey = getAPIKey(providerName);
-  const provider = createProvider({ name: providerName, apiKey });
-
-  const verbose = flags.debug ?? false;
-
-  if (verbose) {
-    console.log('\n🕊️  CONSENSUS CIRCLE\n');
-  }
-
-  const runner = new FrameworkRunner<Proposal, ConsensusCircleResult>('consensus-circle', proposal);
-
-  const rounds: ConsensusRound[] = [];
-  let consensusAchieved = false;
-
-  for (let round = 1; round <= config.parameters.maxRounds && !consensusAchieved; round++) {
-    if (verbose) {
-      console.log(`\nRound ${round}: Gathering voices...`);
+export const consensusCircle = defineFramework<
+  Proposal | { content: string },
+  ConsensusCircleResult
+>({
+  name: 'consensus-circle',
+  description: 'Quaker-inspired consensus building without voting: rounds of voices until unity',
+  normalize(raw) {
+    if (typeof raw === 'object' && raw !== null && 'question' in raw) {
+      return raw as Proposal;
+    }
+    const content = (raw as { content?: string })?.content ?? '';
+    return { question: content, context: '' };
+  },
+  async run(rawInput, session) {
+    const proposal = rawInput as Proposal;
+    const config: ConsensusCircleConfig = {
+      ...DEFAULT_CONFIG,
+      ...(session.flags.config as Partial<ConsensusCircleConfig> | undefined),
+    };
+    const explicitModel = session.models.override;
+    if (explicitModel) {
+      config.models = {
+        participant: explicitModel,
+        clerk: explicitModel,
+      };
     }
 
-    const previousRound = rounds[rounds.length - 1];
-    const voices = await gatherVoices(
-      proposal,
-      round,
-      previousRound,
-      config,
-      provider,
-      runner,
-      verbose
-    );
-    const roundSummary = await synthesizeRound(
-      proposal,
-      voices,
-      round,
-      config,
-      provider,
-      runner,
-      verbose
-    );
+    const rounds: ConsensusRound[] = [];
+    let consensusAchieved = false;
 
-    rounds.push(roundSummary);
-    consensusAchieved = roundSummary.blockingConcerns.length === 0;
+    for (let round = 1; round <= config.parameters.maxRounds && !consensusAchieved; round++) {
+      session.phase(`Round ${round}`, 'Gathering voices');
 
-    if (verbose && consensusAchieved) {
-      console.log('  ✨ Consensus achieved!');
+      const previousRound = rounds[rounds.length - 1];
+      const voices = await gatherVoices(proposal, round, previousRound, config, session);
+      const roundSummary = await synthesizeRound(proposal, voices, round, config, session);
+
+      rounds.push(roundSummary);
+      consensusAchieved = roundSummary.blockingConcerns.length === 0;
+
+      session.note(
+        `Round ${round}: ${roundSummary.areasOfAgreement.length} agreements, ` +
+          `${roundSummary.blockingConcerns.length} blocking` +
+          (consensusAchieved ? ' — consensus achieved' : '')
+      );
     }
-  }
 
-  const decision = await formulateDecision(proposal, rounds, config, provider, runner, verbose);
+    session.phase('Final Decision');
+    const decision = await formulateDecision(proposal, rounds, config, session);
 
-  if (verbose) {
-    console.log(`\nConsensus Achieved: ${decision.consensusAchieved ? 'Yes' : 'No'}`);
-    console.log(`Addressed Concerns: ${decision.addressedConcerns.length}\n`);
-  }
+    session.note(
+      `Consensus achieved: ${decision.consensusAchieved ? 'yes' : 'no'} | ` +
+        `Addressed concerns: ${decision.addressedConcerns.length}`
+    );
 
-  const result: ConsensusCircleResult = {
-    proposal,
-    rounds,
-    decision,
-    metadata: { timestamp: new Date().toISOString(), config },
-  };
-
-  const { auditLog } = await runner.finalize(result, 'complete');
-
-  return {
-    ...result,
-    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
-  };
-}
+    return {
+      proposal,
+      rounds,
+      decision,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        config,
+        decision: decision.consensusAchieved ? 'approve' : 'delay',
+      },
+    };
+  },
+});
 
 async function gatherVoices(
   proposal: Proposal,
   round: number,
   previousRound: ConsensusRound | undefined,
   config: ConsensusCircleConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Proposal, ConsensusCircleResult>,
-  verbose: boolean
+  session: Session
 ): Promise<ParticipantVoice[]> {
   const perspectives = [
     'Pragmatic implementer',
@@ -117,7 +102,7 @@ async function gatherVoices(
     'Future-oriented planner',
   ].slice(0, config.parameters.participantCount);
 
-  const responses = await runner.runParallel(
+  const responses = await session.parallel(
     perspectives.map((perspective, i) => {
       let prompt = `You are a participant in a Consensus Circle (Quaker-style decision making) with the perspective of: ${perspective}.
 
@@ -151,8 +136,6 @@ In Quaker consensus, all voices are valued equally. Express concerns honestly. O
 
       return {
         name: `participant-${i + 1}`,
-        provider,
-        model: config.models.participant,
         prompt,
         temperature: config.parameters.temperature,
         maxTokens: 1024,
@@ -174,9 +157,7 @@ async function synthesizeRound(
   voices: ParticipantVoice[],
   round: number,
   config: ConsensusCircleConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Proposal, ConsensusCircleResult>,
-  verbose: boolean
+  session: Session
 ): Promise<ConsensusRound> {
   const voicesText = voices
     .map(
@@ -185,11 +166,9 @@ async function synthesizeRound(
     )
     .join('\n\n');
 
-  const response = await runner.runAgent(
-    `clerk-round-${round}`,
-    provider,
-    config.models.clerk,
-    `You are the Clerk synthesizing this round of consensus building.
+  const response = await session.step({
+    name: `clerk-round-${round}`,
+    prompt: `You are the Clerk synthesizing this round of consensus building.
 
 PROPOSAL: ${proposal.question}
 
@@ -204,9 +183,9 @@ Synthesize this round in JSON:
 }
 
 Only include concerns that are truly blocking (fundamental objections), not minor reservations.`,
-    config.parameters.temperature,
-    1024
-  );
+    temperature: config.parameters.temperature,
+    maxTokens: 1024,
+  });
 
   const parsed = parseJSON<Omit<ConsensusRound, 'round' | 'voices'>>(response.content);
   return {
@@ -220,14 +199,8 @@ async function formulateDecision(
   proposal: Proposal,
   rounds: ConsensusRound[],
   config: ConsensusCircleConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Proposal, ConsensusCircleResult>,
-  verbose: boolean
+  session: Session
 ): Promise<ConsensusDecision> {
-  if (verbose) {
-    console.log('\nClerk formulating decision...\n');
-  }
-
   const roundsText = rounds
     .map(
       (r) =>
@@ -235,11 +208,9 @@ async function formulateDecision(
     )
     .join('\n\n');
 
-  const response = await runner.runAgent(
-    'clerk-final',
-    provider,
-    config.models.clerk,
-    `You are the Clerk formulating the final decision from the consensus process.
+  const response = await session.step({
+    name: 'clerk-final',
+    prompt: `You are the Clerk formulating the final decision from the consensus process.
 
 PROPOSAL: ${proposal.question}
 
@@ -258,11 +229,22 @@ Formulate the decision in JSON:
   "remainingReservations": ["reservation 1", ...],
   "commitments": ["commitment for implementation", ...]
 }`,
-    config.parameters.temperature,
-    1536
-  );
+    temperature: config.parameters.temperature,
+    maxTokens: 1536,
+  });
 
   return parseJSON<ConsensusDecision>(response.content);
+}
+
+/** Backward-compatible entry returning the bare result. */
+export async function run(
+  input: Proposal | { content: string },
+  flags: RunFlags = {},
+  sinks: EventSink[] = []
+): Promise<ConsensusCircleResult> {
+  const { result, auditLog } = await consensusCircle(input, flags, sinks);
+  result.metadata.costUSD = auditLog.metadata.totalCost;
+  return result;
 }
 
 export * from './types';

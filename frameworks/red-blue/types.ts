@@ -72,6 +72,7 @@ export interface RedBlueResult {
     rounds: number;
     config: RedBlueConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

@@ -65,6 +65,7 @@ export interface StudioResult {
     numPeers: number;
     config: StudioConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

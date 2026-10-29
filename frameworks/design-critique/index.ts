@@ -1,12 +1,14 @@
 /**
- * Design Critique Framework
- * Structured feedback for design work-in-progress
+ * Design Critique Framework — engine port.
+ *
+ * Flow: parallel peer feedback (design perspectives) → parallel stakeholder
+ * input → facilitator synthesis. All provider/model/audit/logging concerns
+ * owned by the engine.
  */
-
-import { createProvider } from '@core/providers';
-import { getAPIKey } from '@core/config';
-import { parseJSON, FrameworkRunner } from '@core/orchestrator';
-import type { LLMProvider, RunFlags } from '@core/types';
+import type { EventSink } from '@core/engine';
+import { defineFramework, Session } from '@core/engine';
+import { parseJSON } from '@core/orchestrator';
+import type { RunFlags } from '@core/types';
 import type {
   DesignWork,
   PeerFeedback,
@@ -17,105 +19,94 @@ import type {
 } from './types';
 import { DEFAULT_CONFIG } from './types';
 
-export async function run(
-  input: DesignWork | { content: string },
-  flags: RunFlags = {}
-): Promise<DesignCritiqueResult> {
-  const design: DesignWork =
-    'title' in input
-      ? input
-      : {
-          title: 'Untitled Design',
-          stage: 'prototype',
-          description: input.content || '',
-          goals: [],
-          artifacts: input.content || '',
-        };
+export const designCritique = defineFramework<
+  DesignWork | { content: string },
+  DesignCritiqueResult
+>({
+  name: 'design-critique',
+  description:
+    'Structured work-in-progress feedback: peer perspectives, stakeholder input, facilitator synthesis',
+  normalize(raw) {
+    if (typeof raw === 'object' && raw !== null && 'title' in raw) {
+      return raw as DesignWork;
+    }
+    const content = (raw as { content?: string })?.content ?? '';
+    return {
+      title: 'Untitled Design',
+      stage: 'prototype',
+      description: content,
+      goals: [],
+      artifacts: content,
+    };
+  },
+  async run(rawInput, session) {
+    const design = rawInput as DesignWork;
+    const config: DesignCritiqueConfig = {
+      ...DEFAULT_CONFIG,
+      ...(session.flags.config as Partial<DesignCritiqueConfig> | undefined),
+    };
+    const explicitModel = session.models.override;
+    if (explicitModel) {
+      config.models = {
+        peer: explicitModel,
+        stakeholder: explicitModel,
+        facilitator: explicitModel,
+      };
+    }
 
-  const config: DesignCritiqueConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  const cliFlags = flags as Record<string, unknown>;
-  if (cliFlags.peers) {
-    config.parameters.peerCount = parseInt(String(cliFlags.peers), 10);
-  }
+    // Phase 1: Peer feedback
+    session.phase('Peer Feedback', `${config.parameters.peerCount} design perspectives`);
+    const peerFeedback = await gatherPeerFeedback(design, config, session);
 
-  const providerName = flags.provider || 'anthropic';
-  const apiKey = getAPIKey(providerName);
-  const provider = createProvider({ name: providerName, apiKey });
+    // Phase 2: Stakeholder input
+    session.phase('Stakeholder Input', `${config.stakeholderTypes.length} stakeholder types`);
+    const stakeholderInput = await gatherStakeholderInput(design, config, session);
 
-  const verbose = flags.debug ?? false;
+    // Phase 3: Facilitator synthesis
+    session.phase('Facilitator Synthesis');
+    const synthesis = await synthesizeCritique(
+      design,
+      peerFeedback,
+      stakeholderInput,
+      config,
+      session
+    );
 
-  if (verbose) {
-    console.log('\n🎨 DESIGN CRITIQUE\n');
-  }
+    session.note(
+      `Strengths: ${synthesis.strengths.length} | Areas for improvement: ${synthesis.areasForImprovement.length} | Next steps: ${synthesis.nextSteps.length}`
+    );
 
-  const runner = new FrameworkRunner<DesignWork, DesignCritiqueResult>('design-critique', design);
-
-  // Phase 1: Peer feedback
-  const peerFeedback = await gatherPeerFeedback(design, config, provider, runner, verbose);
-
-  // Phase 2: Stakeholder input
-  const stakeholderInput = await gatherStakeholderInput(design, config, provider, runner, verbose);
-
-  // Phase 3: Facilitator synthesis
-  const synthesis = await synthesizeCritique(
-    design,
-    peerFeedback,
-    stakeholderInput,
-    config,
-    provider,
-    runner,
-    verbose
-  );
-
-  if (verbose) {
-    console.log(`\nStrengths Identified: ${synthesis.strengths.length}`);
-    console.log(`Areas for Improvement: ${synthesis.areasForImprovement.length}`);
-    console.log(`Next Steps: ${synthesis.nextSteps.length}\n`);
-  }
-
-  const result: DesignCritiqueResult = {
-    design,
-    peerFeedback,
-    stakeholderInput,
-    synthesis,
-    metadata: { timestamp: new Date().toISOString(), config },
-  };
-
-  const { auditLog } = await runner.finalize(result, 'complete');
-
-  return {
-    ...result,
-    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
-  };
-}
+    return {
+      design,
+      peerFeedback,
+      stakeholderInput,
+      synthesis,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        config,
+        decision: synthesis.prioritizedFeedback.some((f) => f.priority === 'critical')
+          ? 'delay'
+          : 'unclear',
+      },
+    };
+  },
+});
 
 async function gatherPeerFeedback(
   design: DesignWork,
   config: DesignCritiqueConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<DesignWork, DesignCritiqueResult>,
-  verbose: boolean
+  session: Session
 ): Promise<PeerFeedback[]> {
-  if (verbose) {
-    console.log('Phase 1: Gathering peer feedback...\n');
-  }
-
   const perspectives = [
     'UX/Interaction Designer',
     'Visual/Brand Designer',
     'Accessibility Specialist',
   ].slice(0, config.parameters.peerCount);
 
-  const responses = await runner.runParallel(
-    perspectives.map((perspective, i) => {
-      if (verbose) {
-        console.log(`  ${perspective} reviewing...`);
-      }
-      return {
-        name: `peer-${i + 1}`,
-        provider,
-        model: config.models.peer,
-        prompt: `You are a ${perspective} participating in a design critique.
+  const responses = await session.parallel(
+    perspectives.map((perspective, i) => ({
+      name: `peer-${i + 1}`,
+      prompt: `You are a ${perspective} participating in a design critique.
 
 DESIGN: ${design.title} (${design.stage} stage)
 
@@ -146,10 +137,9 @@ Provide structured feedback from your perspective in JSON:
     "accessibility": ["accessibility observation", ...]
   }
 }`,
-        temperature: config.parameters.temperature,
-        maxTokens: 2048,
-      };
-    })
+      temperature: config.parameters.temperature,
+      maxTokens: 2048,
+    }))
   );
 
   return responses.map((response, i) => {
@@ -164,24 +154,12 @@ Provide structured feedback from your perspective in JSON:
 async function gatherStakeholderInput(
   design: DesignWork,
   config: DesignCritiqueConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<DesignWork, DesignCritiqueResult>,
-  verbose: boolean
+  session: Session
 ): Promise<StakeholderInput[]> {
-  if (verbose) {
-    console.log('\nPhase 2: Gathering stakeholder input...\n');
-  }
-
-  const responses = await runner.runParallel(
-    config.stakeholderTypes.map((stakeholderType) => {
-      if (verbose) {
-        console.log(`  ${stakeholderType} providing input...`);
-      }
-      return {
-        name: `stakeholder-${stakeholderType.toLowerCase().replace(/\s+/g, '-')}`,
-        provider,
-        model: config.models.stakeholder,
-        prompt: `You are representing the ${stakeholderType} perspective in a design critique.
+  const responses = await session.parallel(
+    config.stakeholderTypes.map((stakeholderType) => ({
+      name: `stakeholder-${stakeholderType.toLowerCase().replace(/\s+/g, '-')}`,
+      prompt: `You are representing the ${stakeholderType} perspective in a design critique.
 
 DESIGN: ${design.title}
 GOALS: ${design.goals.join(', ')}
@@ -193,10 +171,9 @@ Provide input from your stakeholder perspective in JSON:
   "concerns": ["concern 1", ...],
   "requirements": ["requirement 1", ...]
 }`,
-        temperature: config.parameters.temperature,
-        maxTokens: 1024,
-      };
-    })
+      temperature: config.parameters.temperature,
+      maxTokens: 1024,
+    }))
   );
 
   return responses.map((response) => parseJSON<StakeholderInput>(response.content));
@@ -207,14 +184,8 @@ async function synthesizeCritique(
   peerFeedback: PeerFeedback[],
   stakeholderInput: StakeholderInput[],
   config: DesignCritiqueConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<DesignWork, DesignCritiqueResult>,
-  verbose: boolean
+  session: Session
 ): Promise<CritiqueSynthesis> {
-  if (verbose) {
-    console.log('\nPhase 3: Facilitator synthesizing critique...\n');
-  }
-
   const peerText = peerFeedback
     .map(
       (p) =>
@@ -229,11 +200,9 @@ async function synthesizeCritique(
     )
     .join('\n\n');
 
-  const response = await runner.runAgent(
-    'facilitator',
-    provider,
-    config.models.facilitator,
-    `You are facilitating a design critique session.
+  const response = await session.step({
+    name: 'facilitator',
+    prompt: `You are facilitating a design critique session.
 
 DESIGN: ${design.title} (${design.stage})
 GOALS: ${design.goals.join(', ')}
@@ -261,11 +230,22 @@ Synthesize the critique in JSON:
   "nextSteps": ["actionable next step", ...],
   "iterationDirection": "high-level guidance for next iteration"
 }`,
-    config.parameters.temperature,
-    2048
-  );
+    temperature: config.parameters.temperature,
+    maxTokens: 2048,
+  });
 
   return parseJSON<CritiqueSynthesis>(response.content);
+}
+
+/** Backward-compatible entry returning the bare result. */
+export async function run(
+  input: DesignWork | { content: string },
+  flags: RunFlags = {},
+  sinks: EventSink[] = []
+): Promise<DesignCritiqueResult> {
+  const { result, auditLog } = await designCritique(input, flags, sinks);
+  result.metadata.costUSD = auditLog.metadata.totalCost;
+  return result;
 }
 
 export * from './types';

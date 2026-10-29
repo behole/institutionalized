@@ -61,6 +61,7 @@ export interface SWOTResult {
     timestamp: string;
     config: SWOTConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

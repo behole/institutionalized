@@ -1,12 +1,13 @@
 /**
- * Grant Review Panel Framework
- * Comparative prioritization and resource allocation
+ * Grant Review Panel Framework — engine port.
+ *
+ * Flow: per-proposal × per-reviewer parallel scoring → panel chair calibration
+ * and ranking. All provider/model/audit/logging concerns owned by the engine.
  */
-
-import { createProvider } from '@core/providers';
-import { getAPIKey } from '@core/config';
-import { parseJSON, FrameworkRunner } from '@core/orchestrator';
-import type { LLMProvider, RunFlags } from '@core/types';
+import type { EventSink } from '@core/engine';
+import { defineFramework, Session } from '@core/engine';
+import { parseJSON } from '@core/orchestrator';
+import type { RunFlags } from '@core/types';
 import type {
   GrantProposal,
   ReviewerScore,
@@ -16,65 +17,68 @@ import type {
 } from './types';
 import { DEFAULT_CONFIG } from './types';
 
-export async function run(
-  input: { proposals: GrantProposal[] } | { content: string },
-  flags: RunFlags = {}
-): Promise<GrantPanelResult> {
-  const proposals: GrantProposal[] =
-    'proposals' in input ? input.proposals : parseProposalsFromContent(input.content || '');
+export const grantPanel = defineFramework<
+  { proposals: GrantProposal[] } | { content: string },
+  GrantPanelResult
+>({
+  name: 'grant-panel',
+  description:
+    'Comparative prioritization: per-proposal reviewer scoring, panel chair ranking and budget allocation',
+  normalize(raw) {
+    if (typeof raw === 'object' && raw !== null && 'proposals' in raw) {
+      return raw as { proposals: GrantProposal[] };
+    }
+    const content = (raw as { content?: string })?.content ?? '';
+    return { proposals: parseProposalsFromContent(content) };
+  },
+  async run(rawInput, session) {
+    const proposals = (rawInput as { proposals: GrantProposal[] }).proposals;
+    const config: GrantPanelConfig = {
+      ...DEFAULT_CONFIG,
+      ...(session.flags.config as Partial<GrantPanelConfig> | undefined),
+    };
+    const explicitModel = session.models.override;
+    if (explicitModel) {
+      config.models = {
+        reviewer: explicitModel,
+        panel: explicitModel,
+      };
+    }
 
-  const config: GrantPanelConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  const cliFlags = flags as Record<string, unknown>;
-  if (cliFlags.budget) {
-    config.totalBudget = parseInt(String(cliFlags.budget), 10);
-  }
-  if (cliFlags.reviewers) {
-    config.parameters.reviewersPerProposal = parseInt(String(cliFlags.reviewers), 10);
-  }
-
-  const providerName = flags.provider || 'anthropic';
-  const apiKey = getAPIKey(providerName);
-  const provider = createProvider({ name: providerName, apiKey });
-
-  const verbose = flags.debug ?? false;
-
-  if (verbose) {
-    console.log('\n💰 GRANT REVIEW PANEL\n');
-  }
-
-  const runner = new FrameworkRunner<{ proposals: GrantProposal[] }, GrantPanelResult>(
-    'grant-panel',
-    { proposals }
-  );
-
-  // Phase 1: Independent reviewer scoring
-  const reviews = await scoreProposals(proposals, config, provider, runner, verbose);
-
-  // Phase 2: Panel calibration and ranking
-  const ranking = await calibrateAndRank(proposals, reviews, config, provider, runner, verbose);
-
-  if (verbose) {
-    console.log(`\nProposals Reviewed: ${proposals.length}`);
-    console.log(`Recommended for Funding: ${ranking.allocations.length}`);
-    console.log(
-      `Total Allocated: $${ranking.allocations.reduce((sum, a) => sum + a.amount, 0).toLocaleString()}\n`
+    // Phase 1: Independent reviewer scoring
+    session.phase(
+      'Reviewer Scoring',
+      `${proposals.length} proposals × ${config.parameters.reviewersPerProposal} reviewers`
     );
-  }
+    const reviews = await scoreProposals(proposals, config, session);
 
-  const result: GrantPanelResult = {
-    proposals,
-    reviews,
-    ranking,
-    metadata: { timestamp: new Date().toISOString(), config },
-  };
+    // Phase 2: Panel calibration and ranking
+    session.phase('Panel Calibration & Ranking');
+    const ranking = await calibrateAndRank(proposals, reviews, config, session);
 
-  const { auditLog } = await runner.finalize(result, 'complete');
+    session.note(
+      `Proposals reviewed: ${proposals.length} | Recommended for funding: ${ranking.allocations.length} | ` +
+        `Total allocated: $${ranking.allocations.reduce((sum, a) => sum + a.amount, 0).toLocaleString()}`
+    );
 
-  return {
-    ...result,
-    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
-  };
-}
+    return {
+      proposals,
+      reviews,
+      ranking,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        config,
+        decision:
+          ranking.rankedProposals.filter((p) => p.fundingRecommendation === 'fund').length > 0
+            ? 'approve'
+            : ranking.rankedProposals.filter((p) => p.fundingRecommendation === 'fund_if_available')
+                  .length > 0
+              ? 'delay'
+              : 'reject',
+      },
+    };
+  },
+});
 
 function parseProposalsFromContent(content: string): GrantProposal[] {
   // Simple parser - in real use, this would be more sophisticated
@@ -93,18 +97,10 @@ function parseProposalsFromContent(content: string): GrantProposal[] {
 async function scoreProposals(
   proposals: GrantProposal[],
   config: GrantPanelConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<{ proposals: GrantProposal[] }, GrantPanelResult>,
-  verbose: boolean
+  session: Session
 ): Promise<ReviewerScore[]> {
-  if (verbose) {
-    console.log('Phase 1: Independent reviewer scoring...\n');
-  }
-
   const agentSpecs: Array<{
     name: string;
-    provider: LLMProvider;
-    model: string;
     prompt: string;
     temperature: number;
     maxTokens: number;
@@ -112,13 +108,8 @@ async function scoreProposals(
 
   for (const proposal of proposals) {
     for (let i = 0; i < config.parameters.reviewersPerProposal; i++) {
-      if (verbose) {
-        console.log(`  Reviewer ${i + 1} scoring "${proposal.title}"...`);
-      }
       agentSpecs.push({
         name: `reviewer-${proposal.id}-${i + 1}`,
-        provider,
-        model: config.models.reviewer,
         prompt: `You are a grant reviewer evaluating proposals.
 
 PROPOSAL: ${proposal.title}
@@ -150,7 +141,7 @@ Score this proposal (0-10 scale for each criterion) in JSON:
     }
   }
 
-  const responses = await runner.runParallel(agentSpecs);
+  const responses = await session.parallel(agentSpecs);
   return responses.map((response) => parseJSON<ReviewerScore>(response.content));
 }
 
@@ -158,14 +149,8 @@ async function calibrateAndRank(
   proposals: GrantProposal[],
   reviews: ReviewerScore[],
   config: GrantPanelConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<{ proposals: GrantProposal[] }, GrantPanelResult>,
-  verbose: boolean
+  session: Session
 ): Promise<PanelRanking> {
-  if (verbose) {
-    console.log('\nPhase 2: Panel calibration and ranking...\n');
-  }
-
   const reviewsByProposal = proposals.map((p) => ({
     proposal: p,
     reviews: reviews.filter((r) => r.proposalId === p.id),
@@ -178,11 +163,9 @@ async function calibrateAndRank(
     })
     .join('\n---\n\n');
 
-  const response = await runner.runAgent(
-    'panel-chair',
-    provider,
-    config.models.panel,
-    `You are the grant review panel chair calibrating scores and making funding decisions.
+  const response = await session.step({
+    name: 'panel-chair',
+    prompt: `You are the grant review panel chair calibrating scores and making funding decisions.
 
 TOTAL BUDGET: $${config.totalBudget.toLocaleString()}
 
@@ -211,11 +194,22 @@ Rank proposals and make funding recommendations in JSON:
 }
 
 Rank by quality, allocate budget to highest-ranked proposals until exhausted.`,
-    config.parameters.temperature,
-    2048
-  );
+    temperature: config.parameters.temperature,
+    maxTokens: 2048,
+  });
 
   return parseJSON<PanelRanking>(response.content);
+}
+
+/** Backward-compatible entry returning the bare result. */
+export async function run(
+  input: { proposals: GrantProposal[] } | { content: string },
+  flags: RunFlags = {},
+  sinks: EventSink[] = []
+): Promise<GrantPanelResult> {
+  const { result, auditLog } = await grantPanel(input, flags, sinks);
+  result.metadata.costUSD = auditLog.metadata.totalCost;
+  return result;
 }
 
 export * from './types';

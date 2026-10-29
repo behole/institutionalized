@@ -6,8 +6,17 @@ export class AnthropicProvider implements LLMProvider {
   name = 'anthropic';
   private client: Anthropic;
 
-  constructor(apiKey: string) {
-    this.client = new Anthropic({ apiKey });
+  constructor(apiKey: string, baseURL?: string) {
+    const options: Record<string, unknown> = { apiKey };
+    if (baseURL) {
+      options.baseURL = baseURL;
+    }
+    // Proxy gateways may require extra headers (e.g. x-opencode-session).
+    const extraHeaders = process.env.ANTHROPIC_EXTRA_HEADERS;
+    if (extraHeaders) {
+      options.defaultHeaders = JSON.parse(extraHeaders) as Record<string, string>;
+    }
+    this.client = new Anthropic(options as never);
   }
 
   async call(params: LLMCallParams): Promise<LLMResponse> {

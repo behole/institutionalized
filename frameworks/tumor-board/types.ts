@@ -60,6 +60,7 @@ export interface TumorBoardResult {
     timestamp: string;
     config: TumorBoardConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

@@ -96,7 +96,7 @@ export async function defend(
 
   const response = await provider.call({
     model: config.models.defense,
-    maxTokens: 4096,
+    maxTokens: 16384,
     temperature: 0.7,
     messages: [{ role: 'user', content: prompt }],
   });

@@ -58,6 +58,7 @@ export interface WritersWorkshopResult {
     modelUsage: {
       [reviewerId: string]: string;
     };
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

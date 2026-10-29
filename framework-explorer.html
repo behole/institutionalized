@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Institutionalized - Framework Explorer</title>
+    <style>
+        :root {
+            --grid-columns: repeat(6, 1fr);
+            --card-width: calc(100% / 6 - 12px);
+            --card-height: 140px;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+            color: var(--foreground, #1a1a1a);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        header {
+            margin-bottom: 30px;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: var(--muted-foreground, #666);
+            font-size: 14px;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            background: var(--card, #fff);
+            border: 1px solid var(--border, #ddd);
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover {
+            border-color: var(--accent, #007bff);
+        }
+        .filter-btn.active {
+            background: var(--accent, #007bff);
+            color: white;
+            border-color: var(--accent, #007bff);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: var(--grid-columns);
+            gap: 12px;
+        }
+        @media (max-width: 1200px) {
+            :root { --grid-columns: repeat(4, 1fr); }
+        }
+        @media (max-width: 900px) {
+            :root { --grid-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 600px) {
+            :root { --grid-columns: repeat(2, 1fr); }
+        }
+        .framework-card {
+            background: var(--card, #fff);
+            border: 1px solid var(--border, #ddd);
+            border-radius: 8px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            height: var(--card-height);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+        .framework-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: var(--accent, #007bff);
+        }
+        .framework-card.inactive {
+            opacity: 0.4;
+            pointer-events: none;
+            filter: grayscale(100%);
+        }
+        .tier-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        .tier-1 { background: #e3f2fd; color: #1565c0; }
+        .tier-2 { background: #f3e5f5; color: #7b1fa2; }
+        .tier-3 { background: #e8f5e9; color: #2e7d32; }
+        .framework-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        .framework-desc {
+            font-size: 12px;
+            color: var(--muted-foreground, #666);
+            line-height: 1.4;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+        .framework-agents {
+            font-size: 11px;
+            color: var(--muted-foreground, #666);
+            margin-top: 6px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal.show {
+            display: flex;
+        }
+        .modal-content {
+            background: var(--card, #fff);
+            border: 1px solid var(--border, #ddd);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .modal-desc {
+            font-size: 14px;
+            color: var(--muted-foreground, #666);
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+        .modal-use-cases {
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        .modal-use-cases h4 {
+            margin-bottom: 6px;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--muted-foreground, #666);
+        }
+        .modal-use-cases ul {
+            margin-left: 18px;
+        }
+        .modal-use-cases li {
+            margin-bottom: 4px;
+        }
+        .modal-agents {
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        .modal-agents strong {
+            display: block;
+            margin-bottom: 6px;
+        }
+        .modal-agents span {
+            margin-right: 8px;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        .modal-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+        }
+        .modal-btn.primary {
+            background: var(--accent, #007bff);
+            color: white;
+        }
+        .modal-btn.secondary {
+            background: transparent;
+            border: 1px solid var(--border, #ddd);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🏛️ Institutional Reasoning</h1>
+        <p class="subtitle">Select a decision-making framework to visualize its agent architecture</p>
+    </header>
+
+    <div class="controls">
+        <button class="filter-btn active" data-filter="all">All 26</button>
+        <button class="filter-btn" data-filter="tier1">Tier 1</button>
+        <button class="filter-btn" data-filter="tier2">Tier 2</button>
+        <button class="filter-btn" data-filter="tier3">Tier 3</button>
+        <button class="filter-btn" data-filter="mcp">MCP Tools</button>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h2 class="modal-title" id="modalTitle"></h2>
+            <p class="modal-desc" id="modalDesc"></p>
+            <div class="modal-use-cases">
+                <h4>Use Cases</h4>
+                <ul id="modalUseCases"></ul>
+            </div>
+            <div class="modal-agents">
+                <strong>Agent Architecture:</strong>
+                <span id="modalAgents"></span>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeModal()">Close</button>
+                <button class="modal-btn primary" onclick="launchFramework()">Launch Framework</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const frameworks = [
+            { id: 'courtroom', name: 'Courtroom', tier: 1, mcp: true, desc: 'Binary decisions under uncertainty with adversarial debate', agents: 'Prosecutor, Defense, 5 Jurors, Judge', useCases: ['PR mergers', 'Code reviews', 'Hiring decisions'] },
+            { id: 'peer-review', name: 'Peer Review', tier: 1, mcp: true, desc: 'Academic-style validation with author response', agents: '3 Reviewers, Author, Editor', useCases: ['Research papers', 'Technical proposals', 'API design'] },
+            { id: 'talmudic', name: 'Talmudic', tier: 1, mcp: true, desc: 'Multi-perspective legal reasoning with counterarguments', agents: '5 Judges, Scribe, Parties', useCases: ['Contract review', 'Policy decisions', 'Ethical dilemmas'] },
+            { id: 'hegelian', name: 'Hegelian', tier: 1, mcp: false, desc: 'Dialectic progression: thesis → antithesis → synthesis', agents: 'Thesis Agent, Antithesis Agent, Synthesis Agent', useCases: ['Product strategy', 'Technical debates', 'Research direction'] },
+            { id: 'six-hats', name: 'Six Thinking Hats', tier: 2, mcp: true, desc: 'Six cognitive modes for complete problem analysis', agents: 'White (facts), Red (emotion), Black (risk), Yellow (benefits), Green (creativity), Blue (process)', useCases: ['Meeting facilitation', 'Brainstorming', 'Problem-solving'] },
+            { id: 'red-team', name: 'Red Team', tier: 2, mcp: true, desc: 'Adversarial attack simulation for security testing', agents: 'Attacker, Defender, Evaluator', useCases: ['Security reviews', 'Penetration testing', 'Bug bounty analysis'] },
+            { id: 'design-studio', name: 'Design Studio', tier: 2, mcp: true, desc: 'Cross-functional design critique process', agents: 'Designer, PM, Engineer, User Researcher', useCases: ['UI design', 'Product features', 'UX flows'] },
+            { id: 'regulatory', name: 'Regulatory Impact', tier: 2, mcp: true, desc: 'Policy analysis from compliance perspective', agents: 'Compliance Officer, Legal, Business, Public Interest', useCases: ['Policy changes', 'Regulatory filings', 'GDPR/CCPA'] },
+            { id: 'dissertation', name: 'Dissertation Committee', tier: 2, mcp: false, desc: 'Academic thesis defense simulation', agents: 'Advisor, Committee (4), External Examiner', useCases: ['Research proposals', 'Thesis defense', 'Grant applications'] },
+            { id: 'war-gaming', name: 'War Gaming', tier: 2, mcp: false, desc: 'Strategic scenario planning with multiple outcomes', agents: 'Blue Team, Red Team, Neutral Observer, Analyst', useCases: ['Competitive strategy', 'Market entry', 'Crisis planning'] },
+            { id: 'writers-workshop', name: 'Writers Workshop', tier: 3, mcp: false, desc: 'Iterative feedback and revision process', agents: 'Author, 3 Reviewers, Moderator', useCases: ['Documentation', 'Blog posts', 'White papers'] },
+            { id: 'ethics-board', name: 'Ethics Board', tier: 3, mcp: true, desc: 'Ethical review for AI/tech decisions', agents: 'Ethicist (2), Engineer, User Advocate', useCases: ['AI deployment', 'Data usage', 'Product ethics'] },
+            { id: 'market-panel', name: 'Market Panel', tier: 3, mcp: true, desc: 'Customer segment analysis for market decisions', agents: 'B2B, B2C, Enterprise, SMB Representatives', useCases: ['Market research', 'Product fit', 'Pricing strategy'] },
+            { id: 'tech-review', name: 'Tech Review', tier: 3, mcp: true, desc: 'Architectural decision review process', agents: 'Architect (2), Dev, Ops, Security', useCases: ['System design', 'Tech stack', 'Infrastructure'] },
+            { id: 'investment', name: 'Investment Committee', tier: 3, mcp: true, desc: 'Risk-adjusted decision making', agents: 'Investor, Analyst, Risk Officer, CFO', useCases: ['Capital allocation', 'Resource planning', 'Budget decisions'] },
+            { id: 'jury', name: 'Jury', tier: 3, mcp: true, desc: 'Simple majority verdict system', agents: '12 Jurors, Foreperson', useCases: ['Binary decisions', 'Tie-breaking', 'Group consensus'] },
+            { id: 'editor-board', name: 'Editorial Board', tier: 3, mcp: true, desc: 'Content quality gate review', agents: 'Editor-in-Chief, Section Editors (3), Fact-checker', useCases: ['Publishing', 'Content strategy', 'Editorial guidelines'] },
+            { id: 'safety-board', name: 'Safety Board', tier: 3, mcp: true, desc: 'Safety/accident analysis simulation', agents: 'Safety Officer, Engineer, Operations, Legal', useCases: ['Incident review', 'Safety protocols', 'Compliance audits'] },
+            { id: 'focus-group', name: 'Focus Group', tier: 3, mcp: true, desc: 'User feedback aggregation', agents: 'Moderator, Users (6), Analyst', useCases: ['User research', 'Feature feedback', 'Concept testing'] },
+            { id: 'ombudsman', name: 'Ombudsman', tier: 3, mcp: true, desc: 'Mediation between conflicting parties', agents: 'Ombudsman, Party A, Party B', useCases: ['Dispute resolution', 'HR issues', 'Customer complaints'] },
+            { id: 'board', name: 'Board of Directors', tier: 3, mcp: true, desc: 'Executive-level strategic oversight', agents: 'CEO, 4 Board Members, CFO', useCases: ['Strategic planning', 'Major investments', 'Executive decisions'] },
+            { id: 'cabinet', name: 'Cabinet', tier: 3, mcp: true, desc: 'Departmental coordination', agents: 'Prime Minister, Department Heads (5), Chief of Staff', useCases: ['Org-wide decisions', 'Cross-team alignment', 'Policy'] },
+            { id: 'university', name: 'University Senate', tier: 3, mcp: true, desc: 'Academic governance simulation', agents: 'Chancellor, Faculty (4), Student Rep, Staff Rep', useCases: ['Academic policy', 'Curriculum', 'University decisions'] },
+            { id: 'congress', name: 'Congress', tier: 3, mcp: true, desc: 'Legislative process simulation', agents: 'Speaker, Majority/Minority Leaders, Members (10)', useCases: ['Legislation', 'Budget approval', 'Policy changes'] },
+            { id: 'startup-board', name: 'Startup Board', tier: 3, mcp: true, desc: 'Early-stage governance', agents: 'Founder, Investor (2), Advisor, Independent', useCases: ['Funding rounds', 'Pivot decisions', 'Exit strategy'] },
+            { id: 'co-op', name: 'Cooperative Assembly', tier: 3, mcp: true, desc: 'Democratic decision-making', agents: 'Moderator, Member Representatives (8), Secretary', useCases: ['Co-op decisions', 'Democratic voting', 'Member governance'] }
+        ];
+
+        const grid = document.getElementById('grid');
+        const modal = document.getElementById('modal');
+        let selectedFramework = null;
+
+        frameworks.forEach(fw => {
+            const card = document.createElement('div');
+            card.className = 'framework-card';
+            card.setAttribute('data-id', fw.id);
+            card.setAttribute('data-tier', 'tier' + fw.tier);
+            card.setAttribute('data-mcp', fw.mcp);
+
+            card.innerHTML = `
+                <span class="tier-badge tier-${fw.tier}">Tier ${fw.tier}</span>
+                <div class="framework-name">${fw.name}</div>
+                <div class="framework-desc">${fw.desc}</div>
+                <div class="framework-agents">👥 ${fw.agents.split(',').length} agents</div>
+            `;
+
+            card.addEventListener('click', () => openModal(fw));
+            grid.appendChild(card);
+        });
+
+        function openModal(fw) {
+            selectedFramework = fw;
+            document.getElementById('modalTitle').textContent = fw.name;
+            document.getElementById('modalDesc').textContent = fw.desc;
+            document.getElementById('modalAgents').textContent = fw.agents;
+            
+            const ul = document.getElementById('modalUseCases');
+            ul.innerHTML = fw.useCases.map(u => `<li>${u}</li>`).join('');
+
+            modal.classList.add('show');
+        }
+
+        function closeModal() {
+            modal.classList.remove('show');
+            selectedFramework = null;
+        }
+
+        function launchFramework() {
+            if (selectedFramework) {
+                window.hermes.send(`Run ${selectedFramework.name} framework`);
+                closeModal();
+            }
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const filter = btn.getAttribute('data-filter');
+                grid.querySelectorAll('.framework-card').forEach(card => {
+                    const tier = card.getAttribute('data-tier');
+                    const mcp = card.getAttribute('data-mcp') === 'true';
+                    let show = true;
+
+                    if (filter === 'tier1') show = tier === 'tier1';
+                    else if (filter === 'tier2') show = tier === 'tier2';
+                    else if (filter === 'tier3') show = tier === 'tier3';
+                    else if (filter === 'mcp') show = mcp;
+
+                    card.style.display = show ? 'flex' : 'none';
+                });
+            });
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+    </script>
+</body>
+</html>

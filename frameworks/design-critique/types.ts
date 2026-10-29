@@ -74,6 +74,7 @@ export interface DesignCritiqueResult {
     timestamp: string;
     config: DesignCritiqueConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

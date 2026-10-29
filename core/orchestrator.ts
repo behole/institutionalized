@@ -167,7 +167,8 @@ export class FrameworkRunner<TInput, TResult> {
     prompt: string,
     temperature: number = 0.7,
     maxTokens: number = 2048,
-    systemPrompt?: string
+    systemPrompt?: string,
+    json: boolean = false
   ): Promise<LLMResponse> {
     const startTime = Date.now();
 
@@ -182,6 +183,7 @@ export class FrameworkRunner<TInput, TResult> {
       messages: [{ role: 'user', content: prompt }],
       temperature,
       maxTokens,
+      json,
     };
 
     if (systemPrompt !== undefined) {
@@ -271,22 +273,31 @@ export class FrameworkRunner<TInput, TResult> {
 /**
  * Parse JSON from LLM response, handling markdown code blocks.
  * When a Zod schema is provided, the parsed data is validated against it.
+ * Falls back to a repair pass for common LLM JSON sins (trailing commas,
+ * unbalanced brackets, prose around the object).
  */
 export function parseJSON<T>(text: string, schema?: ZodType<T>): T {
   const trimmed = text.trim();
 
   // Try to extract JSON from markdown code block
   const codeBlockMatch = trimmed.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+  const candidate = codeBlockMatch ? codeBlockMatch[1] : trimmed.match(/\{[\s\S]*\}/)?.[0];
+
+  if (!candidate) {
+    throw new Error('No valid JSON found in response');
+  }
+
   let raw: unknown;
-  if (codeBlockMatch) {
-    raw = JSON.parse(codeBlockMatch[1]);
-  } else {
-    // Try to extract raw JSON object
-    const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      raw = JSON.parse(jsonMatch[0]);
-    } else {
-      throw new Error('No valid JSON found in response');
+  try {
+    raw = JSON.parse(candidate);
+  } catch {
+    const repaired = repairJSON(candidate);
+    try {
+      raw = JSON.parse(repaired);
+    } catch {
+      throw new Error(
+        `No valid JSON found in response (repair failed): ${candidate.slice(0, 120)}`
+      );
     }
   }
 
@@ -295,6 +306,66 @@ export function parseJSON<T>(text: string, schema?: ZodType<T>): T {
   }
 
   return raw as T;
+}
+
+/**
+ * Best-effort JSON repair for LLM output:
+ * 1. Strip trailing commas before } or ]
+ * 2. Strip smart quotes used as string delimiters
+ * 3. Close unbalanced brackets/braces
+ * 4. Truncate to the last complete value if trailing prose/garbage follows
+ */
+export function repairJSON(text: string): string {
+  let s = text.trim();
+
+  // Drop any trailing prose after the last } or ]
+  const lastBrace = Math.max(s.lastIndexOf('}'), s.lastIndexOf(']'));
+  if (lastBrace >= 0 && lastBrace < s.length - 1) {
+    s = s.slice(0, lastBrace + 1);
+  }
+
+  // Normalize smart quotes that LLMs use as delimiters (only outside strings
+  // is ideal, but a straight swap is safe enough in practice for JSON)
+  s = s.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'");
+
+  // Remove trailing commas: ,} or ,] (with whitespace between)
+  s = s.replace(/,\s*([}\]])/g, '$1');
+
+  // Close unbalanced brackets/braces in reverse order
+  const stack: string[] = [];
+  let inString = false;
+  let escape = false;
+  for (const ch of s) {
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+    }
+    if (inString) {
+      continue;
+    }
+    if (ch === '{') {
+      stack.push('}');
+    } else if (ch === '[') {
+      stack.push(']');
+    } else if (ch === '}' || ch === ']') {
+      stack.pop();
+    }
+  }
+  if (inString) {
+    s += '"';
+  }
+  while (stack.length > 0) {
+    s += stack.pop();
+  }
+
+  return s;
 }
 
 /**

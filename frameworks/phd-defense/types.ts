@@ -49,6 +49,7 @@ export interface PhDDefenseOutput {
     timestamp: string;
     config: PhDDefenseConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

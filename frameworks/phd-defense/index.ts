@@ -1,12 +1,14 @@
 /**
- * PhD Defense Framework
- * Rigorous proposal validation through doctoral examination
+ * PhD Defense Framework — engine port.
+ *
+ * Flow: parallel committee examination → chair renders the decision.
+ * Prompts are byte-identical to the original implementation.
+ * Provider/model/audit/logging concerns are owned by the engine.
  */
-
-import { createProvider } from '@core/providers';
-import { getAPIKey } from '@core/config';
-import { parseJSON, FrameworkRunner } from '@core/orchestrator';
-import type { LLMProvider, RunFlags } from '@core/types';
+import type { EventSink } from '@core/engine';
+import { defineFramework } from '@core/engine';
+import { parseJSON } from '@core/orchestrator';
+import type { RunFlags } from '@core/types';
 import type {
   Proposal,
   CommitteeMember,
@@ -16,88 +18,42 @@ import type {
 } from './types';
 import { DEFAULT_CONFIG } from './types';
 
-export async function run(
-  input: Proposal | { content: string },
-  flags: RunFlags = {}
-): Promise<PhDDefenseOutput> {
-  const proposal: Proposal =
-    'title' in input
-      ? input
-      : {
-          title: 'Untitled Proposal',
-          abstract: '',
-          document: input.content || '',
-        };
+export const phdDefense = defineFramework<Proposal | { content: string }, PhDDefenseOutput>({
+  name: 'phd-defense',
+  description:
+    'Doctoral examination: parallel committee assessment, chair-rendered decision on a proposal',
+  normalize(raw) {
+    if (typeof raw === 'object' && raw !== null && 'title' in raw) {
+      return raw as Proposal;
+    }
+    const content = (raw as { content?: string })?.content ?? '';
+    return { title: 'Untitled Proposal', abstract: '', document: content };
+  },
+  async run(proposalInput, session) {
+    const proposal = proposalInput as Proposal;
+    const config: PhDDefenseConfig = {
+      ...DEFAULT_CONFIG,
+      ...(session.flags.config as Partial<PhDDefenseConfig> | undefined),
+    };
+    const cliFlags = session.flags as Record<string, unknown>;
+    if (cliFlags.committee) {
+      config.parameters.committeeSize = parseInt(String(cliFlags.committee), 10);
+    }
+    if (cliFlags.specialties) {
+      config.specialties = String(cliFlags.specialties).split(',');
+    }
+    // Engine-level model override wins over legacy per-role config models.
+    const explicitModel = session.models.override;
+    if (explicitModel) {
+      config.models = { committee: explicitModel, chair: explicitModel };
+    }
 
-  const config: PhDDefenseConfig = { ...DEFAULT_CONFIG, ...(flags.config || {}) };
-  const cliFlags = flags as Record<string, unknown>;
-  if (cliFlags.committee) {
-    config.parameters.committeeSize = parseInt(String(cliFlags.committee), 10);
-  }
-  if (cliFlags.specialties) {
-    config.specialties = String(cliFlags.specialties).split(',');
-  }
-
-  const providerName = flags.provider || 'anthropic';
-  const apiKey = getAPIKey(providerName);
-  const provider = createProvider({ name: providerName, apiKey });
-
-  const verbose = flags.debug ?? false;
-
-  if (verbose) {
-    console.log('\n🎓 PhD DEFENSE\n');
-  }
-
-  const runner = new FrameworkRunner<Proposal, PhDDefenseOutput>('phd-defense', proposal);
-
-  // Phase 1: Committee members examine proposal
-  const committee = await examineProposal(proposal, config, provider, runner, verbose);
-
-  // Phase 2: Chair synthesizes decision
-  const defense = await renderDecision(proposal, committee, config, provider, runner, verbose);
-
-  if (verbose) {
-    console.log(`\nDecision: ${defense.decision.toUpperCase()}`);
-    console.log(`Required Revisions: ${defense.requiredRevisions.length}\n`);
-  }
-
-  const result: PhDDefenseOutput = {
-    proposal,
-    committee,
-    defense,
-    metadata: { timestamp: new Date().toISOString(), config },
-  };
-
-  const { auditLog } = await runner.finalize(result, 'complete');
-
-  return {
-    ...result,
-    metadata: { ...result.metadata, costUSD: auditLog.metadata.totalCost },
-  };
-}
-
-async function examineProposal(
-  proposal: Proposal,
-  config: PhDDefenseConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Proposal, PhDDefenseOutput>,
-  verbose: boolean
-): Promise<CommitteeMember[]> {
-  if (verbose) {
-    console.log('Phase 1: Committee examination...\n');
-  }
-
-  const specialties = config.specialties.slice(0, config.parameters.committeeSize);
-
-  const responses = await runner.runParallel(
-    specialties.map((specialty) => {
-      if (verbose) {
-        console.log(`  ${specialty} specialist examining...`);
-      }
-      return {
+    // Phase 1: Committee members examine proposal (parallel)
+    const specialties = config.specialties.slice(0, config.parameters.committeeSize);
+    session.phase('Committee Examination', `${specialties.length} members in parallel`);
+    const committeeSteps = await session.parallel(
+      specialties.map((specialty) => ({
         name: `committee-${specialty.toLowerCase().replace(/\s+/g, '-')}`,
-        provider,
-        model: config.models.committee,
         prompt: `You are a PhD committee member with expertise in: ${specialty}
 
 PROPOSAL TITLE: ${proposal.title}
@@ -123,37 +79,23 @@ As an expert in ${specialty}, examine this proposal and provide your assessment 
 Be rigorous and thorough. Ask hard questions that test the depth of understanding.`,
         temperature: config.parameters.temperature,
         maxTokens: 2048,
-      };
-    })
-  );
+      }))
+    );
+    const committee = committeeSteps.map((s) => parseJSON<CommitteeMember>(s.content));
+    session.note(`${committee.length} committee assessments received`);
 
-  return responses.map((response) => parseJSON<CommitteeMember>(response.content));
-}
+    // Phase 2: Chair synthesizes decision
+    session.phase("Chair's Decision");
+    const committeeText = committee
+      .map(
+        (member, idx) =>
+          `Committee Member ${idx + 1} (${member.specialty}):\nQuestions: ${member.questions.join(', ')}\nAssessment: ${member.assessment}\nConcerns: ${member.concerns.join(', ')}\n`
+      )
+      .join('\n---\n\n');
 
-async function renderDecision(
-  proposal: Proposal,
-  committee: CommitteeMember[],
-  config: PhDDefenseConfig,
-  provider: LLMProvider,
-  runner: FrameworkRunner<Proposal, PhDDefenseOutput>,
-  verbose: boolean
-): Promise<DefenseResult> {
-  if (verbose) {
-    console.log('\nPhase 2: Chair rendering decision...\n');
-  }
-
-  const committeeText = committee
-    .map(
-      (member, idx) =>
-        `Committee Member ${idx + 1} (${member.specialty}):\nQuestions: ${member.questions.join(', ')}\nAssessment: ${member.assessment}\nConcerns: ${member.concerns.join(', ')}\n`
-    )
-    .join('\n---\n\n');
-
-  const response = await runner.runAgent(
-    'chair',
-    provider,
-    config.models.chair,
-    `You are the PhD defense committee chair.
+    const decisionStep = await session.step({
+      name: 'chair',
+      prompt: `You are the PhD defense committee chair.
 
 PROPOSAL: ${proposal.title}
 
@@ -175,11 +117,44 @@ Standards:
 - "pass_with_revisions": Minor clarifications required
 - "major_revisions": Significant work needed, re-defense may be required
 - "fail": Fundamental issues, proposal not viable`,
-    config.parameters.temperature,
-    2048
-  );
+      temperature: config.parameters.temperature,
+      maxTokens: 2048,
+    });
+    const defense = parseJSON<DefenseResult>(decisionStep.content);
+    session.note(
+      `Decision: ${defense.decision.toUpperCase()} | Required revisions: ${defense.requiredRevisions.length}`
+    );
 
-  return parseJSON<DefenseResult>(response.content);
+    return {
+      proposal,
+      committee,
+      defense,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        config,
+        decision:
+          defense.decision === 'pass'
+            ? 'approve'
+            : defense.decision === 'fail'
+              ? 'reject'
+              : 'delay',
+      },
+    };
+  },
+});
+
+/**
+ * Backward-compatible entry: runs the framework, patches cost from
+ * the audit log, returns the bare result (legacy contract).
+ */
+export async function run(
+  input: Proposal | { content: string },
+  flags: RunFlags = {},
+  sinks: EventSink[] = []
+): Promise<PhDDefenseOutput> {
+  const { result, auditLog } = await phdDefense(input, flags, sinks);
+  result.metadata.costUSD = auditLog.metadata.totalCost;
+  return result;
 }
 
 export * from './types';

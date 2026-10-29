@@ -25,7 +25,7 @@ export async function synthesizeFindings(
     model: config.models.observer,
     temperature: config.parameters.observerTemperature,
     messages: [{ role: 'user', content: prompt }],
-    maxTokens: 4096,
+    maxTokens: 16384,
   });
 
   const report = parseJSON<ObserverReport>(response.content);

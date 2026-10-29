@@ -57,6 +57,7 @@ export interface AARResult {
     timestamp: string;
     config: AARConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

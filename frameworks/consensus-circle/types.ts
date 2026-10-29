@@ -60,6 +60,7 @@ export interface ConsensusCircleResult {
     timestamp: string;
     config: ConsensusCircleConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

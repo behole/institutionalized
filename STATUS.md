@@ -1,67 +1,52 @@
 # 📊 Project Status
 
-**Date:** 2026-01-31  
-**Status:** ✅ 26/26 Frameworks Complete - Production Ready
+**Date:** 2026-09-25
+**Status:** Engine rework complete — 26/26 frameworks on the new engine, eval harness live
 
 ---
 
-## ✅ Completed
+## Architecture (v0.2 "lite" rework)
 
-### Frameworks (100% - 26/26)
+- [x] `core/engine/` — TS composition API: `defineFramework` + `Session` primitives
+      (`step`, `parallel`), event-driven reporting, per-role model registry
+      (`MODEL_REGISTRY`), budget guardrails, audit trail with per-agent cost
+- [x] All 26 frameworks ported off the copy-paste boilerplate; zero `console.log`
+      in the framework layer; prompts byte-identical to originals
+- [x] CLI: static registry (no `PKG_ROOT`/`isBundled` dynamic-import hack), reporter
+      wiring, `--output-json`, `--max-cost`, `--provider`/`--model`, normalized exit
+      codes (0 approve / 1 reject / 2 error / 3 indeterminate)
+- [x] Node-compatible core (no Bun-only APIs in `core/`; CLI runs on Bun, npm build TBD)
+- [x] MCP server **removed** — replaced by Claude Code skill (`skills/institutional-reasoning/`)
+- [x] Removed: `test/integration/` (asserted nothing), `test-suite/` (absorbed into
+      `eval/`), committed `.tgz`, `skills/institutional-lite/`
 
-| Tier | Frameworks |
-|------|-----------|
-| **MVP** | Courtroom, Peer Review, Red-Blue Team, Pre-mortem, Studio Critique |
-| **High Demand** | Devil's Advocate, AAR, Six Thinking Hats, PhD Defense, Architecture Review |
-| **Specialized** | Grant Panel, Intelligence Analysis, Delphi, Design Critique, Consensus Circle |
-| **Advanced** | Differential Diagnosis, Socratic, SWOT, Tumor Board, Parliamentary |
-| **Complete** | War Gaming, Writers' Workshop, Regulatory Impact, Hegelian, Talmudic, Dissertation Committee |
+## Validity Harness
 
-### Infrastructure
-- [x] Unified TypeScript monorepo with Bun workspaces
-- [x] Multi-provider LLM support (Anthropic, OpenAI, OpenRouter)
-- [x] Full audit trails with cost tracking
-- [x] MCP server integration for Claude Code
-- [x] CI/CD with GitHub Actions
+- [x] `eval/` — framework vs single-call baseline on ground-truth cases
+- [x] 4 seed cases (`eval/cases/`) with binary ground truth (product-launch) and
+      weighted rubric criteria (api-migration, auth-system, essay-skateboarding)
+- [x] First results (gpt-4o-mini via OpenRouter): pre-mortem +1.00 lift on binary
+      launch case; peer-review +0.10 on blind rubric judging; courtroom/red-blue
+      tie with baseline on binary case
+- [ ] **Not yet proven**: n=1 per cell, one judge model, no multi-seed runs.
+      Scaling cases and seeds is the top validity priority.
 
-### Testing
-- [x] **Unit Tests**: 32 passing (<1s)
-- [x] **E2E Tests**: All frameworks covered
-- [x] 100% pass rate
+## Testing
 
----
+- [x] Unit: 134 passing (<2s), includes property tests
+- [x] E2E (API-key-gated): all frameworks covered, result-shape assertions
+- [x] Repo-wide `tsc --noEmit`: 0 errors
+- [x] Live verification: every framework exercised end-to-end against a real
+      provider during the port
 
-## 🚀 Usage
+## Next Priorities
 
-```bash
-# Run any framework
-bun cli.ts <framework> <input-file> [options]
-
-# Examples
-bun cli.ts courtroom case.json --verbose
-bun cli.ts six-hats decision.md
-bun cli.ts pre-mortem launch.md
-```
-
----
-
-## 📈 Metrics
-
-- **Frameworks**: 26 / 26 (100%)
-- **Lines of Code**: ~20,000+
-- **Test Coverage**: 100% of frameworks
-- **Packages**: 28 (core + 26 frameworks + mcp-server)
+1. Scale eval: 20–50 ground-truth cases, multi-seed runs, judge calibration
+2. npm publication (Node-compatible bin build)
+3. Dynamic website (deferred — user has a specific vision, to be designed)
 
 ---
 
-## 🎯 Next Priorities
-
-1. npm package publication
-2. Individual framework READMEs
-3. Tutorial videos
-4. Community building (Discord, blog)
-
----
-
-**Quality**: Production-ready for beta  
-**Documentation**: Good (comprehensive README, architecture docs)
+**Quality**: production-ready for beta
+**Docs**: README rewritten for the new architecture; ARCHITECTURE.md engine
+section updated next

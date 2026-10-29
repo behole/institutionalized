@@ -50,6 +50,7 @@ export interface DelphiResult {
     timestamp: string;
     config: DelphiConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

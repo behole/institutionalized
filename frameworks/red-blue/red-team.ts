@@ -19,7 +19,7 @@ export async function attackSystem(
     model: config.models.redTeam,
     temperature: config.parameters.redTemperature,
     messages: [{ role: 'user', content: prompt }],
-    maxTokens: 4096,
+    maxTokens: 16384,
   });
 
   const attack = parseJSON<RedTeamAttack>(response.content);

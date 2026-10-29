@@ -45,6 +45,7 @@ export interface SixHatsResult {
     timestamp: string;
     config: SixHatsConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

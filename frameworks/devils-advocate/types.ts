@@ -56,6 +56,7 @@ export interface DevilsAdvocateResult {
     timestamp: string;
     config: DevilsAdvocateConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

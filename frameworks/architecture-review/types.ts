@@ -50,6 +50,7 @@ export interface ArchitectureReviewResult {
     timestamp: string;
     config: ArchitectureReviewConfig;
     costUSD?: number;
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 

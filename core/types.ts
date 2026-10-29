@@ -26,6 +26,8 @@ export interface LLMCallParams {
   maxTokens?: number;
   systemPrompt?: string;
   signal?: AbortSignal;
+  /** Request provider-native JSON output (response_format). OpenAI-compatible only. */
+  json?: boolean;
 }
 
 export interface LLMProvider {
@@ -60,4 +62,10 @@ export interface RunFlags {
   config?: Record<string, unknown>;
   /** Enable verbose debug logging */
   debug?: boolean;
+  /** Per-role model ID overrides, e.g. { judge: 'claude-opus-4-...' } */
+  roleModels?: Partial<Record<'reasoning' | 'fast' | 'cheap' | 'judge', string>>;
+  /** Hard cost ceiling for the run; throws BudgetExceededError when reached */
+  maxCostUSD?: number;
+  /** Hard total-token ceiling for the run */
+  maxTokens?: number;
 }

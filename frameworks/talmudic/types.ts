@@ -52,6 +52,7 @@ export interface TalmudicResult {
     modelUsage: {
       [interpreter: string]: string;
     };
+    decision?: string; // normalized: approve | reject | delay | unclear
   };
 }
 
